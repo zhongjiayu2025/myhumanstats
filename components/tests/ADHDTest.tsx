@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Activity, AlertOctagon, MousePointer2, RotateCcw, Play } from 'lucide-react';
+import { Activity, RotateCcw, Play } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 // ASRS-v1.1 Part A
