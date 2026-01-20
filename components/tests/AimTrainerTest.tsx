@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Crosshair, Trophy, MousePointer2, Target, Activity, RefreshCcw } from 'lucide-react';
 import { saveStat, getHistory } from '../../lib/core';
 import { playUiSound } from '../../lib/sounds';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, YAxis, ResponsiveContainer } from 'recharts';
 
 interface TargetObj {
   id: number;

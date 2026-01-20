@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Keyboard, RotateCcw, Activity, Quote, FileType, Flame, Volume2, VolumeX, Terminal } from 'lucide-react';
+import { Keyboard, RotateCcw, Quote, FileType, Flame, Volume2, VolumeX, Terminal } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { playUiSound } from '../../lib/sounds';
@@ -40,7 +40,6 @@ const TypingSpeedTest: React.FC = () => {
   const [soundEnabled, setSoundEnabled] = useState(true);
   
   const [wpmHistory, setWpmHistory] = useState<{time: number, wpm: number}[]>([]);
-  const [missedKeys, setMissedKeys] = useState<Record<string, number>>({});
   const [streak, setStreak] = useState(0);
   
   const inputRef = useRef<HTMLInputElement>(null);
@@ -84,7 +83,6 @@ const TypingSpeedTest: React.FC = () => {
           } else {
               setStreak(0);
               playUiSound('fail');
-              setMissedKeys(prev => ({ ...prev, [expectedChar.toLowerCase()]: (prev[expectedChar.toLowerCase()] || 0) + 1 }));
           }
       }
 
@@ -131,7 +129,6 @@ const TypingSpeedTest: React.FC = () => {
       setWpm(0);
       setAccuracy(100);
       setWpmHistory([]);
-      setMissedKeys({});
       setStreak(0);
   };
 

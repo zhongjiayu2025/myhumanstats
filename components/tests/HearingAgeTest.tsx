@@ -1,9 +1,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, RefreshCcw, Check, Volume2, ArrowRight, Minus, Plus, AlertTriangle, Info, Activity, Mic } from 'lucide-react';
+import { RefreshCcw, Check, Volume2, ArrowRight, Minus, Plus, AlertTriangle, Info, Mic } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 import ShareCard from '../ShareCard';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceDot, ReferenceLine, Line } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 
 type EarSide = 'left' | 'right';
 
@@ -33,10 +33,6 @@ const HearingAgeTest: React.FC = () => {
   // Data State
   const [results, setResults] = useState<{left: number | null, right: number | null}>({ left: null, right: null });
   const [vizData, setVizData] = useState<number[]>(new Array(32).fill(0));
-  const [sampleRate, setSampleRate] = useState<number>(0);
-
-  // A11y
-  const [a11yAnnouncement, setA11yAnnouncement] = useState("");
 
   // Refs
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -61,8 +57,8 @@ const HearingAgeTest: React.FC = () => {
 
   // --- Initialization & Cleanup ---
   useEffect(() => {
+    // Just initialize audio context to unlock it if possible, no need to store sampleRate if unused
     const tempCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    setSampleRate(tempCtx.sampleRate);
     tempCtx.close();
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -192,7 +188,6 @@ const HearingAgeTest: React.FC = () => {
   const startSweep = () => {
       setFrequency(START_FREQ);
       startTone(START_FREQ, 'sine', activeSide, 0.1);
-      setA11yAnnouncement(`Starting sweep for ${activeSide} ear.`);
       if (mode === 'auto') {
           startTimeRef.current = Date.now();
           const animateSweep = () => {

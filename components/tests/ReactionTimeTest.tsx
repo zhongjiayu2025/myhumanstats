@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Zap, AlertTriangle, RotateCcw, Clock, BarChart3, Medal, Volume2, Eye, ScatterChart as ScatterIcon, History } from 'lucide-react';
 import { saveStat, getHistory } from '../../lib/core';
 import { playUiSound } from '../../lib/sounds';
-import { ScatterChart, Scatter, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, ZAxis, LineChart, Line, CartesianGrid } from 'recharts';
+import { ScatterChart, Scatter, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, ZAxis, LineChart, Line } from 'recharts';
 
 enum GameState { IDLE, WAITING, READY, RESULT, EARLY, CHEAT }
 
