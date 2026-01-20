@@ -1,8 +1,7 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Play, RefreshCcw, AlertTriangle, Sliders, Keyboard, Share2, Check, Wrench, Headphones, Volume2, ArrowLeft, ArrowRight, Minus, Plus } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Play, RefreshCcw, Check, Headphones, Volume2, ArrowRight, Minus, Plus } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 import ShareCard from '../ShareCard';
-import { Link } from 'react-router-dom';
 
 type EarSide = 'left' | 'right';
 
@@ -15,13 +14,10 @@ const HearingAgeTest: React.FC = () => {
   // Audio State
   const [isPlaying, setIsPlaying] = useState(false);
   const [frequency, setFrequency] = useState(20000);
-  const [volume, setVolume] = useState(0.1); // For calibration mainly
   
   // Data State
   const [results, setResults] = useState<{left: number | null, right: number | null}>({ left: null, right: null });
   const [vizData, setVizData] = useState<number[]>(new Array(32).fill(0));
-  const [sampleRate, setSampleRate] = useState<number>(0);
-  const [copied, setCopied] = useState(false);
 
   // A11y
   const [a11yAnnouncement, setA11yAnnouncement] = useState("");
@@ -42,8 +38,8 @@ const HearingAgeTest: React.FC = () => {
 
   // --- Initialization & Cleanup ---
   useEffect(() => {
+    // Basic init check
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    setSampleRate(ctx.sampleRate);
     ctx.close();
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -172,9 +168,11 @@ const HearingAgeTest: React.FC = () => {
               const currentFreq = START_FREQ - (progress * (START_FREQ - END_FREQ));
               
               setFrequency(Math.round(currentFreq));
-              oscillatorRef.current.frequency.setValueAtTime(currentFreq, audioContextRef.current!.currentTime);
+              if (oscillatorRef.current && audioContextRef.current) {
+                  oscillatorRef.current.frequency.setValueAtTime(currentFreq, audioContextRef.current.currentTime);
+              }
               
-              drawVisualizer(); // Need to manually call or ensure the loop handles it. The loop handles it via isPlaying check.
+              // Visualizer loop handles drawing via requestAnimationFrame if isPlaying is true
 
               if (progress < 1) {
                   animationFrameRef.current = requestAnimationFrame(animateSweep);
@@ -182,10 +180,7 @@ const HearingAgeTest: React.FC = () => {
                   stopAudio();
               }
           };
-          // Cancel existing visualizer loop to avoid conflict? 
-          // Actually drawVisualizer calls itself. We can combine them.
-          // Let's just update frequency in a separate interval or loop? 
-          // Re-using animationFrameRef for the sweep logic is better.
+          
           if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
           animationFrameRef.current = requestAnimationFrame(animateSweep);
       }
@@ -312,7 +307,6 @@ const HearingAgeTest: React.FC = () => {
                           <button onClick={() => { setPhase('testing'); setResults({left:null, right:null}); }} className="btn-secondary flex items-center gap-2">
                               <RefreshCcw size={16} /> New Test
                           </button>
-                          {/* Social Share Logic handled by ShareCard usually, but here is a simple button */}
                       </div>
                       
                       <ShareCard 
@@ -329,6 +323,10 @@ const HearingAgeTest: React.FC = () => {
   // Phase: Testing
   return (
     <div className="max-w-3xl mx-auto select-none">
+       <div aria-live="polite" className="sr-only">
+         {a11yAnnouncement}
+       </div>
+
        {/* Device Frame */}
        <div className="tech-border bg-black relative clip-corner-lg overflow-hidden border-zinc-800">
            
