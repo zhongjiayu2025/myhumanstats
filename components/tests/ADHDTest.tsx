@@ -18,7 +18,6 @@ const ADHDTest: React.FC = () => {
   // Go/No-Go State
   const [gonogoState, setGonogoState] = useState<'wait' | 'go' | 'nogo' | 'feedback'>('wait');
   const [impulseErrors, setImpulseErrors] = useState(0); // Clicked on No-Go
-  const [misses, setMisses] = useState(0); // Missed a Go
   const [trial, setTrial] = useState(0);
   const TOTAL_TRIALS = 15;
   const timerRef = useRef<number | null>(null);
@@ -32,7 +31,6 @@ const ADHDTest: React.FC = () => {
       setPhase('gonogo');
       setTrial(0);
       setImpulseErrors(0);
-      setMisses(0);
       scheduleTrial();
   };
 
@@ -62,7 +60,7 @@ const ADHDTest: React.FC = () => {
           handleSuccess();
       } else if (gonogoState === 'nogo') {
           setImpulseErrors(prev => prev + 1);
-          flashFeedback('error');
+          flashFeedback();
       }
   };
 
@@ -71,11 +69,10 @@ const ADHDTest: React.FC = () => {
   };
 
   const handleMiss = () => {
-      setMisses(prev => prev + 1);
       nextTrial();
   };
 
-  const flashFeedback = (type: 'error') => {
+  const flashFeedback = () => {
       setGonogoState('feedback');
       setTimeout(nextTrial, 500);
   };

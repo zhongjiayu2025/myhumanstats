@@ -54,7 +54,7 @@ const FaceBlindnessTest: React.FC = () => {
       };
   };
 
-  const startLevel = (currentLevel: number) => {
+  const startLevel = () => {
       const target = generateFace(0);
       setTargetFace(target);
       setPhase('memorize');
@@ -87,22 +87,22 @@ const FaceBlindnessTest: React.FC = () => {
           setScore(s => s + 1);
           if (level < TOTAL_LEVELS) {
               setLevel(l => l + 1);
-              startLevel(level + 1);
+              startLevel();
           } else {
-              finish(true);
+              finish();
           }
       } else {
           setLives(l => l - 1);
           if (lives <= 1) {
-              finish(false);
+              finish();
           } else {
               // Let's restart level with new face
-              startLevel(level);
+              startLevel();
           }
       }
   };
 
-  const finish = (win: boolean) => {
+  const finish = () => {
       setPhase('result');
       const finalScore = Math.round((score / TOTAL_LEVELS) * 100);
       saveStat('face-blindness', finalScore);
@@ -162,7 +162,7 @@ const FaceBlindnessTest: React.FC = () => {
                    <br/>You will see a target face from different angles. 
                    <br/>You must then identify it from a lineup of similar faces.
                </p>
-               <button onClick={() => startLevel(1)} className="btn-primary">Start Assessment</button>
+               <button onClick={() => startLevel()} className="btn-primary">Start Assessment</button>
            </div>
        )}
 

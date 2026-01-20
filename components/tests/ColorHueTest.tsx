@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Palette, Play, Timer, AlertCircle } from 'lucide-react';
+import { Palette, Play, AlertCircle } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 const ColorHueTest: React.FC = () => {

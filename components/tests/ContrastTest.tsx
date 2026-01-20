@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Contrast, ArrowLeft, ArrowRight, RotateCcw, Activity } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Contrast, RotateCcw, Activity } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 const ContrastTest: React.FC = () => {

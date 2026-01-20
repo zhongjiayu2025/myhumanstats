@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Heart, Brain, Scale, RotateCcw, MessageCircle } from 'lucide-react';
+import { Heart, Brain, Scale, RotateCcw } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 // Question Type: A = Affective (Feeling), C = Cognitive (Understanding)

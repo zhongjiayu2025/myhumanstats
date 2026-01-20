@@ -31,7 +31,6 @@ const AimTrainerTest: React.FC = () => {
   const [targets, setTargets] = useState<TargetObj[]>([]);
   const [score, setScore] = useState(0);
   const [totalClicks, setTotalClicks] = useState(0);
-  const [reactionTimes, setReactionTimes] = useState<number[]>([]);
   
   // Tracking Stats
   const [trackingScore, setTrackingScore] = useState(0); // Milliseconds on target
@@ -95,7 +94,6 @@ const AimTrainerTest: React.FC = () => {
   const startGame = () => {
       setScore(0);
       setTotalClicks(0);
-      setReactionTimes([]);
       setTargets([]);
       setHitmarkers([]);
       
@@ -142,7 +140,6 @@ const AimTrainerTest: React.FC = () => {
       
       setScore(s => s + 1);
       setTotalClicks(c => c + 1);
-      setReactionTimes(prev => [...prev, reaction]);
       
       // Spawn hitmarker at mouse position relative to container
       if (containerRef.current) {
@@ -153,7 +150,7 @@ const AimTrainerTest: React.FC = () => {
       setTargets(prev => prev.map(t => t.id === tId ? generateTarget() : t));
   };
 
-  const handleBackgroundClick = (e: React.MouseEvent) => {
+  const handleBackgroundClick = () => {
       if (phase === 'play') {
           playSound('shoot');
           if (mode === 'gridshot') setTotalClicks(c => c + 1);

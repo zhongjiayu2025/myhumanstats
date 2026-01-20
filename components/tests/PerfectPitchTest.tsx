@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { Music, Volume2, Trophy, Settings, RefreshCcw, CheckCircle2, XCircle, Ear } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
@@ -89,7 +89,6 @@ const PerfectPitchTest: React.FC = () => {
   const [currentNote, setCurrentNote] = useState<NoteDef | null>(null);
   const [score, setScore] = useState(0);
   const [rounds, setRounds] = useState(0);
-  const [streak, setStreak] = useState(0);
   const [maxStreak, setMaxStreak] = useState(0);
   
   // Feedback State
@@ -179,7 +178,6 @@ const PerfectPitchTest: React.FC = () => {
      setDifficulty(diff);
      setScore(0);
      setRounds(0);
-     setStreak(0);
      setMaxStreak(0);
      setPhase('play');
      setTimeout(() => startRound(), 100);
@@ -195,15 +193,11 @@ const PerfectPitchTest: React.FC = () => {
       if (noteName === currentNote.name) {
           setIsCorrect(true);
           setScore(s => s + 1);
-          setStreak(s => {
-              const newS = s + 1;
-              setMaxStreak(m => Math.max(m, newS));
-              return newS;
-          });
+          // Only updating maxStreak, not tracking current streak
+          setMaxStreak(m => Math.max(m, score + 1));
           playTone(currentNote.freq * 2, 0.3); // High ping for correct
       } else {
           setIsCorrect(false);
-          setStreak(0);
       }
 
       // Auto advance

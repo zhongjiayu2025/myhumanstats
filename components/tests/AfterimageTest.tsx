@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sun, Eye, Timer, ScanLine } from 'lucide-react';
+import { Sun, Eye, ScanLine } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 const AfterimageTest: React.FC = () => {

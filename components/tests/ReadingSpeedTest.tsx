@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BookOpen, Zap, FileText, CheckCircle2, Sliders, History, Rocket, Brain } from 'lucide-react';
+import { BookOpen, Zap, FileText, CheckCircle2, History, Rocket, Brain } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 const TEXT_OPTIONS = [
@@ -225,99 +225,4 @@ const ReadingSpeedTest: React.FC = () => {
       {phase === 'reading' && mode === 'standard' && (
         <div className="animate-in fade-in max-w-xl mx-auto">
            <div className="bg-[#fdfbf7] text-black p-8 md:p-12 rounded-lg shadow-2xl border-l-4 border-primary-500 mb-8 font-serif leading-relaxed text-lg">
-               <h3 className="font-bold text-2xl mb-4 border-b border-black/10 pb-4">{activeText.title}</h3>
-               {activeText.content.split('\n\n').map((para, i) => (
-                  <p key={i} className="mb-4 last:mb-0 selection:bg-primary-200">{para}</p>
-               ))}
-           </div>
-           <div className="flex items-center justify-between">
-               <div className="text-xs font-mono text-zinc-500 animate-pulse">TIMER ACTIVE...</div>
-               <button onClick={handleFinishReading} className="btn-primary">Done Reading</button>
-           </div>
-        </div>
-      )}
-
-      {phase === 'reading' && mode === 'rsvp' && (
-          <div className="flex flex-col items-center justify-center min-h-[400px]">
-              <div className="bg-black border-y-2 border-zinc-800 w-full py-24 flex justify-center relative shadow-inner">
-                  {/* Focus Brackets */}
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-24 border-x border-zinc-800 rounded-lg pointer-events-none opacity-50"></div>
-                  
-                  <div className="absolute top-4 left-4 text-xs font-mono text-zinc-600">{targetRsvpWpm} WPM</div>
-                  
-                  {renderRsvpWord()}
-              </div>
-              
-              <div className="mt-12 w-full max-w-md bg-zinc-900 h-2 rounded-full overflow-hidden">
-                  <div className="h-full bg-primary-500 transition-all duration-100 ease-linear" style={{ width: `${(rsvpIndex / words.length) * 100}%` }}></div>
-              </div>
-              <div className="mt-2 text-xs text-zinc-500 font-mono">Word {rsvpIndex + 1} / {words.length}</div>
-          </div>
-      )}
-
-      {phase === 'quiz' && (
-        <div className="animate-in slide-in-from-right max-w-xl mx-auto">
-           <div className="mb-8 flex items-center gap-2">
-              <CheckCircle2 className="text-primary-500" />
-              <h3 className="text-xl font-bold text-white">Comprehension Check</h3>
-           </div>
-           <div className="bg-zinc-900/50 p-6 border border-zinc-800 rounded-lg mb-6">
-              <p className="text-lg text-white mb-6 font-medium leading-relaxed">{activeText.questions[quizAnswers.length].q}</p>
-              <div className="space-y-3">
-                 {activeText.questions[quizAnswers.length].options.map((opt, idx) => (
-                    <button 
-                       key={idx}
-                       onClick={() => handleAnswer(idx)}
-                       className="w-full text-left p-4 bg-black border border-zinc-800 hover:border-primary-500 hover:bg-zinc-800 hover:pl-6 transition-all rounded text-zinc-300 hover:text-white"
-                    >
-                       {opt}
-                    </button>
-                 ))}
-              </div>
-              <div className="mt-6 text-right text-xs text-zinc-600 font-mono">
-                  QUESTION {quizAnswers.length + 1} / {activeText.questions.length}
-              </div>
-           </div>
-        </div>
-      )}
-
-      {phase === 'result' && (
-         <div className="text-center py-12 animate-in zoom-in">
-            <FileText size={64} className="mx-auto text-primary-500 mb-6" />
-            <div className="text-sm font-mono text-zinc-500 uppercase tracking-widest mb-4">
-                {mode === 'rsvp' ? 'Theoretical Max Speed' : 'Effective Reading Speed'}
-            </div>
-            
-            {/* Speedometer Visual */}
-            <div className="relative w-64 h-32 mx-auto mb-6 overflow-hidden">
-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-60 h-60 rounded-full border-[20px] border-zinc-800 border-t-0 border-l-0 rotate-45 transform origin-center"></div>
-                <div 
-                    className="absolute bottom-0 left-1/2 -translate-x-1/2 w-60 h-60 rounded-full border-[20px] border-primary-500 border-t-0 border-l-0 rotate-45 transform origin-center transition-all duration-1000 ease-out"
-                    style={{ clipPath: 'polygon(0 0, 100% 0, 100% 100%, 0 100%)', transform: `translateX(-50%) rotate(${45 + (Math.min(wpm, 1000)/1000)*180}deg)` }}
-                ></div>
-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 text-5xl font-bold text-white mb-2 text-glow">{wpm}</div>
-            </div>
-            
-            <div className="text-zinc-400 mb-12">Words Per Minute</div>
-            
-            <div className="mt-8 grid grid-cols-2 gap-4 max-w-sm mx-auto mb-8">
-               <div className="bg-zinc-900 border border-zinc-800 p-4 rounded">
-                  <div className="text-xs text-zinc-500 uppercase mb-1">Time</div>
-                  <div className="text-xl text-white font-mono">{duration.toFixed(1)}s</div>
-               </div>
-               <div className="bg-zinc-900 border border-zinc-800 p-4 rounded">
-                  <div className="text-xs text-zinc-500 uppercase mb-1">Retention</div>
-                  <div className={`text-xl font-mono font-bold ${comprehensionScore === 100 ? 'text-emerald-500' : comprehensionScore > 60 ? 'text-yellow-500' : 'text-red-500'}`}>
-                     {comprehensionScore}%
-                  </div>
-               </div>
-            </div>
-
-            <button onClick={restart} className="btn-secondary">Retake Test</button>
-         </div>
-      )}
-    </div>
-  );
-};
-
-export default ReadingSpeedTest;
+               <h3 className="font-bold text

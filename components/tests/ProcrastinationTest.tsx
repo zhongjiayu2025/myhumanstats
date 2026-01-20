@@ -1,6 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import Questionnaire from './Questionnaire';
-import { Clock, Hourglass, Play, Square, RotateCcw } from 'lucide-react';
+import React, { useState } from 'react';
+import { Hourglass, Play, Square, RotateCcw } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 const QUESTIONS = [
@@ -22,8 +21,6 @@ const ProcrastinationTest: React.FC = () => {
 
   const [quizScore, setQuizScore] = useState(0);
   const [qIndex, setQIndex] = useState(0);
-
-  const timerRef = useRef<number | null>(null);
 
   // --- Phase 1: Time Blindness ---
   const startTimer = () => {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AlertCircle, Wind, Heart, RotateCcw, Check } from 'lucide-react';
+import { AlertCircle, Wind, RotateCcw } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 const QUESTIONS = [

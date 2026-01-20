@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import Questionnaire from './Questionnaire';
-import { Heart, Smile, Frown, Meh, Eye } from 'lucide-react';
+import { Heart } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 // --- Phase 1: Micro-Expressions ---
@@ -87,35 +86,6 @@ const EQTest: React.FC = () => {
       }
   };
 
-  const handleQuizFinish = (finalAnswers: Record<string, number>) => {
-      // Not used directly, Questionnaire handles its own logic, we need to wrap it.
-      // But Questionnaire component is self-contained. 
-      // We will render it conditionally and pass a custom save handler.
-  };
-
-  // Wrapper for the Questionnaire component to intercept save
-  const SurveySection = () => (
-      <Questionnaire
-          testId="eq-test-temp" // Temp ID, we save manually
-          questions={QUESTIONS}
-          title="Part 2: Self-Assessment"
-          // We intercept the internal finish by hiding the result UI of Questionnaire? 
-          // Ideally Questionnaire prop `onFinish` should handle this. 
-          // NOTE: The existing Questionnaire component saves directly to localStorage. 
-          // We need to patch it or just accept the flow.
-          // Let's rely on the Questionnaire's visual output but override the save logic in our head?
-          // Since we can't easily modify Questionnaire prop from here without editing that file, 
-          // we will assume Questionnaire renders its own result screen.
-          // TRICK: We will Calculate the total EQ here and save it overwrite the simple score.
-      />
-  );
-
-  // We need to modify Questionnaire to accept an `onScoreCalculated` callback or similar.
-  // Given constraints, I will re-implement a simple version of the quiz logic here 
-  // OR modify Questionnaire.tsx. 
-  // Let's modify Questionnaire.tsx? No, user asked to update THIS file.
-  // I will re-implement the quiz logic locally for Phase 3 to ensure we combine scores.
-  
   const [quizScore, setQuizScore] = useState(0);
   const [qIndex, setQIndex] = useState(0);
 

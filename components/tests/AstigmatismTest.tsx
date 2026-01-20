@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Eye, Check, X, MousePointer2, RefreshCcw } from 'lucide-react';
+import { Eye, Check, MousePointer2, RefreshCcw } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 const AstigmatismTest: React.FC = () => {
@@ -80,7 +80,6 @@ const AstigmatismTest: React.FC = () => {
       
       // Snap to nearest 30 deg
       const snapped = Math.round(angle / 30) * 30;
-      const normalized = snapped % 180; // Astigmatism axis is 0-180 usually
       
       // Map back to 0-360 for drawing (just select one of the lines, e.g. 30 deg implies 30 and 210)
       // Visual feedback handles drawing both sides. We store the "Clock" angle basically.

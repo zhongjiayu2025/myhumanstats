@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UserX, RefreshCcw, ShieldAlert } from 'lucide-react';
+import { UserX, RefreshCcw } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 

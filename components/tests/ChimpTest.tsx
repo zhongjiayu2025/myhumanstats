@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Brain, Trophy, RotateCcw, Banana } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
@@ -12,7 +12,6 @@ interface Node {
 const ChimpTest: React.FC = () => {
   const [phase, setPhase] = useState<'intro' | 'play' | 'result'>('intro');
   const [level, setLevel] = useState(4);
-  const [strikes, setStrikes] = useState(0);
   const [nodes, setNodes] = useState<Node[]>([]);
   const [nextNum, setNextNum] = useState(1);
   const [isMasked, setIsMasked] = useState(false);
@@ -28,7 +27,6 @@ const ChimpTest: React.FC = () => {
   const startTest = () => {
       setLives(3);
       setLevel(4);
-      setStrikes(0);
       startLevel(4);
   };
 
@@ -79,7 +77,6 @@ const ChimpTest: React.FC = () => {
       } 
       // Incorrect Click
       else {
-          setStrikes(s => s + 1);
           setLives(l => l - 1);
           setWrongClickId(clickedNode.val);
           setIsRevealing(true); // Trigger reveal mode
@@ -172,13 +169,6 @@ const ChimpTest: React.FC = () => {
                    {/* Reveal Mode Nodes (Re-render everything to show correct order) */}
                    {isRevealing && (
                        <>
-                           {/* Generate full set of nodes for this level to show what was missed */}
-                           {/* NOTE: In a real app we'd store the initial state. For now we use `nodes` state which holds remaining unclicked ones. 
-                               Ideally we want to show ALL numbers 1..Level. 
-                               But since we removed clicked ones from `nodes`, we only show remaining. 
-                               For better UX, we should keep all nodes in state and mark `clicked` boolean. 
-                               Refactoring to that is safer.
-                           */}
                            {/* Just show remaining nodes revealed for now */}
                            {nodes.map((node) => (
                                <div

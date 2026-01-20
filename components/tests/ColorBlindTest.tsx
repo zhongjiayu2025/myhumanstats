@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Eye, Check, X, RefreshCcw, AlertTriangle, Keyboard, Layers } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Eye, RefreshCcw, Layers } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 // --- Types ---

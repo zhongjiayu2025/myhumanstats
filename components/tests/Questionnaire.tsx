@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, Keyboard, RefreshCcw, BarChart3 } from 'lucide-react';
+import { ChevronRight, Keyboard, RefreshCcw } from 'lucide-react';
 import { saveStat } from '../../lib/core';
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
 
 export interface Question {
   id: number;

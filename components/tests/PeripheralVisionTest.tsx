@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Eye, Target, Crosshair, MousePointer2 } from 'lucide-react';
+import { Eye, Crosshair, MousePointer2 } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 

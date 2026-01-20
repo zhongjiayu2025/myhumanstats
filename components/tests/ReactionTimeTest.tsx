@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Zap, AlertTriangle, CheckCircle, RotateCcw, Clock, BarChart3, Medal, Volume2, Eye, ScatterChart as ScatterIcon } from 'lucide-react';
+import { Zap, AlertTriangle, RotateCcw, Clock, BarChart3, Medal, Volume2, Eye, ScatterChart as ScatterIcon } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 import { ScatterChart, Scatter, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, ZAxis } from 'recharts';
 

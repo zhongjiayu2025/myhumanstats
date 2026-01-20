@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Moon, Sun, Coffee, Briefcase, Bed, Sunrise, Sunset, RotateCcw, Activity } from 'lucide-react';
+import { Moon, Sun, Briefcase, Bed, Sunrise, RotateCcw, Activity } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 // Simplified Logic: 
