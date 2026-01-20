@@ -36,6 +36,7 @@ const ReadingSpeedTest = React.lazy(() => import('./ReadingSpeedTest'));
 const VerbalMemoryTest = React.lazy(() => import('./VerbalMemoryTest'));
 
 // Personality
+const BigFiveTest = React.lazy(() => import('./BigFiveTest'));
 const ProcrastinationTest = React.lazy(() => import('./ProcrastinationTest'));
 const SocialBatteryTest = React.lazy(() => import('./SocialBatteryTest'));
 const LeftRightBrainTest = React.lazy(() => import('./LeftRightBrainTest'));
@@ -79,6 +80,7 @@ export const TEST_REGISTRY: Record<string, React.LazyExoticComponent<React.FC>> 
   'verbal-memory-test': VerbalMemoryTest,
 
   // Personality
+  'big-five-test': BigFiveTest,
   'procrastination-test': ProcrastinationTest,
   'difficult-person-test': DifficultPersonTest,
   'social-battery-test': SocialBatteryTest,

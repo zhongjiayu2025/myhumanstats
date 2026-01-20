@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { Activity, AlertOctagon, MousePointer2 } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Activity, AlertOctagon, MousePointer2, RotateCcw } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 // ASRS-v1.1 Part A
@@ -53,7 +53,9 @@ const ADHDTest: React.FC = () => {
       }, delay);
   };
 
-  const handleInput = () => {
+  const handleInput = (e?: React.MouseEvent | KeyboardEvent) => {
+      if (e) e.preventDefault();
+      if (phase !== 'gonogo') return;
       if (timerRef.current) clearTimeout(timerRef.current);
       
       if (gonogoState === 'go') {
@@ -63,6 +65,17 @@ const ADHDTest: React.FC = () => {
           flashFeedback();
       }
   };
+
+  // Add Keyboard Listener
+  useEffect(() => {
+      const handleKeyDown = (e: KeyboardEvent) => {
+          if (e.code === 'Space') {
+              handleInput(e);
+          }
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [phase, gonogoState]);
 
   const handleSuccess = () => {
       nextTrial();
@@ -114,7 +127,15 @@ const ADHDTest: React.FC = () => {
 
   return (
     <div className="max-w-2xl mx-auto select-none" onMouseDown={phase === 'gonogo' ? handleInput : undefined}>
-       
+       <style>{`
+          @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            75% { transform: translateX(8px); }
+          }
+          .animate-shake { animation: shake 0.3s ease-in-out; }
+       `}</style>
+
        {phase === 'intro' && (
            <div className="text-center py-12 animate-in fade-in">
                <Activity size={64} className="mx-auto text-amber-500 mb-6" />
@@ -140,7 +161,7 @@ const ADHDTest: React.FC = () => {
                </div>
 
                <div className={`
-                   w-48 h-48 rounded-2xl flex items-center justify-center transition-all duration-75 shadow-2xl
+                   w-48 h-48 rounded-2xl flex items-center justify-center transition-all duration-75 shadow-2xl cursor-pointer
                    ${gonogoState === 'wait' ? 'bg-zinc-800 border-2 border-zinc-700' : ''}
                    ${gonogoState === 'go' ? 'bg-emerald-500 scale-110 shadow-[0_0_50px_#10b981]' : ''}
                    ${gonogoState === 'nogo' ? 'bg-red-500 scale-110 shadow-[0_0_50px_#ef4444]' : ''}
@@ -214,7 +235,9 @@ const ADHDTest: React.FC = () => {
                    Combined with your symptom report, the results suggest {quizScore > 14 ? "a high probability of adult ADHD." : "you likely do not meet the clinical criteria for ADHD."}
                </div>
 
-               <button onClick={() => window.location.reload()} className="btn-secondary">Retake Assessment</button>
+               <button onClick={() => window.location.reload()} className="btn-secondary flex items-center gap-2 justify-center mx-auto">
+                   <RotateCcw size={16} /> Retake Assessment
+               </button>
            </div>
        )}
     </div>

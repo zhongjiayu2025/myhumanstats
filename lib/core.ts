@@ -537,6 +537,19 @@ export const TESTS: TestDefinition[] = [
 
   // --- PERSONALITY STATS ---
   {
+    id: 'big-five-test',
+    title: 'Big 5 Personality',
+    category: TestCategory.PERSONALITY,
+    description: 'The Gold Standard. Measure your Openness, Conscientiousness, Extraversion, Agreeableness, and Neuroticism.',
+    iconName: 'PieChart',
+    estimatedTime: '5 min',
+    isImplemented: true,
+    seoContent: `
+      <h2>The Five-Factor Model</h2>
+      <p>The Big Five personality traits are the best accepted and most commonly used model of personality in academic psychology. The traits are often remembered by the acronym OCEAN.</p>
+    `
+  },
+  {
     id: 'adhd-test',
     title: 'ADHD Screener',
     category: TestCategory.PERSONALITY,
