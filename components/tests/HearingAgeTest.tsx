@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, RefreshCcw, Check, Headphones, Volume2, ArrowRight, Minus, Plus, AlertTriangle, Info } from 'lucide-react';
+import { Play, RefreshCcw, Check, Volume2, ArrowRight, Minus, Plus, AlertTriangle, Info } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 import ShareCard from '../ShareCard';
 
