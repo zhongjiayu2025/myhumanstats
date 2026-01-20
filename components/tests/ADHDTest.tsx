@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Activity, AlertOctagon, MousePointer2, RotateCcw } from 'lucide-react';
+import { Activity, AlertOctagon, MousePointer2, RotateCcw, Play } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 // ASRS-v1.1 Part A
@@ -26,36 +26,64 @@ const ADHDTest: React.FC = () => {
   const [quizScore, setQuizScore] = useState(0);
   const [qIndex, setQIndex] = useState(0);
 
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
   // --- GO / NO-GO LOGIC ---
   const startGoNoGo = () => {
       setPhase('gonogo');
       setTrial(0);
       setImpulseErrors(0);
-      scheduleTrial();
+      // Small delay before first trial so user is ready
+      setTimeout(scheduleTrial, 500);
   };
 
   const scheduleTrial = () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      
       setGonogoState('wait');
-      const delay = 1000 + Math.random() * 1500;
+      
+      // Random wait 1.5s - 3s
+      const delay = 1500 + Math.random() * 1500;
+      
       timerRef.current = window.setTimeout(() => {
           // 30% chance of No-Go (Red)
           const isNoGo = Math.random() < 0.3;
           setGonogoState(isNoGo ? 'nogo' : 'go');
           
-          // Auto-fail if too slow on Go
+          // Reaction window: 800ms
+          // If they don't click within 800ms:
           timerRef.current = window.setTimeout(() => {
               if (isNoGo) {
-                  handleSuccess(); // Correctly ignored No-Go
+                  // Correctly ignored No-Go (Success)
+                  handleSuccess(); 
               } else {
-                  handleMiss(); // Missed Go
+                  // Missed Go (Timeout)
+                  // We treat missed Go as "neutral" or just next trial in this simple version, 
+                  // but ideally it's an attention lapse. For flow, we just move on.
+                  nextTrial(); 
               }
-          }, 800); // 800ms window
+          }, 800); 
       }, delay);
   };
 
   const handleInput = (e?: React.MouseEvent | KeyboardEvent) => {
-      if (e) e.preventDefault();
+      if (e) {
+        // Prevent spacebar scrolling
+        if ((e as KeyboardEvent).key === ' ' || (e as KeyboardEvent).code === 'Space') {
+            e.preventDefault();
+        }
+      }
+      
       if (phase !== 'gonogo') return;
+      
+      // CRITICAL FIX: Ignore inputs during 'wait' phase so we don't clear the spawn timer
+      if (gonogoState === 'wait') return;
+
+      // Clear the "Reaction Window" timer since user responded
       if (timerRef.current) clearTimeout(timerRef.current);
       
       if (gonogoState === 'go') {
@@ -78,10 +106,6 @@ const ADHDTest: React.FC = () => {
   }, [phase, gonogoState]);
 
   const handleSuccess = () => {
-      nextTrial();
-  };
-
-  const handleMiss = () => {
       nextTrial();
   };
 
@@ -113,10 +137,8 @@ const ADHDTest: React.FC = () => {
       // Logic:
       // Impulse Score: (15 - errors) / 15
       // Quiz Score: (Raw / 24) * 100
-      // High score = High ADHD likelihood for Quiz.
-      // High Impulse Errors = High ADHD likelihood.
       
-      // Let's normalize everything to "ADHD Likelihood Score" 0-100.
+      // Normalizing Impulse errors: >3 errors is high impulsivity.
       const impulseScore = (impulseErrors / (TOTAL_TRIALS * 0.3)) * 100; // % of No-Go's failed
       const symptomScore = (finalQuizRaw / 24) * 100;
       
@@ -145,31 +167,44 @@ const ADHDTest: React.FC = () => {
                    <br/>1. <strong>Go/No-Go Task:</strong> Measures impulse control behaviorally.
                    <br/>2. <strong>ASRS-v1.1:</strong> Standardized symptom checklist.
                </p>
-               <button onClick={startGoNoGo} className="btn-primary">Start Assessment</button>
+               <button onClick={startGoNoGo} className="btn-primary flex items-center gap-2 mx-auto">
+                   <Play size={18} fill="currentColor" /> Start Assessment
+               </button>
            </div>
        )}
 
        {phase === 'gonogo' && (
-           <div className="py-12 flex flex-col items-center justify-center min-h-[400px]">
+           <div className="py-12 flex flex-col items-center justify-center min-h-[450px]">
                <div className="mb-8 text-center">
                    <h3 className="text-xl font-bold text-white mb-2">Impulse Control Task</h3>
-                   <p className="text-zinc-500 text-sm">
-                       Press Space / Click on <strong className="text-emerald-500">GREEN</strong>. <br/>
-                       Do NOT press on <strong className="text-red-500">RED</strong>.
-                   </p>
+                   <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-lg inline-block text-left text-sm text-zinc-400 mb-4">
+                       <div className="flex items-center gap-2 mb-1">
+                           <span className="w-3 h-3 rounded-full bg-emerald-500"></span> 
+                           <span>Green Box = <strong>PRESS SPACE</strong></span>
+                       </div>
+                       <div className="flex items-center gap-2">
+                           <span className="w-3 h-3 rounded-full bg-red-500"></span> 
+                           <span>Red Box = <strong>DO NOT PRESS</strong></span>
+                       </div>
+                   </div>
                    <div className="text-xs font-mono text-zinc-600 mt-2">TRIAL {trial+1}/{TOTAL_TRIALS}</div>
                </div>
 
                <div className={`
-                   w-48 h-48 rounded-2xl flex items-center justify-center transition-all duration-75 shadow-2xl cursor-pointer
-                   ${gonogoState === 'wait' ? 'bg-zinc-800 border-2 border-zinc-700' : ''}
-                   ${gonogoState === 'go' ? 'bg-emerald-500 scale-110 shadow-[0_0_50px_#10b981]' : ''}
-                   ${gonogoState === 'nogo' ? 'bg-red-500 scale-110 shadow-[0_0_50px_#ef4444]' : ''}
+                   w-64 h-64 rounded-3xl flex items-center justify-center transition-all duration-100 shadow-2xl cursor-pointer border-4
+                   ${gonogoState === 'wait' ? 'bg-zinc-800 border-zinc-700' : ''}
+                   ${gonogoState === 'go' ? 'bg-emerald-500 border-emerald-400 scale-105 shadow-[0_0_50px_#10b981]' : ''}
+                   ${gonogoState === 'nogo' ? 'bg-red-500 border-red-400 scale-105 shadow-[0_0_50px_#ef4444]' : ''}
                    ${gonogoState === 'feedback' ? 'bg-red-900 border-red-500 animate-shake' : ''}
                `}>
-                   {gonogoState === 'go' && <MousePointer2 size={64} className="text-black" />}
-                   {gonogoState === 'nogo' && <AlertOctagon size={64} className="text-black" />}
+                   {gonogoState === 'wait' && <span className="text-zinc-600 font-bold font-mono animate-pulse">WAIT...</span>}
+                   {gonogoState === 'go' && <span className="text-black font-black text-4xl">CLICK!</span>}
+                   {gonogoState === 'nogo' && <span className="text-black font-black text-4xl">STOP!</span>}
                    {gonogoState === 'feedback' && <span className="text-red-500 font-bold text-xl">MISTAKE</span>}
+               </div>
+               
+               <div className="mt-8 text-zinc-500 text-xs font-mono">
+                   Tap area or use Spacebar
                </div>
            </div>
        )}
