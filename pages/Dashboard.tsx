@@ -4,7 +4,7 @@ import * as Icons from 'lucide-react';
 import StatsRadar from '../components/RadarChart';
 import SEO from '../components/SEO';
 import { TESTS, getStats, calculateCategoryScores } from '../lib/core';
-import { UserStats, CategoryScore, TestDefinition } from '../types';
+import { UserStats, CategoryScore } from '../types';
 import { Helmet } from 'react-helmet-async';
 
 // Animated Typing Title Component

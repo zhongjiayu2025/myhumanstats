@@ -1,6 +1,6 @@
 import React, { Suspense } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Cpu, Grip, Info, FileText, ChevronRight, Loader2, HelpCircle, BookOpen, Microscope, CheckCircle2, Bookmark } from 'lucide-react';
+import { ArrowLeft, Cpu, Info, FileText, ChevronRight, Loader2, HelpCircle, BookOpen, Microscope, CheckCircle2, Bookmark } from 'lucide-react';
 import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { Helmet } from 'react-helmet-async';

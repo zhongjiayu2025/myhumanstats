@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FileText, Activity, Layers, Book } from 'lucide-react';
+import { Activity, Layers, Book } from 'lucide-react';
 import SEO from '../components/SEO';
 import { TESTS } from '../lib/core';
 import { BLOG_POSTS } from '../lib/blogData';

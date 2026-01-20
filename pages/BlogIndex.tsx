@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, Clock, ChevronRight, Hash } from 'lucide-react';
+import { Calendar, Clock, ChevronRight } from 'lucide-react';
 import SEO from '../components/SEO';
 import { BLOG_POSTS } from '../lib/blogData';
 
@@ -24,7 +24,7 @@ const BlogIndex: React.FC = () => {
 
       {/* Featured Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {BLOG_POSTS.map((post, index) => (
+        {BLOG_POSTS.map((post) => (
           <Link 
             to={`/blog/${post.slug}`} 
             key={post.slug}
