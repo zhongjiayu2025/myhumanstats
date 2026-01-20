@@ -1,9 +1,10 @@
+
 import React, { useState, useRef } from 'react';
-import { Contrast, RotateCcw, Activity } from 'lucide-react';
+import { Contrast, RotateCcw, Activity, Monitor } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 const ContrastTest: React.FC = () => {
-  const [phase, setPhase] = useState<'intro' | 'test' | 'result'>('intro');
+  const [phase, setPhase] = useState<'intro' | 'calibrate' | 'test' | 'result'>('intro');
   const [level, setLevel] = useState(1);
   const [score, setScore] = useState(0);
   const [orientation, setOrientation] = useState<'left' | 'right'>('left');
@@ -73,10 +74,6 @@ const ContrastTest: React.FC = () => {
       setOrientation(newTilt);
       
       // Contrast Decay Curve: 
-      // Lvl 1: 50%
-      // Lvl 5: 10%
-      // Lvl 10: 1%
-      // Lvl 15: 0.5%
       const newContrast = 100 * Math.pow(0.65, level);
       setContrast(newContrast);
       
@@ -120,7 +117,27 @@ const ContrastTest: React.FC = () => {
                    <br/>Identify the tilt of the fuzzy stripes: <strong>Left</strong> vs <strong>Right</strong>.
                    <br/>The pattern will fade until it becomes invisible.
                </p>
-               <button onClick={startTest} className="btn-primary">Start Calibration</button>
+               <button onClick={() => setPhase('calibrate')} className="btn-primary">Start Calibration</button>
+           </div>
+       )}
+
+       {phase === 'calibrate' && (
+           <div className="py-12 animate-in slide-in-from-right">
+               <Monitor size={48} className="mx-auto text-primary-500 mb-4" />
+               <h2 className="text-xl font-bold text-white mb-6">Display Calibration</h2>
+               <p className="text-zinc-400 text-sm mb-8 max-w-sm mx-auto">
+                   Adjust your screen brightness until you can distinguish the 3 blocks below from the black background.
+               </p>
+               
+               <div className="flex justify-center gap-4 mb-8 bg-black p-8 rounded-xl border border-zinc-800">
+                   <div className="w-16 h-16 bg-[#000000] border border-zinc-900 flex items-center justify-center text-[9px] text-zinc-700">0%</div>
+                   <div className="w-16 h-16 bg-[#050505] flex items-center justify-center text-[9px] text-zinc-700">2%</div>
+                   <div className="w-16 h-16 bg-[#0a0a0a] flex items-center justify-center text-[9px] text-zinc-700">4%</div>
+               </div>
+
+               <button onClick={startTest} className="btn-primary">
+                   Visible - Continue
+               </button>
            </div>
        )}
 

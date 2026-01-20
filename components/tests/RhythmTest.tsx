@@ -1,16 +1,20 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Activity, Play, MousePointer2, RefreshCcw, Music2, TrendingUp, BarChart3, Wrench } from 'lucide-react';
+import { Activity, Play, MousePointer2, RefreshCcw, Music2, TrendingUp, BarChart3, Wrench, Settings } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Cell, LineChart, Line, CartesianGrid } from 'recharts';
 
 const RhythmTest: React.FC = () => {
-  const [phase, setPhase] = useState<'idle' | 'listening' | 'tapping' | 'result'>('idle');
+  const [phase, setPhase] = useState<'idle' | 'calibrate' | 'listening' | 'tapping' | 'result'>('idle');
   const [count, setCount] = useState(0);
   const [taps, setTaps] = useState<{timestamp: number, interval: number, deviation: number}[]>([]);
   const [score, setScore] = useState(0);
   const [activeBeat, setActiveBeat] = useState(-1); // For visual metronome
+  
+  // Calibration
+  const [inputLatency, setInputLatency] = useState(0);
+  const [calibrationTaps, setCalibrationTaps] = useState<number[]>([]);
   
   // Stats
   const [stats, setStats] = useState({ avgError: 0, stdDev: 0, tendency: 'Stable' });
@@ -53,15 +57,52 @@ const RhythmTest: React.FC = () => {
     osc.stop(time + 0.1);
   };
 
+  const startCalibration = () => {
+      setPhase('calibrate');
+      setCalibrationTaps([]);
+      setCount(0);
+      
+      audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const ctx = audioCtxRef.current;
+      if (ctx.state === 'suspended') ctx.resume();
+      
+      const startTime = ctx.currentTime + 0.5;
+      startTimeRef.current = performance.now() + 500;
+      
+      // Play 10 beats for calibration
+      for(let i=0; i<10; i++) {
+          playClick(startTime + i * (INTERVAL_MS/1000), 'weak');
+          setTimeout(() => setActiveBeat(i), 500 + i * INTERVAL_MS);
+      }
+  };
+
+  const handleCalibrationTap = () => {
+      if (count >= 10) return;
+      const now = performance.now();
+      const expected = startTimeRef.current + (count * INTERVAL_MS);
+      const diff = now - expected;
+      
+      setCalibrationTaps(prev => [...prev, diff]);
+      setCount(c => c + 1);
+      
+      if (count >= 9) {
+          // Finish calibration
+          setTimeout(() => {
+              const validTaps = calibrationTaps.slice(2); // Remove first 2 for stability
+              const avg = validTaps.reduce((a,b)=>a+b, 0) / validTaps.length;
+              setInputLatency(avg);
+              startTest();
+          }, 500);
+      }
+  };
+
   const startTest = useCallback(() => {
-    if (phase !== 'idle' && phase !== 'result') return;
-    
     setTaps([]);
     setCount(0);
     setPhase('listening');
     setActiveBeat(-1);
     
-    audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    if (!audioCtxRef.current) audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
     const ctx = audioCtxRef.current;
     if (ctx.state === 'suspended') ctx.resume();
 
@@ -82,9 +123,14 @@ const RhythmTest: React.FC = () => {
         lastTapTimeRef.current = startTimeRef.current + (LISTENING_BEATS - 1) * INTERVAL_MS; 
     }, 500 + (LISTENING_BEATS * INTERVAL_MS));
 
-  }, [phase]);
+  }, [inputLatency]);
 
   const handleInput = useCallback((e?: React.MouseEvent | KeyboardEvent) => {
+    if (phase === 'calibrate') {
+        handleCalibrationTap();
+        return;
+    }
+    
     if (phase !== 'tapping') return;
     if (e) e.preventDefault(); 
 
@@ -93,8 +139,8 @@ const RhythmTest: React.FC = () => {
     const currentBeatIndex = count + LISTENING_BEATS;
     const expectedTime = startTimeRef.current + (currentBeatIndex * INTERVAL_MS);
     
-    // Deviation from Grid (Sync)
-    let deviation = now - expectedTime;
+    // Deviation from Grid (Sync) - Corrected by input latency
+    let deviation = now - expectedTime - inputLatency;
     
     // Interval consistency (Continuation)
     const intervalDiff = now - lastTapTimeRef.current;
@@ -117,19 +163,19 @@ const RhythmTest: React.FC = () => {
     if (count + 1 >= TARGET_TAPS) {
         finishTest([...taps, newTap]);
     }
-  }, [phase, count, taps]);
+  }, [phase, count, taps, inputLatency]);
 
   // Keyboard Support (Spacebar)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
         if (e.code === 'Space') {
-            if (phase === 'idle' || phase === 'result') startTest();
-            else if (phase === 'tapping') handleInput(e);
+            if (phase === 'idle' || phase === 'result') startCalibration();
+            else if (phase === 'tapping' || phase === 'calibrate') handleInput(e);
         }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [phase, startTest, handleInput]);
+  }, [phase, startCalibration, handleInput]);
 
   const finishTest = (finalTaps: typeof taps) => {
     setPhase('result');
@@ -190,7 +236,7 @@ const RhythmTest: React.FC = () => {
     <div className="max-w-2xl mx-auto select-none" onMouseDown={() => handleInput()}>
       
       {/* HUD Header */}
-      {(phase === 'tapping' || phase === 'result') && (
+      {(phase === 'tapping' || phase === 'result' || phase === 'calibrate') && (
         <div className="flex justify-between items-end border-b border-zinc-800 pb-4 mb-8">
            <div className="text-left">
               <div className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest">Tempo</div>
@@ -199,8 +245,10 @@ const RhythmTest: React.FC = () => {
               </div>
            </div>
            <div className="text-right">
-               <div className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest">Beat Count</div>
-               <div className="text-xl text-primary-400 font-mono font-bold">{Math.min(count, TARGET_TAPS)}/{TARGET_TAPS}</div>
+               <div className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest">{phase === 'calibrate' ? 'Calibrating' : 'Beat Count'}</div>
+               <div className="text-xl text-primary-400 font-mono font-bold">
+                   {phase === 'calibrate' ? `${count}/10` : `${Math.min(count, TARGET_TAPS)}/${TARGET_TAPS}`}
+               </div>
            </div>
         </div>
       )}
@@ -210,7 +258,7 @@ const RhythmTest: React.FC = () => {
         
         {phase === 'idle' && (
             <div className="text-center animate-in fade-in zoom-in">
-                <div className="w-24 h-24 rounded-full border-2 border-zinc-700 bg-zinc-900 flex items-center justify-center mx-auto mb-6 group cursor-pointer hover:border-primary-500 hover:bg-zinc-800 transition-all" onClick={startTest}>
+                <div className="w-24 h-24 rounded-full border-2 border-zinc-700 bg-zinc-900 flex items-center justify-center mx-auto mb-6 group cursor-pointer hover:border-primary-500 hover:bg-zinc-800 transition-all" onClick={startCalibration}>
                     <Play size={32} className="text-zinc-500 group-hover:text-primary-400 ml-1 transition-colors" />
                 </div>
                 <h2 className="text-2xl font-bold text-white mb-2">Rhythm Test</h2>
@@ -220,6 +268,20 @@ const RhythmTest: React.FC = () => {
                 </p>
                 <div className="inline-flex items-center gap-2 px-3 py-1 bg-zinc-900 border border-zinc-800 rounded text-[10px] text-zinc-500 font-mono">
                     <span>TIP: USE KEYBOARD SPACEBAR</span>
+                </div>
+            </div>
+        )}
+
+        {phase === 'calibrate' && (
+            <div className="text-center animate-in fade-in">
+                <div className="flex justify-center mb-6">
+                    <Settings size={48} className="text-primary-500 animate-spin-slow" />
+                </div>
+                <h2 className="text-xl font-bold text-white mb-2">Hardware Calibration</h2>
+                <p className="text-zinc-400 text-sm mb-8">Tap along with the beat to measure your system latency.</p>
+                
+                <div className="w-full h-2 bg-zinc-800 rounded-full max-w-xs mx-auto overflow-hidden">
+                    <div className="h-full bg-primary-500 transition-all duration-200" style={{ width: `${count * 10}%` }}></div>
                 </div>
             </div>
         )}
@@ -343,6 +405,8 @@ const RhythmTest: React.FC = () => {
                 </div>
 
                 <div className="bg-zinc-900/50 p-4 border border-zinc-800 text-xs text-zinc-400 leading-relaxed mb-6">
+                    <strong>Measured Input Latency:</strong> {Math.round(inputLatency)}ms (Compensated)
+                    <br/><br/>
                     {score > 90 ? "Metronomic precision. Your internal clock is rock solid." :
                      score > 70 ? "Solid rhythm. Minor drift is natural for humans." :
                      "Significant drift detected. Practice with a metronome to internalize the grid."}

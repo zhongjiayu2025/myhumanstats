@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Mic, Music, RefreshCw, Volume2 } from 'lucide-react';
 import { saveStat } from '../../lib/core';
@@ -50,12 +51,6 @@ const VisualPiano: React.FC<{ activeMidi: number | null; range?: { min: number, 
     return (
         <div className="flex justify-center items-start h-24 relative bg-zinc-800 p-1 rounded-b-lg shadow-xl overflow-hidden">
             {keys.map((k) => {
-                // If it's a black key, we render it differently (absolute pos usually, but here flex with negative margin)
-                // Simplified flex approach:
-                // Black keys float on top. This is complex in pure CSS flex.
-                // Let's use a standard "White Key" loop and interject Black Keys absolute.
-                // Or simply render a flat list where black keys are narrow?
-                // Better: Standard piano roll logic.
                 if (k.isBlack) return null; // We'll handle black keys inside the white key loop next to it
                 
                 // Find associated black key (next note)
@@ -94,6 +89,7 @@ const VocalRangeTest: React.FC = () => {
   // Live Audio Data
   const [pitch, setPitch] = useState<{freq: number, note: string, cents: number, midi: number} | null>(null);
   const [volume, setVolume] = useState(0);
+  const [confidence, setConfidence] = useState(0);
   
   // Results
   const [lowRecord, setLowRecord] = useState<{freq: number, note: string, midi: number} | null>(null);
@@ -101,7 +97,7 @@ const VocalRangeTest: React.FC = () => {
   
   // System
   const [error, setError] = useState('');
-  const noiseThreshold = -50; // dB
+  const noiseThreshold = -45; // dB - Raised slightly to filter more noise
   
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyzerRef = useRef<AnalyserNode | null>(null);
@@ -170,9 +166,9 @@ const VocalRangeTest: React.FC = () => {
 
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
-            echoCancellation: false,
-            autoGainControl: false, 
-            noiseSuppression: false 
+            echoCancellation: true, // Improved stability
+            autoGainControl: true, 
+            noiseSuppression: true 
         } 
       });
       streamRef.current = stream;
@@ -201,17 +197,18 @@ const VocalRangeTest: React.FC = () => {
     audioContextRef.current = null;
   };
 
-  // --- Auto-Correlation Pitch Detection ---
-  const autoCorrelate = (buf: Float32Array, sampleRate: number) => {
+  // --- Auto-Correlation Pitch Detection with RMS Gate and Octave Correction ---
+  const autoCorrelate = (buf: Float32Array, sampleRate: number): { freq: number, clarity: number } => {
     let size = buf.length;
     let rms = 0;
     for (let i = 0; i < size; i++) rms += buf[i] * buf[i];
     rms = Math.sqrt(rms / size);
     
+    // RMS Threshold Check
     const db = 20 * Math.log10(rms);
-    if (db < noiseThreshold) return -1; // Noise gate
+    if (db < noiseThreshold) return { freq: -1, clarity: 0 }; 
 
-    // Simple Autocorrelation
+    // Autocorrelation
     let r1 = 0, r2 = size - 1, thres = 0.2;
     for (let i = 0; i < size / 2; i++) if (Math.abs(buf[i]) < thres) { r1 = i; break; }
     for (let i = 1; i < size / 2; i++) if (Math.abs(buf[size - i]) < thres) { r2 = size - i; break; }
@@ -230,13 +227,17 @@ const VocalRangeTest: React.FC = () => {
     }
     let T0 = maxpos;
 
+    // Normalize peak to determine clarity/confidence
+    // c[0] is the max possible correlation (signal with itself)
+    const clarity = c[0] > 0 ? maxval / c[0] : 0;
+
     // Parabolic interpolation for better precision
     let x1 = c[T0 - 1], x2 = c[T0], x3 = c[T0 + 1];
     let a = (x1 + x3 - 2 * x2) / 2;
     let b = (x3 - x1) / 2;
     if (a) T0 = T0 - b / (2 * a);
 
-    return sampleRate / T0;
+    return { freq: sampleRate / T0, clarity };
   };
 
   const updateLoop = () => {
@@ -245,15 +246,20 @@ const VocalRangeTest: React.FC = () => {
     const buf = new Float32Array(analyzerRef.current.fftSize);
     analyzerRef.current.getFloatTimeDomainData(buf);
     
+    // Volume Meter Logic
     let sum = 0;
     for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
     const rms = Math.sqrt(sum / buf.length);
     const db = 20 * Math.log10(rms);
     setVolume(Math.max(0, (db + 100) / 100)); 
 
-    const freq = autoCorrelate(buf, audioContextRef.current.sampleRate);
+    const { freq, clarity } = autoCorrelate(buf, audioContextRef.current.sampleRate);
+    setConfidence(clarity);
 
-    if (freq !== -1 && freq > 50 && freq < 1500) {
+    // Filter: 
+    // 1. Valid Frequency Range (Human voice roughly 50Hz - 1500Hz for fundamental)
+    // 2. High Clarity (Above 0.9 means signal is very periodic/clear tone)
+    if (freq !== -1 && freq > 50 && freq < 1500 && clarity > 0.9) {
         pitchBufferRef.current.push(freq);
         if (pitchBufferRef.current.length > 5) pitchBufferRef.current.shift();
         
@@ -261,11 +267,12 @@ const VocalRangeTest: React.FC = () => {
         const sorted = [...pitchBufferRef.current].sort((a,b) => a-b);
         const median = sorted[Math.floor(sorted.length/2)];
         
+        // Consistency Check: Ensure pitch isn't jumping wildly
         if (Math.abs(median - pitchBufferRef.current[pitchBufferRef.current.length-1]) < 10) {
             const data = getNoteData(median);
             setPitch({ freq: median, note: data.note, cents: data.cents, midi: data.midi });
             
-            // Capture records
+            // Capture records logic
             if (step === 'low-test') {
                 setLowRecord(prev => (!prev || median < prev.freq) ? {freq: median, note: data.note, midi: data.midi} : prev);
             }
@@ -450,7 +457,7 @@ const VocalRangeTest: React.FC = () => {
                         <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 100 100">
                             <circle cx="50" cy="50" r="45" fill="none" stroke="#27272a" strokeWidth="8" />
                             <circle 
-                                cx="50" cy="50" r="45" fill="none" stroke="#06b6d4" strokeWidth="8"
+                                cx="50" cy="50" r="45" fill="none" stroke={volume > 0.05 ? "#06b6d4" : "#27272a"} strokeWidth="8"
                                 strokeDasharray="283"
                                 strokeDashoffset={283 - (Math.min(1, volume * 1.5) * 283)}
                                 className="transition-all duration-75"
@@ -492,6 +499,10 @@ const VocalRangeTest: React.FC = () => {
                                 <div className="flex justify-between w-48 mt-1 text-[9px] text-zinc-600 font-mono">
                                     <span>FLAT</span>
                                     <span>SHARP</span>
+                                </div>
+                                {/* Confidence Indicator */}
+                                <div className="absolute top-2 right-2 text-[9px] font-mono text-zinc-600">
+                                    Signal Quality: {Math.round(confidence * 100)}%
                                 </div>
                             </>
                         ) : (

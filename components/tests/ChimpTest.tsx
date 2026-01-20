@@ -1,8 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Brain, Trophy, RotateCcw, Banana, Volume2, VolumeX } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 import { playUiSound } from '../../lib/sounds';
+import CountdownOverlay from '../CountdownOverlay';
 
 interface Node {
   id: number;
@@ -12,7 +13,7 @@ interface Node {
 }
 
 const ChimpTest: React.FC = () => {
-  const [phase, setPhase] = useState<'intro' | 'play' | 'result'>('intro');
+  const [phase, setPhase] = useState<'intro' | 'countdown' | 'play' | 'result'>('intro');
   const [level, setLevel] = useState(4);
   const [nodes, setNodes] = useState<Node[]>([]);
   // Keep a full copy for reveal phase
@@ -32,14 +33,14 @@ const ChimpTest: React.FC = () => {
   const GRID_COLS = 8;
   const GRID_ROWS = 5;
 
-  const startTest = () => {
+  const initiateTest = () => {
       setLives(3);
       setLevel(4);
-      startLevel(4);
+      prepareLevel(4);
+      setPhase('countdown');
   };
 
-  const startLevel = (numCount: number) => {
-      setPhase('play');
+  const prepareLevel = (numCount: number) => {
       setNextNum(1);
       setIsMasked(false);
       setIsRevealing(false);
@@ -63,6 +64,22 @@ const ChimpTest: React.FC = () => {
       setAllNodes(newNodes);
   };
 
+  const startLevelPlay = () => {
+      setPhase('play');
+  };
+
+  const nextLevel = () => {
+      const nextLvl = level + 1;
+      setLevel(nextLvl);
+      prepareLevel(nextLvl);
+      setPhase('play'); // No countdown between levels, keeps flow
+  };
+
+  const retryLevel = () => {
+      prepareLevel(level);
+      setPhase('play');
+  };
+
   const handleNodeClick = (clickedNode: Node) => {
       if (isRevealing) return;
 
@@ -82,9 +99,7 @@ const ChimpTest: React.FC = () => {
           // Level Complete
           if (nodes.length === 1) {
               if (soundEnabled) playUiSound('success');
-              const nextLevel = level + 1;
-              setLevel(nextLevel);
-              setTimeout(() => startLevel(nextLevel), 500);
+              setTimeout(nextLevel, 500);
           }
       } 
       // Incorrect Click
@@ -98,8 +113,7 @@ const ChimpTest: React.FC = () => {
               if (lives - 1 <= 0) {
                   finish();
               } else {
-                  // Retry same level
-                  startLevel(level);
+                  retryLevel();
               }
           }, 3000); // 3s to review mistakes
       }
@@ -127,8 +141,10 @@ const ChimpTest: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto select-none">
+    <div className="max-w-4xl mx-auto select-none relative">
        
+       <CountdownOverlay isActive={phase === 'countdown'} onComplete={startLevelPlay} />
+
        {phase === 'intro' && (
            <div className="text-center py-16 animate-in fade-in zoom-in">
                <div className="w-24 h-24 bg-zinc-900 border border-zinc-800 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -140,11 +156,11 @@ const ChimpTest: React.FC = () => {
                    <br/>Click the numbers in order (1, 2, 3...). 
                    <br/><strong className="text-white">Crucial:</strong> After you click '1', all other numbers will be masked. You must remember their positions.
                </p>
-               <button onClick={startTest} className="btn-primary">Start Challenge</button>
+               <button onClick={initiateTest} className="btn-primary">Start Challenge</button>
            </div>
        )}
 
-       {phase === 'play' && (
+       {(phase === 'play' || phase === 'countdown') && (
            <div className="animate-in fade-in">
                {/* HUD */}
                <div className="flex justify-between items-end mb-6 px-4 border-b border-zinc-800 pb-4">
@@ -168,8 +184,8 @@ const ChimpTest: React.FC = () => {
                    </div>
                </div>
 
-               {/* Game Board */}
-               <div className="relative w-full aspect-[8/5] bg-[#0c0c0e] border border-zinc-800 rounded-xl shadow-2xl mx-auto max-w-[800px] overflow-hidden">
+               {/* Game Board - Responsive Aspect Ratio */}
+               <div className="relative w-full aspect-[4/5] md:aspect-[8/5] bg-[#0c0c0e] border border-zinc-800 rounded-xl shadow-2xl mx-auto max-w-[800px] overflow-hidden">
                    <div className="absolute inset-0 bg-grid opacity-5 pointer-events-none"></div>
 
                    {/* Reveal Path Overlay */}
@@ -191,6 +207,7 @@ const ChimpTest: React.FC = () => {
                        <div
                           key={node.val}
                           onMouseDown={(e) => { e.preventDefault(); handleNodeClick(node); }}
+                          onTouchStart={(e) => { e.preventDefault(); handleNodeClick(node); }}
                           className={`
                               absolute flex items-center justify-center rounded-lg cursor-pointer transition-all duration-100 active:scale-90 z-20
                               ${isMasked 
@@ -207,7 +224,7 @@ const ChimpTest: React.FC = () => {
                           }}
                        >
                            {!isMasked && (
-                               <span className="text-3xl md:text-4xl font-black font-sans select-none">{node.val}</span>
+                               <span className="text-2xl md:text-4xl font-black font-sans select-none">{node.val}</span>
                            )}
                        </div>
                    ))}
@@ -235,7 +252,7 @@ const ChimpTest: React.FC = () => {
                                       marginTop: `${(1/GRID_ROWS)*7.5}%`,
                                   }}
                                >
-                                   <span className="text-3xl md:text-4xl font-bold">{node.val}</span>
+                                   <span className="text-2xl md:text-4xl font-bold">{node.val}</span>
                                </div>
                            ))}
                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
@@ -261,7 +278,7 @@ const ChimpTest: React.FC = () => {
                     "Average human range (5-7)."}
                </p>
                
-               <button onClick={startTest} className="btn-secondary flex items-center justify-center gap-2 mx-auto">
+               <button onClick={initiateTest} className="btn-secondary flex items-center justify-center gap-2 mx-auto">
                    <RotateCcw size={16} /> Try Again
                </button>
            </div>

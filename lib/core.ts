@@ -665,7 +665,8 @@ export const getStats = (): UserStats => {
 
 export interface HistoryEntry {
   timestamp: number;
-  score: number;
+  score: number; // 0-100 normalized
+  raw?: number;  // The actual raw value (e.g. 215ms, 17000Hz)
 }
 
 export const getHistory = (testId: string): HistoryEntry[] => {
@@ -679,7 +680,7 @@ export const getHistory = (testId: string): HistoryEntry[] => {
   }
 };
 
-export const saveStat = (testId: string, score: number) => {
+export const saveStat = (testId: string, score: number, rawValue?: number) => {
   try {
     // 1. Update Current Score
     const current = getStats();
@@ -691,8 +692,17 @@ export const saveStat = (testId: string, score: number) => {
     const allHistory = historyData ? JSON.parse(historyData) : {};
     const testHistory = allHistory[testId] || [];
     
+    // Create new entry, including raw value if provided
+    const newEntry: HistoryEntry = { 
+        timestamp: Date.now(), 
+        score 
+    };
+    if (rawValue !== undefined) {
+        newEntry.raw = rawValue;
+    }
+
     // Limit history to last 50 entries to avoid bloat
-    const newHistory = [...testHistory, { timestamp: Date.now(), score }].slice(-50);
+    const newHistory = [...testHistory, newEntry].slice(-50);
     
     localStorage.setItem(HISTORY_KEY, JSON.stringify({ ...allHistory, [testId]: newHistory }));
 
@@ -727,5 +737,49 @@ export const calculateCategoryScores = (stats: UserStats): CategoryScore[] => {
       completed: completedCount,
       total: testsInCat.length
     };
+  });
+};
+
+export const exportUserData = () => {
+  try {
+    const stats = localStorage.getItem(STORAGE_KEY);
+    const history = localStorage.getItem(HISTORY_KEY);
+    const data = {
+      stats: stats ? JSON.parse(stats) : {},
+      history: history ? JSON.parse(history) : {},
+      exportDate: new Date().toISOString()
+    };
+    
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mhs-backup-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    console.error("Export failed", e);
+    alert("Failed to export data.");
+  }
+};
+
+export const importUserData = (file: File) => {
+  return new Promise<void>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const json = JSON.parse(e.target?.result as string);
+        if (json.stats) localStorage.setItem(STORAGE_KEY, JSON.stringify(json.stats));
+        if (json.history) localStorage.setItem(HISTORY_KEY, JSON.stringify(json.history));
+        window.dispatchEvent(new Event('storage-update'));
+        resolve();
+      } catch (err) {
+        reject(err);
+      }
+    };
+    reader.onerror = reject;
+    reader.readAsText(file);
   });
 };

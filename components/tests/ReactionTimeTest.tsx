@@ -16,13 +16,16 @@ const ReactionTimeTest: React.FC = () => {
   const [shake, setShake] = useState(false);
   
   // Historical Data for Trend Chart
-  const [longTermHistory, setLongTermHistory] = useState<{timestamp: number, score: number}[]>([]);
+  const [longTermHistory, setLongTermHistory] = useState<{timestamp: number, score: number, raw?: number}[]>([]);
   
   const timeoutRef = useRef<number | null>(null);
   const startTimeRef = useRef(0);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
   useEffect(() => { 
+      // Load initial history
+      const h = getHistory('reaction-time');
+      setLongTermHistory(h);
       return () => clearExistingTimeout(); 
   }, []);
 
@@ -137,12 +140,10 @@ const ReactionTimeTest: React.FC = () => {
             
             // Save & Load History
             const score = Math.max(0, Math.min(100, Math.round(100 - (avg - 150) / 3.5)));
-            saveStat('reaction-time', score);
-            // Load long term history for chart
+            // IMPORTANT: Saving RAW average now
+            saveStat('reaction-time', score, avg);
+            
             const rawHist = getHistory('reaction-time');
-            // We want to chart the raw MS values, but saveStat saves the normalized score.
-            // For now, let's map the score back to approx ms for the visual, or just plot the score trend.
-            // Let's plot SCORE trend.
             setLongTermHistory(rawHist);
         } else {
             setGameState(GameState.IDLE); 
@@ -232,10 +233,10 @@ const ReactionTimeTest: React.FC = () => {
   const minTime = Math.min(...history, 9999);
   const maxTime = Math.max(...history, 0);
 
-  // Prepare Trend Data (Last 20 entries)
+  // Prepare Trend Data (Last 20 entries), preferring Raw MS if available
   const trendData = longTermHistory.slice(-20).map((h, i) => ({
       i,
-      score: h.score
+      val: h.raw || (150 + (100 - h.score) * 3.5) // Approximate MS from score if raw missing
   }));
 
   return (
@@ -319,12 +320,13 @@ const ReactionTimeTest: React.FC = () => {
                   {/* History Trend Line */}
                   <div className="h-40 w-full relative bg-zinc-900/30 rounded border border-zinc-800/50 p-2">
                       <div className="absolute top-2 left-2 text-[10px] text-zinc-500 font-mono flex items-center gap-1">
-                          <History size={10} /> PROGRESS_TREND
+                          <History size={10} /> HISTORY (MS)
                       </div>
                       <ResponsiveContainer width="100%" height="100%">
                           <LineChart data={trendData} margin={{ top: 20, right: 10, bottom: 0, left: 0 }}>
-                              <Line type="monotone" dataKey="score" stroke="#8b5cf6" strokeWidth={2} dot={false} />
-                              <YAxis domain={[0, 100]} hide />
+                              <Line type="monotone" dataKey="val" stroke="#8b5cf6" strokeWidth={2} dot={false} />
+                              <YAxis domain={['auto', 'auto']} hide />
+                              <Tooltip contentStyle={{ backgroundColor: '#000', borderColor: '#333', fontSize: '10px' }} />
                           </LineChart>
                       </ResponsiveContainer>
                   </div>

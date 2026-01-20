@@ -1,7 +1,9 @@
+
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import Layout from './components/Layout';
+import { SettingsProvider } from './lib/settings'; // Import Provider
 import Dashboard from './pages/Dashboard';
 import TestPage from './pages/TestPage';
 import CategoryPage from './pages/CategoryPage';
@@ -53,36 +55,38 @@ const GlobalStyles = () => (
 const App: React.FC = () => {
   return (
     <HelmetProvider>
-      <GlobalStyles />
-      <BrowserRouter>
-        <Layout>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/test/:id" element={<TestPage />} />
-            <Route path="/category/:categoryId" element={<CategoryPage />} />
-            <Route path="/glossary" element={<Glossary />} />
-            <Route path="/statistics" element={<Statistics />} />
-            
-            {/* Tools Routes */}
-            <Route path="/tools" element={<ToolsIndex />} />
-            <Route path="/tools/tone-generator" element={<ToneGenPage />} />
-            <Route path="/tools/bpm-counter" element={<BPMPage />} />
-            <Route path="/tools/dead-pixel-test" element={<DeadPixelPage />} />
-            <Route path="/tools/stereo-test" element={<StereoTestPage />} />
-            <Route path="/tools/hz-test" element={<RefreshRatePage />} />
-            <Route path="/tools/mic-test" element={<MicTestPage />} />
+      <SettingsProvider>
+        <GlobalStyles />
+        <BrowserRouter>
+          <Layout>
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/test/:id" element={<TestPage />} />
+              <Route path="/category/:categoryId" element={<CategoryPage />} />
+              <Route path="/glossary" element={<Glossary />} />
+              <Route path="/statistics" element={<Statistics />} />
+              
+              {/* Tools Routes */}
+              <Route path="/tools" element={<ToolsIndex />} />
+              <Route path="/tools/tone-generator" element={<ToneGenPage />} />
+              <Route path="/tools/bpm-counter" element={<BPMPage />} />
+              <Route path="/tools/dead-pixel-test" element={<DeadPixelPage />} />
+              <Route path="/tools/stereo-test" element={<StereoTestPage />} />
+              <Route path="/tools/hz-test" element={<RefreshRatePage />} />
+              <Route path="/tools/mic-test" element={<MicTestPage />} />
 
-            <Route path="/about" element={<About />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/privacy" element={<Privacy />} />
-            <Route path="/terms" element={<Terms />} />
-            <Route path="/blog" element={<BlogIndex />} />
-            <Route path="/blog/:slug" element={<BlogPost />} />
-            <Route path="/sitemap" element={<SitemapHTML />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </Layout>
-      </BrowserRouter>
+              <Route path="/about" element={<About />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/blog" element={<BlogIndex />} />
+              <Route path="/blog/:slug" element={<BlogPost />} />
+              <Route path="/sitemap" element={<SitemapHTML />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Layout>
+        </BrowserRouter>
+      </SettingsProvider>
     </HelmetProvider>
   );
 };

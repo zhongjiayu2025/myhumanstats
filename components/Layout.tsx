@@ -1,9 +1,12 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Activity, Shield, Terminal, Zap, BookOpen, Search, Command } from 'lucide-react';
+import { Activity, Shield, Terminal, Zap, BookOpen, Search, Command, Settings, Monitor, Eye, ZapOff, Download, Upload } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import CommandPalette from './CommandPalette';
 import LiveTicker from './LiveTicker';
+import { useSettings } from '../lib/settings';
+import { exportUserData, importUserData } from '../lib/core';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -13,6 +16,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const isDashboard = location.pathname === '/';
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const { reducedMotion, setReducedMotion, showScanlines, setShowScanlines, highContrast } = useSettings();
 
   // Global Key Listener for Cmd+K
   useEffect(() => {
@@ -25,6 +32,24 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      try {
+        await importUserData(file);
+        alert("Data restored successfully.");
+        // Optional: Trigger a reload or context update
+        window.location.reload();
+      } catch (err) {
+        alert("Failed to import data. Invalid file format.");
+      }
+    }
+  };
 
   // Organization Schema
   const orgSchema = {
@@ -57,7 +82,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col font-sans relative overflow-hidden bg-background">
+    <div className={`min-h-screen flex flex-col font-sans relative overflow-hidden bg-background ${highContrast ? 'contrast-125' : ''}`}>
       <Helmet>
         <script type="application/ld+json">{JSON.stringify(orgSchema)}</script>
         <script type="application/ld+json">{JSON.stringify(websiteSchema)}</script>
@@ -73,13 +98,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         Skip to Main Content
       </a>
       
-      {/* Global VFX */}
-      <div className="scanlines print:hidden"></div>
+      {/* Global VFX - Conditionally Rendered based on Settings */}
+      {showScanlines && <div className="scanlines print:hidden"></div>}
       <div className="vignette print:hidden"></div>
-      <div className="fixed inset-0 bg-grid z-0 pointer-events-none print:hidden" />
+      {!reducedMotion && <div className="fixed inset-0 bg-grid z-0 pointer-events-none print:hidden" />}
       
-      {/* Ambient Light */}
-      <div className="fixed top-[-10%] left-[20%] w-[500px] h-[500px] bg-primary-500/5 rounded-full blur-[120px] pointer-events-none z-0 print:hidden" />
+      {/* Ambient Light - Disable if Reduced Motion for performance/distraction */}
+      {!reducedMotion && (
+        <div className="fixed top-[-10%] left-[20%] w-[500px] h-[500px] bg-primary-500/5 rounded-full blur-[120px] pointer-events-none z-0 print:hidden" />
+      )}
 
       {/* Technical Header */}
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-background/90 backdrop-blur-md print:hidden">
@@ -88,8 +115,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             {/* Logo Container */}
             <div className="relative flex items-center justify-center w-10 h-10 bg-surface border border-white/10 clip-corner-sm overflow-hidden group-hover:border-primary-500/50 transition-all">
               <Activity className="text-primary-400 w-5 h-5 z-10" />
-              {/* Scanline effect inside logo */}
-              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary-400/20 to-transparent translate-y-[-100%] group-hover:translate-y-[100%] transition-transform duration-1000 ease-in-out" />
+              {/* Scanline effect inside logo - Hide if reduced motion */}
+              {!reducedMotion && (
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary-400/20 to-transparent translate-y-[-100%] group-hover:translate-y-[100%] transition-transform duration-1000 ease-in-out" />
+              )}
             </div>
             
             <div className="flex flex-col">
@@ -136,12 +165,73 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   </div>
                </button>
 
+                {/* Settings Trigger */}
+                <div className="relative">
+                    <button 
+                        onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                        className={`p-2 rounded hover:bg-zinc-800 transition-colors ${isSettingsOpen ? 'bg-zinc-800 text-white' : 'text-zinc-500'}`}
+                        aria-label="Settings"
+                    >
+                        <Settings size={16} />
+                    </button>
+                    
+                    {/* Settings Dropdown */}
+                    {isSettingsOpen && (
+                        <div className="absolute right-0 top-full mt-2 w-64 bg-black border border-zinc-700 shadow-2xl rounded-lg p-3 z-50 animate-in fade-in zoom-in-95">
+                            <div className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-3 pb-2 border-b border-zinc-800">
+                                Visual & Accessibility
+                            </div>
+                            <div className="space-y-2 mb-4">
+                                <button 
+                                    onClick={() => setReducedMotion(!reducedMotion)}
+                                    className="w-full flex items-center justify-between text-left p-2 hover:bg-zinc-900 rounded text-xs text-zinc-300"
+                                >
+                                    <div className="flex items-center gap-2"><ZapOff size={14} /> Reduced Motion</div>
+                                    <div className={`w-2 h-2 rounded-full ${reducedMotion ? 'bg-emerald-500' : 'bg-zinc-700'}`}></div>
+                                </button>
+                                <button 
+                                    onClick={() => setShowScanlines(!showScanlines)}
+                                    className="w-full flex items-center justify-between text-left p-2 hover:bg-zinc-900 rounded text-xs text-zinc-300"
+                                >
+                                    <div className="flex items-center gap-2"><Monitor size={14} /> Scanlines</div>
+                                    <div className={`w-2 h-2 rounded-full ${showScanlines ? 'bg-emerald-500' : 'bg-zinc-700'}`}></div>
+                                </button>
+                            </div>
+
+                            <div className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-3 pb-2 border-b border-zinc-800">
+                                Data Management
+                            </div>
+                            <div className="space-y-2">
+                                <button 
+                                    onClick={exportUserData}
+                                    className="w-full flex items-center gap-2 p-2 hover:bg-zinc-900 rounded text-xs text-zinc-300"
+                                >
+                                    <Download size={14} /> Backup Data (JSON)
+                                </button>
+                                <button 
+                                    onClick={handleImportClick}
+                                    className="w-full flex items-center gap-2 p-2 hover:bg-zinc-900 rounded text-xs text-zinc-300"
+                                >
+                                    <Upload size={14} /> Restore Data
+                                </button>
+                                <input 
+                                  type="file" 
+                                  ref={fileInputRef} 
+                                  className="hidden" 
+                                  accept=".json" 
+                                  onChange={handleFileChange}
+                                />
+                            </div>
+                        </div>
+                    )}
+                </div>
+
                <div className="hidden md:flex flex-col items-end">
                   <div className="flex items-center gap-1.5">
                      <span className="w-1.5 h-1.5 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-pulse"></span>
                      <span className="text-[10px] text-zinc-400 font-mono tracking-widest">ONLINE</span>
                   </div>
-                  <span className="text-[9px] text-zinc-700 font-mono">V.2.0.5.BUILD</span>
+                  <span className="text-[9px] text-zinc-700 font-mono">V.2.2.0</span>
                </div>
             </div>
           </div>
@@ -226,7 +316,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       </footer>
       
       {/* Real-time social proof ticker */}
-      <LiveTicker />
+      {!reducedMotion && <LiveTicker />}
     </div>
   );
 };

@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Crosshair, Trophy, MousePointer2, Target, Activity, RefreshCcw } from 'lucide-react';
+import { Crosshair, Trophy, MousePointer2, Target, Activity, RefreshCcw, Smartphone } from 'lucide-react';
 import { saveStat, getHistory } from '../../lib/core';
 import { playUiSound } from '../../lib/sounds';
 import { LineChart, Line, YAxis, ResponsiveContainer } from 'recharts';
+import CountdownOverlay from '../CountdownOverlay';
 
 interface TargetObj {
   id: number;
@@ -28,7 +29,8 @@ interface TrackingTarget {
 
 const AimTrainerTest: React.FC = () => {
   const [mode, setMode] = useState<'gridshot' | 'tracking'>('gridshot');
-  const [phase, setPhase] = useState<'intro' | 'play' | 'result'>('intro');
+  const [phase, setPhase] = useState<'intro' | 'countdown' | 'play' | 'result'>('intro');
+  const [isMobile, setIsMobile] = useState(false);
   
   // Gridshot Stats
   const [targets, setTargets] = useState<TargetObj[]>([]);
@@ -52,6 +54,16 @@ const AimTrainerTest: React.FC = () => {
   const SPAWN_LIMIT = 30; // 30 seconds game
   const TARGET_COUNT = 3; 
 
+  // Mobile Detection
+  useEffect(() => {
+      const checkMobile = () => {
+          setIsMobile(window.matchMedia('(max-width: 768px)').matches);
+      };
+      checkMobile();
+      window.addEventListener('resize', checkMobile);
+      return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   // Cleanup
   useEffect(() => {
       return () => {
@@ -59,6 +71,10 @@ const AimTrainerTest: React.FC = () => {
           if (rafRef.current) cancelAnimationFrame(rafRef.current);
       };
   }, []);
+
+  const initiateGame = () => {
+      setPhase('countdown');
+  };
 
   const startGame = () => {
       setScore(0);
@@ -99,8 +115,9 @@ const AimTrainerTest: React.FC = () => {
       setTimeout(() => setHitmarkers(prev => prev.filter(h => h.id !== id)), 800);
   };
 
-  const handleTargetClick = (e: React.MouseEvent, tId: number, bornTime: number) => {
+  const handleTargetClick = (e: React.MouseEvent | React.TouchEvent, tId: number, bornTime: number) => {
       e.stopPropagation();
+      // Handle potential double fire from touch events
       if (phase !== 'play' || mode !== 'gridshot') return;
       
       playUiSound('success');
@@ -115,7 +132,17 @@ const AimTrainerTest: React.FC = () => {
       // Spawn hitmarker at mouse position relative to container
       if (containerRef.current) {
           const rect = containerRef.current.getBoundingClientRect();
-          spawnHitmarker(e.clientX - rect.left, e.clientY - rect.top, `${reaction}ms`);
+          let clientX, clientY;
+          
+          if ('touches' in e) {
+              clientX = e.touches[0].clientX;
+              clientY = e.touches[0].clientY;
+          } else {
+              clientX = (e as React.MouseEvent).clientX;
+              clientY = (e as React.MouseEvent).clientY;
+          }
+
+          spawnHitmarker(clientX - rect.left, clientY - rect.top, `${reaction}ms`);
       }
       
       setTargets(prev => prev.map(t => t.id === tId ? generateTarget() : t));
@@ -154,12 +181,21 @@ const AimTrainerTest: React.FC = () => {
   };
 
   const mousePos = useRef({x: 0, y: 0});
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handleMouseMove = (e: React.MouseEvent | React.TouchEvent) => {
       if (containerRef.current) {
           const rect = containerRef.current.getBoundingClientRect();
+          let clientX, clientY;
+          if ('touches' in e) {
+              clientX = e.touches[0].clientX;
+              clientY = e.touches[0].clientY;
+          } else {
+              clientX = (e as React.MouseEvent).clientX;
+              clientY = (e as React.MouseEvent).clientY;
+          }
+          
           mousePos.current = {
-              x: e.clientX - rect.left,
-              y: e.clientY - rect.top
+              x: clientX - rect.left,
+              y: clientY - rect.top
           };
       }
   };
@@ -221,7 +257,10 @@ const AimTrainerTest: React.FC = () => {
   const trackingAccuracy = Math.round((trackingScore / 30000) * 100);
 
   return (
-    <div className="w-full max-w-4xl mx-auto select-none">
+    <div className="w-full max-w-4xl mx-auto select-none relative">
+       
+       <CountdownOverlay isActive={phase === 'countdown'} onComplete={startGame} />
+
        {phase === 'intro' && (
            <div className="max-w-xl mx-auto text-center py-12 animate-in fade-in zoom-in">
                <div className="w-24 h-24 bg-zinc-900 border border-zinc-700 rounded-full flex items-center justify-center mx-auto mb-6 relative">
@@ -232,6 +271,15 @@ const AimTrainerTest: React.FC = () => {
                <p className="text-zinc-400 mb-8 max-w-md mx-auto">
                    Calibrate your mouse control.
                </p>
+               
+               {isMobile && (
+                   <div className="mb-8 p-4 bg-yellow-900/20 border border-yellow-500/30 rounded-lg text-sm text-yellow-200 flex items-center gap-3 text-left">
+                       <Smartphone size={24} className="shrink-0" />
+                       <div>
+                           <strong>Mobile Detected:</strong> This test is designed for mouse & keyboard. Accuracy may be affected by touch input.
+                       </div>
+                   </div>
+               )}
                
                <div className="flex justify-center gap-4 mb-8">
                    <button 
@@ -252,13 +300,13 @@ const AimTrainerTest: React.FC = () => {
                    </button>
                </div>
 
-               <button onClick={startGame} className="btn-primary flex items-center gap-2 mx-auto">
+               <button onClick={initiateGame} className="btn-primary flex items-center gap-2 mx-auto">
                    <MousePointer2 size={18} /> Start Round
                </button>
            </div>
        )}
 
-       {phase === 'play' && (
+       {(phase === 'play' || phase === 'countdown') && (
            <div className="relative">
                {/* HUD */}
                <div className="flex justify-between items-center mb-4 bg-black border border-zinc-800 p-4 clip-corner-sm">
@@ -281,7 +329,9 @@ const AimTrainerTest: React.FC = () => {
                   ref={containerRef}
                   onMouseDown={handleBackgroundClick}
                   onMouseMove={handleMouseMove}
-                  className="w-full h-[500px] bg-zinc-950 border border-zinc-800 relative overflow-hidden cursor-crosshair shadow-[inset_0_0_50px_rgba(0,0,0,0.5)] rounded-lg"
+                  onTouchStart={(e) => { handleBackgroundClick(); handleMouseMove(e); }}
+                  onTouchMove={handleMouseMove}
+                  className="w-full h-[500px] bg-zinc-950 border border-zinc-800 relative overflow-hidden cursor-crosshair shadow-[inset_0_0_50px_rgba(0,0,0,0.5)] rounded-lg touch-none"
                >
                    <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:50px_50px] pointer-events-none"></div>
 
@@ -301,6 +351,7 @@ const AimTrainerTest: React.FC = () => {
                        <div
                           key={t.id}
                           onMouseDown={(e) => handleTargetClick(e, t.id, t.born)}
+                          onTouchStart={(e) => handleTargetClick(e, t.id, t.born)}
                           className="absolute w-16 h-16 -translate-x-1/2 -translate-y-1/2 rounded-full bg-zinc-900 border-2 border-primary-500 flex items-center justify-center cursor-pointer active:scale-95 transition-transform duration-75 z-10 animate-in zoom-in-50 duration-100 group"
                           style={{ left: `${t.x}%`, top: `${t.y}%` }}
                        >
@@ -370,7 +421,7 @@ const AimTrainerTest: React.FC = () => {
                    </ResponsiveContainer>
                </div>
 
-               <button onClick={startGame} className="btn-secondary w-full flex items-center justify-center gap-2">
+               <button onClick={initiateGame} className="btn-secondary w-full flex items-center justify-center gap-2">
                    <RefreshCcw size={16} /> Restart Round
                </button>
            </div>
