@@ -1,8 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, Music, RefreshCw, Volume2, AlertCircle, Check, X, ArrowUp, ArrowDown } from 'lucide-react';
+import { Mic, Music, RefreshCw, Volume2 } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 const NOTES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+
+interface SingerProfile {
+  name: string;
+  range: string;
+  note: string;
+}
 
 // Standard Vocal Ranges
 const VOCAL_TYPES = [
@@ -14,7 +20,7 @@ const VOCAL_TYPES = [
   { name: "Soprano", min: 260, max: 1050, desc: "Highest female voice. Bright and agile.", color: "text-fuchsia-500" } // C4-C6
 ];
 
-const FAMOUS_SINGERS = [
+const FAMOUS_SINGERS: SingerProfile[] = [
   { name: "Axl Rose", range: "F1-B6", note: "Incredible 6 octave range" },
   { name: "Mariah Carey", range: "F2-G7", note: "Known for the whistle register" },
   { name: "Freddie Mercury", range: "F2-F6", note: "Legendary control and power" },
@@ -31,7 +37,7 @@ type Step = 'intro' | 'mic-check' | 'low-test' | 'high-test' | 'result';
 
 const VocalRangeTest: React.FC = () => {
   const [step, setStep] = useState<Step>('intro');
-  const [isListening, setIsListening] = useState(false);
+  const [, setIsListening] = useState(false); // Used setter only
   
   // Live Audio Data
   const [pitch, setPitch] = useState<{freq: number, note: string, cents: number} | null>(null);
@@ -43,7 +49,8 @@ const VocalRangeTest: React.FC = () => {
   
   // System
   const [error, setError] = useState('');
-  const [noiseThreshold, setNoiseThreshold] = useState(-50); // dB
+  // Fixed threshold, setter removed to avoid TS error
+  const noiseThreshold = -50; // dB
   
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyzerRef = useRef<AnalyserNode | null>(null);
@@ -311,13 +318,13 @@ const VocalRangeTest: React.FC = () => {
       }
   };
 
-  const findClosestSinger = () => {
+  const findClosestSinger = (): SingerProfile | null => {
       if (!lowRecord || !highRecord) return null;
       const userLow = freqToMidi(lowRecord.freq);
       const userHigh = freqToMidi(highRecord.freq);
       const userCenter = (userLow + userHigh) / 2;
 
-      let bestMatch = null;
+      let bestMatch: SingerProfile | null = null;
       let minDiff = Infinity;
 
       FAMOUS_SINGERS.forEach(singer => {
