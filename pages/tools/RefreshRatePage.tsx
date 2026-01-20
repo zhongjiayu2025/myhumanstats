@@ -163,7 +163,7 @@ const RefreshRatePage: React.FC = () => {
                 <div className="bg-zinc-900/30 p-4 border border-zinc-800 rounded">
                    <strong className="block text-white mb-1 text-sm">240+ Hz</strong>
                    <span className="text-zinc-500">Esports Grade</span>
-                   <br/>Update every <4ms. Diminishing returns but elite responsiveness.
+                   <br/>Update every &lt;4ms. Diminishing returns but elite responsiveness.
                 </div>
              </div>
           </div>
