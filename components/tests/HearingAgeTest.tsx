@@ -57,7 +57,7 @@ const HearingAgeTest: React.FC = () => {
 
   // --- Initialization & Cleanup ---
   useEffect(() => {
-    // Just initialize audio context to unlock it if possible, no need to store sampleRate if unused
+    // Just initialize audio context to unlock it if possible
     const tempCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
     tempCtx.close();
 
