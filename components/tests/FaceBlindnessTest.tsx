@@ -46,7 +46,7 @@ const FaceBlindnessTest: React.FC = () => {
       };
   };
 
-  const startLevel = (lvl: number) => {
+  const startLevel = () => {
       // Create target
       const target = generateFace(0);
       setTargetFace(target);
@@ -87,7 +87,7 @@ const FaceBlindnessTest: React.FC = () => {
           setScore(s => s + 1);
           if (level < 10) {
               setLevel(l => l + 1);
-              startLevel(level + 1);
+              startLevel();
           } else {
               finish(true);
           }
@@ -138,7 +138,7 @@ const FaceBlindnessTest: React.FC = () => {
                    Test your ability to recognize facial features (Prosopagnosia).
                    <br/>You will see a target face, then identify it among similar lookalikes.
                </p>
-               <button onClick={() => startLevel(1)} className="btn-primary">Start Identification</button>
+               <button onClick={() => startLevel()} className="btn-primary">Start Identification</button>
            </div>
        )}
 
