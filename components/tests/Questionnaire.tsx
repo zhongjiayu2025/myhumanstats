@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Check, ChevronRight } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 interface Question {
@@ -20,7 +20,6 @@ interface QuestionnaireProps {
 const Questionnaire: React.FC<QuestionnaireProps> = ({ 
   testId, 
   questions, 
-  title, 
   resultTitle, 
   resultDescription,
   maxScorePerQuestion = 5

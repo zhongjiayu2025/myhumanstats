@@ -9,14 +9,17 @@ interface StatsRadarProps {
 const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
+    // Handle potential missing value if hovering over the ghost radar
+    const value = payload.find((p: any) => p.dataKey === 'score')?.value || 0;
+    
     return (
       <div className="bg-black/90 border border-primary-500/30 p-3 shadow-[0_0_15px_rgba(6,182,212,0.15)] backdrop-blur-md">
         <div className="flex items-center justify-between gap-4 mb-1">
           <span className="font-mono text-xs text-primary-400 uppercase tracking-wider">{data.category}</span>
-          <span className="font-mono text-xs font-bold text-white">{payload[0].value}</span>
+          <span className="font-mono text-xs font-bold text-white">{value}</span>
         </div>
         <div className="w-full bg-zinc-800 h-0.5 mt-1">
-          <div className="bg-primary-500 h-0.5" style={{ width: `${payload[0].value}%` }}></div>
+          <div className="bg-primary-500 h-0.5" style={{ width: `${value}%` }}></div>
         </div>
       </div>
     );
@@ -26,7 +29,12 @@ const CustomTooltip = ({ active, payload }: any) => {
 
 const StatsRadar: React.FC<StatsRadarProps> = ({ data }) => {
   const hasData = data.some(d => d.score > 0);
-  const ghostData = data.map(d => ({ ...d, score: 100 }));
+  
+  // Augment data with a 'fullMark' property for the background chart
+  const chartData = data.map(d => ({
+    ...d,
+    fullMark: 100
+  }));
 
   return (
     <div className="w-full h-[350px] md:h-[450px] relative select-none">
@@ -50,7 +58,7 @@ const StatsRadar: React.FC<StatsRadarProps> = ({ data }) => {
       )}
       
       <ResponsiveContainer width="100%" height="100%">
-        <RadarChart cx="50%" cy="50%" outerRadius="70%" data={data}>
+        <RadarChart cx="50%" cy="50%" outerRadius="70%" data={chartData}>
           <PolarGrid stroke="#27272a" strokeWidth={1} />
           <PolarAngleAxis 
             dataKey="category" 
@@ -59,15 +67,16 @@ const StatsRadar: React.FC<StatsRadarProps> = ({ data }) => {
           />
           <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
           
+          {/* Max Range (Ghost) Radar */}
           <Radar
             name="Max"
-            data={ghostData}
-            dataKey="score"
+            dataKey="fullMark"
             stroke="#27272a"
             strokeWidth={1}
             fill="transparent"
           />
 
+          {/* User Stats Radar */}
           <Radar
             name="My Stats"
             dataKey="score"

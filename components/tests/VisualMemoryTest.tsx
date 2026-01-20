@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Grid, Eye, Play } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 const VisualMemoryTest: React.FC = () => {
@@ -14,15 +13,12 @@ const VisualMemoryTest: React.FC = () => {
        generateLevel();
        const timer = setTimeout(() => {
           setPhase('recall');
-       }, 1000 + (level * 200)); // Time increases slightly with level? Or stays constant to make hard? Let's keep reasonable.
+       }, 1000 + (level * 200)); 
        return () => clearTimeout(timer);
     }
   }, [phase, level]);
 
   const generateLevel = () => {
-     // Level 1-2: 3x3, 3 tiles
-     // Level 3-5: 4x4, 4-5 tiles
-     // Level 6+: 5x5...
      const size = Math.min(6, 3 + Math.floor((level - 1) / 3));
      const tilesCount = 3 + Math.floor(level / 2);
      
@@ -62,7 +58,6 @@ const VisualMemoryTest: React.FC = () => {
   };
 
   const saveScore = () => {
-     // Max level reasonably 15?
      const score = Math.min(100, Math.round((level / 15) * 100));
      saveStat('visual-memory', score);
   };
@@ -109,7 +104,14 @@ const VisualMemoryTest: React.FC = () => {
                {Array.from({ length: gridSize * gridSize }).map((_, i) => {
                   const isActive = phase === 'memorize' && pattern.includes(i);
                   const isSelected = userPattern.includes(i);
-                  const isWrong = phase === 'gameover' && !pattern.includes(i) && isSelected; // Simplified logic as we stop on first error
+                  
+                  // Fix for TS2367: Use an explicit boolean logic rather than implicit string literal comparison if types are narrow
+                  // Actually the error was due to 'phase' being strictly narrowed in map function context possibly?
+                  // No, the error likely came from comparing phase (which is 'memorize'|'recall'...) to 'gameover' inside a scope where TS thought it couldn't be 'gameover'.
+                  // However, since phase IS typed to include 'gameover', it should be fine unless narrowed by early return.
+                  // We can simplify by just checking isSelected && !pattern.includes(i) which implies wrong choice in recall phase.
+                  // Or just use the prop to style "wrong" if we wanted to show it.
+                  // Since we immediately switch phase to 'gameover' on wrong click, we can just use that.
                   
                   return (
                      <div 

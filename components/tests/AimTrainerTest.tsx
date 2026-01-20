@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Crosshair, Target, Trophy, MousePointer2 } from 'lucide-react';
+import { Crosshair, Trophy, MousePointer2 } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 interface TargetObj {

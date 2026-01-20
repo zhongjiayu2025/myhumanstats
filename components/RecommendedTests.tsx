@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import * as Icons from 'lucide-react';
-import { TestDefinition } from '../types';
 import { TESTS } from '../lib/core';
 
 interface RecommendedTestsProps {

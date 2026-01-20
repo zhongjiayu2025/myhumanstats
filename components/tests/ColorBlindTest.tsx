@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Eye, Check, X, RefreshCcw, AlertTriangle, Activity, Palette, Keyboard, ChevronRight } from 'lucide-react';
+import { Eye, Check, X, RefreshCcw, AlertTriangle, Keyboard } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 // --- Types ---
@@ -87,7 +87,7 @@ const ColorBlindTest: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [phase, inputBuffer]); // Dependency on inputBuffer to ensure state freshness is handled by setInputBuffer functional update, but good to include deps
+  }, [phase, inputBuffer]); 
 
   // --- Ishihara Generation Engine ---
   
@@ -434,9 +434,7 @@ const ColorBlindTest: React.FC = () => {
 
           {/* SEO Footer */}
           <div className="mt-12 border-t border-zinc-800 pt-6 text-left">
-              <h4 className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest mb-2 flex items-center gap-2">
-                 <Palette size={12} /> Clinical Context: Ishihara Plates
-              </h4>
+              <h4 className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest mb-2">Clinical Context: Ishihara Plates</h4>
               <p className="text-xs text-zinc-500 leading-relaxed">
                  This <strong>Color Blind Test</strong> is based on the <strong>Ishihara Test</strong> principles. It utilizes pseudoisochromatic plates to screen for <strong>Color Vision Deficiency (CVD)</strong>. The test creates confusion lines where colors appear indistinguishable to those with specific types of color blindness (Protanopia, Deuteranopia, Tritanopia). While accurate for screening, a comprehensive diagnosis requires a visit to an optometrist.
               </p>

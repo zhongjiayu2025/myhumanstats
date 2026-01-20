@@ -1,22 +1,19 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Eye, MousePointer2 } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Eye } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 const PeripheralVisionTest: React.FC = () => {
   const [phase, setPhase] = useState<'intro' | 'test' | 'result'>('intro');
-  const [score, setScore] = useState(0);
   const [targetsHit, setTargetsHit] = useState(0);
   const [missed, setMissed] = useState(0);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [targetPos, setTargetPos] = useState<{top: number, left: number} | null>(null);
-  const [isFixated, setIsFixated] = useState(true); // Hovering center
 
   // Game Logic
   const spawnTimer = useRef<number | null>(null);
   
   const startGame = () => {
-      setScore(0);
       setTargetsHit(0);
       setMissed(0);
       setPhase('test');

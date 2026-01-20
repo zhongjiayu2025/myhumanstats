@@ -16,7 +16,6 @@ const AttentionSpanTest: React.FC = () => {
   const timeoutRef = useRef<number | null>(null);
   const reactionStartRef = useRef<number>(0);
   const reactionTimesRef = useRef<number[]>([]);
-  const testDurationRef = useRef<number>(0);
   const testStartRef = useRef<number>(0);
 
   const TEST_LENGTH_MS = 30000; // 30 seconds for web version (Clinical is usually minutes)

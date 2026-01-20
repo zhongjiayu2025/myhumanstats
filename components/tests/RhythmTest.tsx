@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Activity, Play, MousePointer2, RefreshCcw, Zap, Music2, TrendingUp, TrendingDown, BarChart3 } from 'lucide-react';
+import { Activity, Play, MousePointer2, RefreshCcw, Music2, TrendingUp, BarChart3 } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 const RhythmTest: React.FC = () => {

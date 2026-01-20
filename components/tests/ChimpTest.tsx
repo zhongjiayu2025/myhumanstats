@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Brain, RotateCcw } from 'lucide-react';
+import { Brain } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 const ChimpTest: React.FC = () => {
@@ -56,14 +56,14 @@ const ChimpTest: React.FC = () => {
               setLevel(l => l + 1);
               startLevel(level + 1);
            } else {
-              finish(true);
+              finish();
            }
         }
      } else {
         // Wrong
         setStrikes(s => s + 1);
         if (strikes >= 2) {
-           finish(false);
+           finish();
         } else {
            // Restart same level or downgrade? usually continue but strikes count
            // Simple version: Reset to same level
@@ -72,7 +72,7 @@ const ChimpTest: React.FC = () => {
      }
   };
 
-  const finish = (win: boolean) => {
+  const finish = () => {
      setPhase('result');
      // Max level ~15-20. 
      const score = Math.min(100, Math.round((level / 15) * 100));

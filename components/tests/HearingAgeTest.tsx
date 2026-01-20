@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Play, Square, RefreshCcw, Volume2, AlertTriangle, Ear, Sliders, Keyboard, Share2, Check } from 'lucide-react';
+import { Play, RefreshCcw, AlertTriangle, Sliders, Keyboard, Share2, Check } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 import ShareCard from '../ShareCard';
 
@@ -48,7 +48,7 @@ const HearingAgeTest: React.FC = () => {
       stopAudio();
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isPlaying, warningAccepted, result, mode]); // Deps needed for closure
+  }, [isPlaying, warningAccepted, result, mode]); 
 
   const initAudio = () => {
     if (!audioContextRef.current) {

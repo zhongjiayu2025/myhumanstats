@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Contrast, ArrowRight } from 'lucide-react';
+import { Contrast } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 const LETTERS = ['C', 'O', 'D', 'H', 'K', 'N', 'R', 'S', 'V', 'Z'];
@@ -16,7 +16,7 @@ const ContrastTest: React.FC = () => {
       return Math.max(0.005, 0.2 * Math.pow(0.7, lvl - 1));
   };
 
-  const startLevel = (lvl: number) => {
+  const startLevel = () => {
       const letter = LETTERS[Math.floor(Math.random() * LETTERS.length)];
       setCurrentLetter(letter);
       
@@ -34,16 +34,16 @@ const ContrastTest: React.FC = () => {
       if (guess === currentLetter) {
           if (level < 20) {
               setLevel(l => l + 1);
-              startLevel(level + 1);
+              startLevel();
           } else {
-              finish(true);
+              finish();
           }
       } else {
-          finish(false);
+          finish();
       }
   };
 
-  const finish = (win: boolean) => {
+  const finish = () => {
       setPhase('result');
       // Score based on level. Normal contrast sensitivity usually allows seeing down to ~1-2%
       // Level 10 ~ 0.8%. 
@@ -61,7 +61,7 @@ const ContrastTest: React.FC = () => {
                    Can you see the hidden letters?
                    <br/>The letters will become increasingly faint (lower contrast) against the grey background.
                </p>
-               <button onClick={() => startLevel(1)} className="btn-primary">Start</button>
+               <button onClick={() => startLevel()} className="btn-primary">Start</button>
            </div>
        )}
 

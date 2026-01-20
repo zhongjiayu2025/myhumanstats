@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, StopCircle, RefreshCw, Music, Info, MicOff, Volume2, AlertCircle } from 'lucide-react';
+import { Mic, MicOff, Music, Info, AlertCircle } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 const NOTES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
@@ -287,8 +287,8 @@ const VocalRangeTest: React.FC = () => {
     const startMidi = 36; // C2
     const endMidi = 84;   // C6
     
-    const whiteKeys = [];
-    const blackKeys = [];
+    const whiteKeys: { midi: number, note: string }[] = [];
+    const blackKeys: { midi: number }[] = [];
 
     // Pre-calculate keys
     for (let i = startMidi; i <= endMidi; i++) {
@@ -340,22 +340,9 @@ const VocalRangeTest: React.FC = () => {
             </div>
 
             {/* Black Keys Layer (Overlay) */}
-            {/* Logic: A black key sits between two white keys.
-                In an octave of 7 white keys, black keys are at positions:
-                Between 1-2 (C-D), 2-3 (D-E), 4-5 (F-G), 5-6 (G-A), 6-7 (A-B).
-                Visually, if white key width is W.
-                C# is at W * 0.7 roughly.
-                We can calculate precise left % based on the white key index.
-            */}
             {blackKeys.map((key) => {
                 // Find index of the white key just BEFORE this black key
                 const whiteIndex = whiteKeys.findIndex(w => w.midi === key.midi - 1);
-                
-                // Calculate position: 
-                // We have `whiteKeys.length` total slots. 
-                // Each white key is 1 unit width.
-                // Black key is roughly 0.6 unit width.
-                // Center of black key should be at border of white key `whiteIndex` and `whiteIndex+1`.
                 
                 const widthPercent = (1 / whiteKeys.length) * 100; // Width of one white key
                 const leftPercent = (whiteIndex + 1) * widthPercent - (widthPercent * 0.3); // Offset left by half black key width
@@ -522,5 +509,8 @@ const VocalRangeTest: React.FC = () => {
     </div>
   );
 };
+
+// Add RefreshCw icon manually since it was removed from import but used in reset button
+import { RefreshCw } from 'lucide-react';
 
 export default VocalRangeTest;

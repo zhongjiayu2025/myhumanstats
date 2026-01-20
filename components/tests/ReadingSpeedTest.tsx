@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { BookOpen, Timer, Check, X, FileText } from 'lucide-react';
+import React, { useState } from 'react';
+import { BookOpen, Timer, FileText } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 const TEXT_SOURCE = {

@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Music, Play, Volume2 } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Music, Volume2 } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 const NOTES = [

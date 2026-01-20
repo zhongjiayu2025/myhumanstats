@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Music, ArrowUp, ArrowDown, Play, Check, X, RotateCcw, Volume2, Ear, BarChart3, Info } from 'lucide-react';
+import { ArrowUp, ArrowDown, Play, Check, X, RotateCcw, Volume2, Ear, BarChart3, Info } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 const ToneDeafTest: React.FC = () => {
   const [stage, setStage] = useState<'intro' | 'playing' | 'guessing' | 'feedback' | 'result'>('intro');
   const [level, setLevel] = useState(1);
   const [score, setScore] = useState(0);
-  const [hzDiff, setHzDiff] = useState(0);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [frequencies, setFrequencies] = useState<{f1: number, f2: number} | null>(null);
   
   const [correctAnswer, setCorrectAnswer] = useState<'higher' | 'lower'>('higher');
@@ -119,7 +119,6 @@ const ToneDeafTest: React.FC = () => {
     if (ctx.state === 'suspended') await ctx.resume();
 
     const diff = getDiffForLevel(level);
-    setHzDiff(diff);
     
     // Randomize: Is second tone higher or lower?
     const isHigher = Math.random() > 0.5;
@@ -231,15 +230,6 @@ const ToneDeafTest: React.FC = () => {
       setStage('intro');
   };
 
-  // UI Helpers
-  const getHzDescription = (diff: number) => {
-      if (diff > 30) return "Beginner";
-      if (diff > 15) return "Standard";
-      if (diff > 8) return "Advanced";
-      if (diff > 3) return "Expert";
-      return "Virtuoso";
-  };
-
   return (
     <div className="max-w-xl mx-auto text-center select-none">
       
@@ -270,7 +260,6 @@ const ToneDeafTest: React.FC = () => {
       {/* Main Area */}
       <div className="relative min-h-[360px] flex flex-col items-center justify-center">
         
-        {/* Intro Stage */}
         {stage === 'intro' && (
             <div className="space-y-6 animate-in fade-in zoom-in duration-300">
                 <div className="w-20 h-20 bg-zinc-900 rounded-full flex items-center justify-center mx-auto border border-zinc-800 shadow-inner">

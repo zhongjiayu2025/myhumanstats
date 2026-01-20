@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { Type } from 'lucide-react';
+import React, { useState } from 'react';
 import { saveStat } from '../../lib/core';
 
 const COLORS = [

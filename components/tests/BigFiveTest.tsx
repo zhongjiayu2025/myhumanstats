@@ -16,7 +16,7 @@ const BigFiveTest: React.FC = () => {
        questions={QUESTIONS}
        title="Big 5 Traits"
        resultTitle={(score) => score > 70 ? "Balanced Personality" : "Distinct Personality"}
-       resultDescription={(score) => 
+       resultDescription={() => 
           "This simplified test aggregates your Openness, Conscientiousness, Extraversion, Agreeableness, and Neuroticism into a single stability score. A comprehensive profile requires a 60+ question assessment."
        }
     />

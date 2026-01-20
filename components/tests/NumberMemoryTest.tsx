@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Hash, Check, X, Play, ArrowRight, Brain } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Hash, ArrowRight } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 const NumberMemoryTest: React.FC = () => {
@@ -9,8 +9,6 @@ const NumberMemoryTest: React.FC = () => {
   const [input, setInput] = useState('');
   const [timeLeft, setTimeLeft] = useState(0);
   const [maxTime, setMaxTime] = useState(0);
-
-  const progressBarRef = useRef<number>(0);
 
   const startLevel = (lvl: number) => {
     // Generate number: level 1 = 1 digit, level 2 = 2 digits...
@@ -27,7 +25,7 @@ const NumberMemoryTest: React.FC = () => {
     
     // Time to memorize: 1000ms + 500ms per digit roughly? 
     // Or constant time? Standard is ~2-3 seconds usually.
-    // Let's do: 1500ms + (length * 500ms)
+    // Let's do: 1500ms + (length * 600ms)
     const duration = 1000 + (length * 600);
     setMaxTime(duration);
     setTimeLeft(duration);

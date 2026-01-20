@@ -1,5 +1,5 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { Download, Share2, Loader2 } from 'lucide-react';
+import React, { useRef, useEffect } from 'react';
+import { Download, Share2 } from 'lucide-react';
 
 interface ShareCardProps {
   testName: string;
@@ -15,7 +15,6 @@ const ShareCard: React.FC<ShareCardProps> = ({
   color = '#06b6d4' 
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isGenerated, setIsGenerated] = useState(false);
 
   useEffect(() => {
     generateCard();
@@ -104,8 +103,6 @@ const ShareCard: React.FC<ShareCardProps> = ({
     ctx.beginPath(); ctx.moveTo(pad, pad + cornerSize); ctx.lineTo(pad, pad); ctx.lineTo(pad + cornerSize, pad); ctx.stroke();
     // BR
     ctx.beginPath(); ctx.moveTo(width-pad, height-pad-cornerSize); ctx.lineTo(width-pad, height-pad); ctx.lineTo(width-pad-cornerSize, height-pad); ctx.stroke();
-
-    setIsGenerated(true);
   };
 
   const handleDownload = () => {

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { User, Users, Check, X, ScanFace } from 'lucide-react';
+import React, { useState } from 'react';
+import { ScanFace } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 interface FaceParams {
@@ -20,9 +20,7 @@ const FaceBlindnessTest: React.FC = () => {
   const [score, setScore] = useState(0);
   const [message, setMessage] = useState('');
 
-  const generateFace = (id: number, difficulty: number): FaceParams => {
-     // High difficulty = subtle differences
-     // Low difficulty = distinct features
+  const generateFace = (id: number): FaceParams => {
      return {
         id,
         eyeSpacing: 0.8 + Math.random() * 0.4,
@@ -50,21 +48,14 @@ const FaceBlindnessTest: React.FC = () => {
 
   const startLevel = (lvl: number) => {
       // Create target
-      const target = generateFace(0, lvl);
+      const target = generateFace(0);
       setTargetFace(target);
       setPhase('memorize');
-      
-      // Timer to auto-switch? Or click to continue
-      // Let's do click to continue for accessibility
   };
 
   const startIdentify = () => {
       if (!targetFace) return;
       
-      // Generate distractors
-      // Level 1: Very different
-      // Level 10: Very similar
-      const similarity = Math.min(0.9, 0.1 * level); 
       const variance = 10 - (level * 0.8); // Large variance at level 1, small at level 10
       
       const distractors = [];
@@ -76,7 +67,7 @@ const FaceBlindnessTest: React.FC = () => {
          if (level > 3) {
              distractors.push(generateVariant(targetFace, i, variance));
          } else {
-             distractors.push(generateFace(i, 0));
+             distractors.push(generateFace(i));
          }
       }
       
@@ -113,8 +104,6 @@ const FaceBlindnessTest: React.FC = () => {
   };
 
   const RenderFace = ({ face, size = 150 }: { face: FaceParams, size?: number }) => {
-      // Procedural SVG Face
-      const scale = size / 100;
       return (
           <svg width={size} height={size} viewBox="0 0 100 100" className="bg-zinc-200 rounded-lg shadow-inner">
              {/* Head Shape - varied by faceShape */}

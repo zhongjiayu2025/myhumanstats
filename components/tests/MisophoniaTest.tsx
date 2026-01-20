@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Volume2, VolumeX, Activity, AlertTriangle, ShieldAlert, Play, Square, Headphones, BarChart3, Wind } from 'lucide-react';
+import { Volume2, Activity, AlertTriangle, ShieldAlert, Play, Square, Headphones, Wind } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 // --- Types ---
