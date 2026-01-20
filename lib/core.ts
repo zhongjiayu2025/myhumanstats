@@ -22,6 +22,18 @@ export const TESTS: TestDefinition[] = [
       "Noise Exposure Tracking: Early loss of frequencies >16kHz may indicate damage from loud music or industrial noise.",
       "Cochlear Health: Specifically tests the function of stereocilia at the basal turn of the cochlea."
     ],
+    benchmarks: {
+      title: "Average High-Frequency Hearing Limit by Age",
+      columns: ["Age Group", "Frequency Limit", "Status"],
+      rows: [
+        ["Under 20", "> 19,000 Hz", "Excellent"],
+        ["20 - 29", "17,000 - 19,000 Hz", "Normal"],
+        ["30 - 39", "15,000 - 17,000 Hz", "Normal"],
+        ["40 - 49", "12,000 - 15,000 Hz", "Mild Decline"],
+        ["50 - 59", "10,000 - 12,000 Hz", "Moderate Decline"],
+        ["60+", "< 10,000 Hz", "Expected Decline"]
+      ]
+    },
     concepts: [
       { term: "Presbycusis", definition: "The cumulative effect of aging on hearing, characterized by the progressive loss of high-frequency sensitivity due to hair cell degradation in the cochlea." },
       { term: "Hertz (Hz)", definition: "The unit of frequency in the International System of Units (SI), equal to one cycle per second. Humans typically hear between 20 Hz and 20,000 Hz." },
@@ -49,46 +61,6 @@ export const TESTS: TestDefinition[] = [
     seoContent: `
       <h2>What is a Hearing Age Test?</h2>
       <p>A Hearing Age Test measures your ability to hear high-frequency sounds, specifically those above 8,000 Hertz. As we age, the microscopic hair cells (stereocilia) in our inner ear that are responsible for detecting high-pitched sounds naturally degrade. This condition is known as Presbycusis.</p>
-      
-      <h3>Average Hearing Frequency Limit by Age</h3>
-      <p>The following table shows the typical upper frequency limit for healthy ears across different age groups. Compare your result below.</p>
-      
-      <table>
-        <thead>
-          <tr>
-            <th>Age Group</th>
-            <th>Frequency Limit (Hz)</th>
-            <th>Common Reference</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Under 20</td>
-            <td>19,000 - 22,000 Hz</td>
-            <td>Dog Whistle / Anti-Loitering Alarm</td>
-          </tr>
-          <tr>
-            <td>20 - 29 Years</td>
-            <td>17,000 - 19,000 Hz</td>
-            <td>Mosquito Tone (17.4kHz)</td>
-          </tr>
-          <tr>
-            <td>30 - 39 Years</td>
-            <td>15,000 - 17,000 Hz</td>
-            <td>CRT TV Whine</td>
-          </tr>
-          <tr>
-            <td>40 - 49 Years</td>
-            <td>12,000 - 15,000 Hz</td>
-            <td>Crickets / High Pitched Singing</td>
-          </tr>
-          <tr>
-            <td>50+ Years</td>
-            <td>&lt; 12,000 Hz</td>
-            <td>Standard Speech Clarity</td>
-          </tr>
-        </tbody>
-      </table>
       
       <h3>How This Test Works</h3>
       <p>This online tool generates a pure sine wave that sweeps from 22,000 Hz down to 8,000 Hz. By pausing the generator the moment you can hear the sound, we can estimate the physiological age of your cochlea. Note that hardware limitations (cheap speakers/headphones) may affect results above 16kHz.</p>
@@ -163,19 +135,22 @@ export const TESTS: TestDefinition[] = [
       { term: "JND (Just Noticeable Difference)", definition: "The minimum difference in stimulation that a person can detect 50% of the time. In this test, it is the smallest Hz difference between two tones." },
       { term: "Cent", definition: "A logarithmic unit of measure for musical intervals. There are 100 cents in a semitone." }
     ],
+    benchmarks: {
+      title: "Frequency Discrimination Thresholds",
+      columns: ["Sensitivity Level", "JND (Hz at 440Hz)", "Musical Ability"],
+      rows: [
+        ["Elite", "< 2 Hz", "Professional Musician"],
+        ["High", "2 - 5 Hz", "Trained Ear"],
+        ["Average", "6 - 15 Hz", "Normal"],
+        ["Low", "16 - 25 Hz", "Untrained"],
+        ["Deficient", "> 26 Hz", "Possible Amusia"]
+      ]
+    },
     seoContent: `
       <h2>Understanding Tone Deafness (Amusia)</h2>
       <p>Tone deafness, or <strong>congenital amusia</strong>, is a biological condition that affects approximately 4% of the population. It is characterized by an inability to distinguish between musical pitches.</p>
-      
       <h3>How the Tone Deaf Test Works</h3>
       <p>This test measures your <strong>Just Noticeable Difference (JND)</strong> in frequency. We play two tones back-to-back. One is a reference tone (e.g., 440Hz), and the other is slightly detuned. Your task is to determine if the second tone is higher or lower.</p>
-      
-      <h3>Scoring Guide</h3>
-      <ul class="list-disc pl-5 space-y-2 text-zinc-400">
-        <li><strong>Professional Musicians:</strong> Often detect differences as small as 2-5 Hz (< 20 Cents).</li>
-        <li><strong>Average Listeners:</strong> Can detect differences of 10-15 Hz.</li>
-        <li><strong>Potential Amusia:</strong> Struggle to detect differences greater than 25-50 Hz (Quarter tone).</li>
-      </ul>
     `
   },
   {
@@ -242,16 +217,8 @@ export const TESTS: TestDefinition[] = [
     seoContent: `
       <h2>The Science of Color Blindness Tests</h2>
       <p>This <strong>Color Blind Test</strong> uses pseudoisochromatic plates, widely known as the <strong>Ishihara Test</strong>. It is designed to detect Color Vision Deficiency (CVD) by using dots of varying sizes and brightness, arranged to form a number that is only visible if you can distinguish specific colors.</p>
-      
-      <h3>Types of Color Vision Deficiency</h3>
-      <ul class="list-disc pl-5 space-y-2 text-zinc-400">
-        <li><strong>Protanopia (Red-Blind):</strong> A lack of functioning red cone cells. Red appears as black or dark grey.</li>
-        <li><strong>Deuteranopia (Green-Blind):</strong> The most common form of color blindness. Green comes appear red, making it hard to distinguish the two.</li>
-        <li><strong>Tritanopia (Blue-Blind):</strong> A rare condition where blue cone cells are missing. Blue and green are often confused, as are yellow and violet.</li>
-      </ul>
-      
       <h3>How Reliable is this Online Test?</h3>
-      <p>While this tool uses the same principles as a clinical examination, screen calibration can affect results. If you struggle with these plates, we recommend seeing an optometrist for a formal diagnosis. This tool is excellent for screening <strong>Red-Green Color Blindness</strong>, which affects approximately 8% of men worldwide.</p>
+      <p>While this tool uses the same principles as a clinical examination, screen calibration can affect results. If you struggle with these plates, we recommend seeing an optometrist for a formal diagnosis.</p>
     `
   },
   {
@@ -329,9 +296,6 @@ export const TESTS: TestDefinition[] = [
       <h2>The Limits of Spatial Working Memory</h2>
       <p>This <strong>Visual Memory Test</strong>, sometimes called a Spatial Span Test or the Corsi Block-Tapping Task, measures the capacity of your visuo-spatial sketchpad.</p>
       
-      <h3>The Magic Number 7?</h3>
-      <p>While the "Magic Number 7" (plus or minus two) is often cited for verbal memory (digits), visual memory capacity is often lower, typically around <strong>5 to 6 items</strong> for complex spatial patterns.</p>
-      
       <h3>Strategies for Improvement</h3>
       <p>High scorers on this test often use "chunking." Instead of memorizing 7 individual tiles, they memorize a shape (e.g., "a triangle pointing left" or "the letter T"). This compresses the information, allowing the brain to store more data in the same working memory slots.</p>
     `
@@ -344,19 +308,25 @@ export const TESTS: TestDefinition[] = [
     iconName: 'Crosshair',
     estimatedTime: '30 sec',
     isImplemented: true,
+    benchmarks: {
+      title: "Aim Speed & Accuracy Benchmarks",
+      columns: ["Skill Level", "Targets Hit (30s)", "Accuracy"],
+      rows: [
+        ["Pro Gamer", "60+", "> 95%"],
+        ["Advanced", "45 - 60", "90 - 95%"],
+        ["Average", "30 - 45", "85 - 90%"],
+        ["Beginner", "15 - 30", "< 85%"],
+        ["Novice", "< 15", "Variable"]
+      ]
+    },
     seoContent: `
       <h2>The Science of Hand-Eye Coordination</h2>
       <p>An <strong>Aim Trainer</strong> is more than just a tool for FPS gamers. It is a psychomotor assessment that measures the efficiency of your occulomotor loop—the connection between what your eyes see and how your hand muscles respond.</p>
-      
       <h3>Key Metrics Measured</h3>
       <ul class="list-disc pl-5 space-y-2 text-zinc-400">
         <li><strong>Flick Shots (Saccades):</strong> Fast, ballistic movements of the eyes and hands to a new target.</li>
-        <li><strong>Micro-Corrections:</strong> The ability to make tiny adjustments when nearing a target to ensure accuracy.</li>
         <li><strong>Tracking:</strong> Maintaining focus on a moving object (Smooth Pursuit).</li>
       </ul>
-      
-      <h3>Improving Your Aim</h3>
-      <p>Consistency is key. Professional eSports players often train for 30-60 minutes daily. Factors like mouse sensitivity (DPI), posture, and even hydration can impact your score. A score of 60+ hits in 30 seconds places you in the top percentile of casual gamers.</p>
     `
   },
 
@@ -380,6 +350,18 @@ export const TESTS: TestDefinition[] = [
       "Cognitive Fatigue: Slower times often correlate with sleep deprivation or mental exhaustion.",
       "Age-Related Decline: Reaction time is one of the most reliable biomarkers for cognitive aging."
     ],
+    benchmarks: {
+      title: "Average Visual Reaction Time by Age",
+      columns: ["Age Group", "Average (ms)", "Pro Athlete"],
+      rows: [
+        ["18 - 25", "215 ms", "150 - 180 ms"],
+        ["26 - 35", "240 ms", "180 - 200 ms"],
+        ["36 - 45", "270 ms", "200 - 230 ms"],
+        ["46 - 55", "320 ms", "230 - 260 ms"],
+        ["56 - 65", "370 ms", "260+ ms"],
+        ["65+", "400+ ms", "Variable"]
+      ]
+    },
     concepts: [
       { term: "Simple Reaction Time (SRT)", definition: "The time required for an observer to detect the presence of a stimulus." },
       { term: "Myelination", definition: "The process of coating the axon of each neuron with a fatty coating called myelin, which protects the neuron and helps it conduct signals more efficiently." }
@@ -405,47 +387,6 @@ export const TESTS: TestDefinition[] = [
     seoContent: `
       <h2>Why Measure Reaction Time?</h2>
       <p>Reaction time (RT) is the elapsed time between the presentation of a sensory stimulus and the subsequent behavioral response. It is a critical indicator of central nervous system processing speed.</p>
-      
-      <h3>Reaction Time Benchmarks by Age</h3>
-      <p>Average visual reaction speeds (in milliseconds) generally decline with age. See where you fit in the table below.</p>
-      
-      <table>
-        <thead>
-          <tr>
-            <th>Age Group</th>
-            <th>Average Speed (ms)</th>
-            <th>Performance Level</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>18 - 25 Years</td>
-            <td>210 - 240 ms</td>
-            <td>Peak Performance</td>
-          </tr>
-          <tr>
-            <td>26 - 35 Years</td>
-            <td>240 - 270 ms</td>
-            <td>High Average</td>
-          </tr>
-          <tr>
-            <td>36 - 45 Years</td>
-            <td>270 - 300 ms</td>
-            <td>Average</td>
-          </tr>
-          <tr>
-            <td>46 - 55 Years</td>
-            <td>300 - 350 ms</td>
-            <td>Slowing Reflexes</td>
-          </tr>
-          <tr>
-            <td>60+ Years</td>
-            <td>350+ ms</td>
-            <td>Reduced Processing Speed</td>
-          </tr>
-        </tbody>
-      </table>
-      
       <h3>Factors Affecting Reaction Time</h3>
       <p>Several variables impact your score on this <strong>Reaction Time Test</strong>:</p>
       <ul class="list-disc pl-5 space-y-1 text-zinc-400">
@@ -453,9 +394,6 @@ export const TESTS: TestDefinition[] = [
         <li><strong>Hardware Latency:</strong> Wireless mice and 60Hz monitors can add 10-30ms of input lag compared to wired peripherals and 144Hz+ displays.</li>
         <li><strong>Alertness:</strong> Caffeine and adrenaline can temporarily decrease reaction time (improve speed).</li>
       </ul>
-      
-      <h3>How to Improve</h3>
-      <p>While genetics play a role, you can train your reflexes through regular practice, staying hydrated, getting adequate sleep, and playing fast-paced action video games.</p>
     `
   },
   {
@@ -475,48 +413,20 @@ export const TESTS: TestDefinition[] = [
     iconName: 'Keyboard',
     estimatedTime: '1 min',
     isImplemented: true,
+    benchmarks: {
+      title: "Typing Speed Percentiles",
+      columns: ["Skill Level", "Speed (WPM)", "Percentile"],
+      rows: [
+        ["Elite", "100+ WPM", "Top 1%"],
+        ["Pro / Advanced", "80 - 100 WPM", "Top 10%"],
+        ["Fluent", "60 - 80 WPM", "Top 25%"],
+        ["Average", "40 - 60 WPM", "Top 50%"],
+        ["Beginner", "< 40 WPM", "Bottom 50%"]
+      ]
+    },
     seoContent: `
       <h2>What is a Good Typing Speed?</h2>
       <p>Typing speed is measured in <strong>Words Per Minute (WPM)</strong>. It is a measure of both cognitive processing speed (reading and translating thought to action) and fine motor skills (muscle memory).</p>
-      
-      <h3>WPM Skill Levels</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>WPM Score</th>
-            <th>Skill Level</th>
-            <th>Typical Role</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>0 - 30 WPM</td>
-            <td>Beginner</td>
-            <td>Learning Touch Typing</td>
-          </tr>
-          <tr>
-            <td>30 - 50 WPM</td>
-            <td>Average</td>
-            <td>Casual User / Student</td>
-          </tr>
-          <tr>
-            <td>50 - 70 WPM</td>
-            <td>Professional</td>
-            <td>Office Worker / Copywriter</td>
-          </tr>
-          <tr>
-            <td>70 - 100 WPM</td>
-            <td>Advanced</td>
-            <td>Programmer / Editor</td>
-          </tr>
-          <tr>
-            <td>100+ WPM</td>
-            <td>Elite</td>
-            <td>Competitive Typist</td>
-          </tr>
-        </tbody>
-      </table>
-      
       <h3>Touch Typing vs. Hunt and Peck</h3>
       <p>The biggest factor in increasing your WPM is learning <strong>Touch Typing</strong>—using all ten fingers without looking at the keyboard. This relies on muscle memory (proprioception) rather than visual feedback, drastically reducing the cognitive load required to find keys.</p>
     `
@@ -544,12 +454,8 @@ export const TESTS: TestDefinition[] = [
     seoContent: `
       <h2>The Story of Ayumu the Chimpanzee</h2>
       <p>This test is based on a famous experiment conducted at Kyoto University's Primate Research Institute. A young chimpanzee named <strong>Ayumu</strong> shocked the world by memorizing the positions of numbers 1-9 on a screen in less than 60 milliseconds—faster than the blink of a human eye.</p>
-      
       <h3>Working Memory vs. Eidetic Memory</h3>
-      <p>The <strong>Chimp Test</strong> challenges your working memory and iconic memory (visual sensory memory). While humans generally outperform chimpanzees in language and complex reasoning, some primates appear to have superior immediate visual recall, possibly an evolutionary adaptation for tracking threats or food in a complex canopy environment.</p>
-      
-      <h3>How to Score High</h3>
-      <p>Most humans can comfortably recall 4-5 numbers. To score higher (8+), you must use "chunking" strategies or train your peripheral vision to capture a snapshot of the screen instantly.</p>
+      <p>The <strong>Chimp Test</strong> challenges your working memory and iconic memory (visual sensory memory). While humans generally outperform chimpanzees in language and complex reasoning, some primates appear to have superior immediate visual recall.</p>
     `
   },
   {
@@ -566,10 +472,8 @@ export const TESTS: TestDefinition[] = [
     seoContent: `
       <h2>The Magic Number 7</h2>
       <p>This test is known in psychology as the <strong>Digit Span Test</strong>. In 1956, cognitive psychologist George Miller published a famous paper arguing that the capacity of human short-term memory is approximately 7 items, plus or minus 2.</p>
-      
       <h3>Improving Your Score with Chunking</h3>
       <p>If you find it hard to remember more than 7 digits, try <strong>chunking</strong>. This is the process of breaking a long string of numbers into smaller groups.</p>
-      <p>For example, instead of remembering "5 5 5 1 2 3 4" as seven separate items, you can remember "555" and "1234", reducing the cognitive load to just two "chunks". This is why phone numbers are often formatted with hyphens.</p>
     `
   },
   {
@@ -586,13 +490,6 @@ export const TESTS: TestDefinition[] = [
     seoContent: `
       <h2>Vigilance and Sustained Attention</h2>
       <p>This <strong>Attention Span Test</strong> is a simplified version of a Psychomotor Vigilance Task (PVT). It measures your ability to remain alert to a visual stimulus over a period of time.</p>
-      
-      <h3>Signs of Attention Deficits</h3>
-      <p>Poor performance on this test typically manifests in two ways:</p>
-      <ul class="list-disc pl-5 space-y-2 text-zinc-400">
-        <li><strong>Lapses (Omission Errors):</strong> Failing to click when the dot appears. This indicates "zoning out" or micro-sleeps.</li>
-        <li><strong>False Alarms (Commission Errors):</strong> Clicking when no dot has appeared. This indicates impulsivity and a lack of inhibitory control.</li>
-      </ul>
     `
   },
   {
@@ -606,14 +503,6 @@ export const TESTS: TestDefinition[] = [
     seoContent: `
       <h2>What is the CPS Test?</h2>
       <p>The <strong>CPS Test</strong> (Clicks Per Second) measures the speed at which you can click your mouse button in a given timeframe, usually 10 seconds. It is a popular benchmark in the gaming community, particularly for Minecraft PvP.</p>
-      
-      <h3>Clicking Techniques</h3>
-      <p>To achieve high scores (10+ CPS), players often use specialized techniques:</p>
-      <ul class="list-disc pl-5 space-y-1 text-zinc-400">
-        <li><strong>Jitter Clicking:</strong> Vibrating the muscles in the arm and wrist to click rapidly.</li>
-        <li><strong>Butterfly Clicking:</strong> Using two fingers (index and middle) to alternate clicks on the same button.</li>
-        <li><strong>Drag Clicking:</strong> Dragging a finger across the mouse button to create friction-based bounces (requires specific mouse texture).</li>
-      </ul>
     `
   },
   {
@@ -627,9 +516,6 @@ export const TESTS: TestDefinition[] = [
     seoContent: `
       <h2>The Spacebar Counter Challenge</h2>
       <p>Also known as the <strong>Spacebar Clicker</strong>, this test isolates the speed of your thumb. While index fingers are used for mouse clicking, the thumb is heavier and often slower, yet crucial for movement (jumping) in gaming.</p>
-      
-      <h3>Average Spacebar CPS</h3>
-      <p>Most people can hit the spacebar between <strong>6 to 8 times per second</strong>. Scores above 10 are considered elite. Keyboard switches also play a role; mechanical switches with lighter actuation force (like Cherry MX Reds or Silvers) allow for faster rebounding than membrane keyboards.</p>
     `
   },
   {
@@ -646,14 +532,6 @@ export const TESTS: TestDefinition[] = [
     seoContent: `
       <h2>What is the Stroop Effect?</h2>
       <p>The <strong>Stroop Effect</strong> demonstrates the delay in reaction time between congruent and incongruent stimuli. It is one of the most famous experiments in cognitive psychology.</p>
-      
-      <h3>Interference and Inhibition</h3>
-      <p>When you see the word <span style="color:red">BLUE</span> written in red ink, your brain has two conflicting signals:
-      <ol class="list-decimal pl-6 space-y-2 text-zinc-400">
-         <li><strong>Semantic:</strong> Reading the word "Blue" (Faster, automatic process).</li>
-         <li><strong>Chromatic:</strong> Identifying the color Red (Slower, requires conscious effort).</li>
-      </ol>
-      <p>To perform the task correctly, your anterior cingulate cortex (ACC) must suppress the automatic urge to read the word. This mental effort causes a delay, known as the Stroop Interference.</p>
     `
   },
 
@@ -672,16 +550,6 @@ export const TESTS: TestDefinition[] = [
     seoContent: `
       <h2>Adult ADHD Self-Report Scale (ASRS-v1.1)</h2>
       <p>This <strong>ADHD Test</strong> utilizes the 6-question screening checklist developed by the World Health Organization. It focuses on the frequency of symptoms related to inattention, impulsivity, and hyperactivity in adults.</p>
-      
-      <h3>Interpreting the Results</h3>
-      <p>This tool is a <strong>screener</strong>, not a diagnostic instrument. A high score indicates that your symptoms are consistent with adults who have ADHD, but many other conditions (anxiety, sleep deprivation, thyroid issues) can mimic these symptoms.</p>
-      
-      <h3>The 3 Subtypes of ADHD</h3>
-      <ul class="list-disc pl-5 space-y-2 text-zinc-400">
-        <li><strong>Predominantly Inattentive:</strong> Difficulty organizing tasks, easily distracted, forgetful (formerly called ADD).</li>
-        <li><strong>Predominantly Hyperactive-Impulsive:</strong> Fidgeting, inability to sit still, interrupting others.</li>
-        <li><strong>Combined Presentation:</strong> A mix of both inattentive and hyperactive symptoms.</li>
-      </ul>
     `
   },
   {
@@ -695,14 +563,6 @@ export const TESTS: TestDefinition[] = [
     seoContent: `
       <h2>Emotional Intelligence Quotient (EQ)</h2>
       <p>Unlike IQ, which measures cognitive intelligence, EQ measures your ability to identify, evaluate, control, and express emotions. High EQ is strongly correlated with leadership ability and relationship satisfaction.</p>
-      
-      <h3>The Four Pillars of EQ</h3>
-      <ul class="list-disc pl-5 space-y-2 text-zinc-400">
-        <li><strong>Self-Awareness:</strong> Recognizing your own emotions as they happen.</li>
-        <li><strong>Self-Management:</strong> Controlling impulsive feelings and behaviors.</li>
-        <li><strong>Social Awareness:</strong> Empathy and understanding the needs of others.</li>
-        <li><strong>Relationship Management:</strong> Building bonds and conflict resolution.</li>
-      </ul>
     `
   },
   {

@@ -1,8 +1,15 @@
+
 export enum TestCategory {
   AUDITORY = 'Auditory',
   VISUAL = 'Visual',
   COGNITIVE = 'Cognitive',
   PERSONALITY = 'Personality'
+}
+
+export interface BenchmarkData {
+  title: string; // e.g. "Global Averages by Age"
+  columns: [string, string, string]; // e.g. ["Age Group", "Average Score", "Rating"]
+  rows: [string, string, string][]; // Data rows
 }
 
 export interface TestDefinition {
@@ -19,6 +26,7 @@ export interface TestDefinition {
   citations?: string[]; // Scientific references for E-E-A-T
   clinicalRelevance?: string[]; // Key takeaways for topical authority
   concepts?: { term: string, definition: string }[]; // For DefinedTerm Schema & Glossary
+  benchmarks?: BenchmarkData; // Data tables for SEO Featured Snippets
 }
 
 export interface UserStats {

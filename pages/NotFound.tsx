@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { WifiOff, Home } from 'lucide-react';
+import { WifiOff, Home, Database } from 'lucide-react';
 import SEO from '../components/SEO';
 
 const NotFound: React.FC = () => {
@@ -26,9 +26,14 @@ const NotFound: React.FC = () => {
          The requested sector could not be located in the neural link. The path may be corrupted or restricted.
       </p>
 
-      <Link to="/" className="btn-primary flex items-center gap-2">
-         <Home size={18} /> Return to Dashboard
-      </Link>
+      <div className="flex gap-4">
+         <Link to="/" className="btn-primary flex items-center gap-2">
+            <Home size={18} /> Return to Dashboard
+         </Link>
+         <Link to="/statistics" className="btn-secondary flex items-center gap-2">
+            <Database size={18} /> View Statistics
+         </Link>
+      </div>
     </div>
   );
 };

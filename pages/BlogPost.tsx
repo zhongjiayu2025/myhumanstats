@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, Calendar, Share2, Tag, ChevronRight, Activity, Volume2, StopCircle } from 'lucide-react';
+import { ArrowLeft, Clock, Calendar, Share2, Tag, ChevronRight, Activity, Volume2, StopCircle, List } from 'lucide-react';
 import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { BLOG_POSTS } from '../lib/blogData';
@@ -16,15 +16,29 @@ const BlogPost: React.FC = () => {
   // TTS State
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [speechSupported, setSpeechSupported] = useState(false);
+  const [toc, setToc] = useState<{id: string, text: string}[]>([]);
 
   useEffect(() => {
     if ('speechSynthesis' in window) {
       setSpeechSupported(true);
     }
+    
+    // Generate ToC from H2/H3 tags in content string
+    if (post) {
+       const regex = /<h2.*?>(.*?)<\/h2>/g;
+       const matches = [...post.content.matchAll(regex)];
+       const generatedToc = matches.map((match, index) => {
+          const text = match[1].replace(/<[^>]*>/g, ''); // strip inner html if any
+          const id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+          return { id, text };
+       });
+       setToc(generatedToc);
+    }
+
     return () => {
       window.speechSynthesis.cancel(); // Stop on unmount
     };
-  }, []);
+  }, [post]);
 
   const handleSpeak = () => {
     if (isSpeaking) {
@@ -51,6 +65,16 @@ const BlogPost: React.FC = () => {
       setIsSpeaking(true);
     }
   };
+
+  // Modify content to inject IDs for ToC
+  // This is a lightweight way to add anchors without full parsing
+  const processedContent = post?.content.replace(
+     /<h2(.*?)>(.*?)<\/h2>/g, 
+     (match, attrs, text) => {
+        const id = text.replace(/<[^>]*>/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        return `<h2 id="${id}"${attrs}>${text}</h2>`;
+     }
+  );
 
   if (!post) {
     return (
@@ -154,8 +178,8 @@ const BlogPost: React.FC = () => {
             )}
 
             <article 
-               className="prose prose-invert prose-lg max-w-none prose-headings:font-bold prose-headings:text-white prose-p:text-zinc-300 prose-p:leading-relaxed prose-a:text-primary-400 prose-a:no-underline hover:prose-a:underline prose-strong:text-white prose-li:text-zinc-300 prose-ul:list-disc prose-ol:list-decimal print:prose-black print:text-black"
-               dangerouslySetInnerHTML={{ __html: post.content }}
+               className="prose prose-invert prose-lg max-w-none prose-headings:font-bold prose-headings:text-white prose-p:text-zinc-300 prose-p:leading-relaxed prose-a:text-primary-400 prose-a:no-underline hover:prose-a:underline prose-strong:text-white prose-li:text-zinc-300 prose-ul:list-disc prose-ol:list-decimal print:prose-black print:text-black scroll-mt-24"
+               dangerouslySetInnerHTML={{ __html: processedContent || post.content }}
             />
             
             {/* Tags Footer */}
@@ -175,6 +199,27 @@ const BlogPost: React.FC = () => {
             {/* CTA Card - Sticky */}
             <div className="sticky top-24 space-y-8">
                
+               {/* Table of Contents */}
+               {toc.length > 0 && (
+                  <div className="bg-zinc-900/30 border border-zinc-800 p-6 rounded">
+                     <h3 className="text-sm font-mono text-zinc-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                        <List size={14} /> Contents
+                     </h3>
+                     <ul className="space-y-2 text-sm">
+                        {toc.map((item, idx) => (
+                           <li key={idx}>
+                              <a 
+                                 href={`#${item.id}`} 
+                                 className="text-zinc-400 hover:text-primary-400 transition-colors block border-l-2 border-transparent hover:border-primary-500 pl-3 py-1"
+                              >
+                                 {item.text}
+                              </a>
+                           </li>
+                        ))}
+                     </ul>
+                  </div>
+               )}
+
                {/* Related Test Card */}
                {relatedTest && (
                   <div className="bg-surface border border-zinc-800 p-6 clip-corner-sm relative overflow-hidden group">
@@ -213,21 +258,6 @@ const BlogPost: React.FC = () => {
                      <button className="py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 text-xs border border-zinc-700 transition-colors">
                         Copy Link
                      </button>
-                  </div>
-               </div>
-
-               {/* Recent Posts Mini-List */}
-               <div>
-                  <h3 className="text-sm font-bold text-white mb-4">Latest Research</h3>
-                  <div className="space-y-4">
-                     {BLOG_POSTS.filter(p => p.slug !== post.slug).slice(0, 3).map(p => (
-                        <Link to={`/blog/${p.slug}`} key={p.slug} className="block group">
-                           <h4 className="text-sm text-zinc-300 group-hover:text-primary-400 transition-colors mb-1">
-                              {p.title}
-                           </h4>
-                           <span className="text-[10px] text-zinc-600 font-mono">{p.date}</span>
-                        </Link>
-                     ))}
                   </div>
                </div>
 

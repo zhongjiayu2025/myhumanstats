@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Activity, Play, MousePointer2, RefreshCcw, Music2, TrendingUp, BarChart3 } from 'lucide-react';
+import { Activity, Play, MousePointer2, RefreshCcw, Music2, TrendingUp, BarChart3, Wrench } from 'lucide-react';
 import { saveStat } from '../../lib/core';
+import { Link } from 'react-router-dom';
 
 const RhythmTest: React.FC = () => {
   const [phase, setPhase] = useState<'idle' | 'listening' | 'tapping' | 'result'>('idle');
@@ -334,6 +335,12 @@ const RhythmTest: React.FC = () => {
           <p className="text-xs text-zinc-500 leading-relaxed">
              Why take a <strong>Rhythm Test</strong>? This tool serves as a precise <strong>rhythm test</strong> designed to quantify temporal consistency. Unlike a standard metronome check, this online <strong>rhythm test</strong> analyzes milliseconds of drift to provide a comprehensive aptitude score.
           </p>
+          {/* Internal Link */}
+          <div className="mt-2">
+             <Link to="/tools/bpm-counter" className="text-[10px] text-primary-500 hover:text-white font-mono flex items-center gap-1">
+                <Wrench size={10} /> Calculate BPM manually? Use BPM Counter
+             </Link>
+          </div>
       </div>
     </div>
   );

@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Play, RefreshCcw, AlertTriangle, Sliders, Keyboard, Share2, Check } from 'lucide-react';
+import { Play, RefreshCcw, AlertTriangle, Sliders, Keyboard, Share2, Check, Wrench } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 import ShareCard from '../ShareCard';
+import { Link } from 'react-router-dom';
 
 const HearingAgeTest: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -440,6 +441,12 @@ const HearingAgeTest: React.FC = () => {
                     <p className="text-[10px] leading-relaxed text-zinc-500 font-mono">
                        <strong>SYSTEM_INFO:</strong> This digital <strong>Hearing Age Test</strong> generates precision sine waves between 8kHz and 20kHz to determine your upper auditory threshold. As human hearing naturally degrades with age (presbycusis), the maximum audible frequency decreases. This <strong>Hearing Age Test</strong> correlates your high-frequency cutoff with ISO 7029 statistical population data to provide an estimated biological ear age.
                     </p>
+                 </div>
+                 {/* Internal Link to Tool */}
+                 <div className="mt-2 pl-3">
+                    <Link to="/tools/tone-generator" className="text-[10px] text-primary-500 hover:text-white font-mono flex items-center gap-1">
+                       <Wrench size={10} /> Need a manual Tone Generator?
+                    </Link>
                  </div>
               </div>
 

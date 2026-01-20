@@ -4,6 +4,12 @@ import { HelmetProvider } from 'react-helmet-async';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import TestPage from './pages/TestPage';
+import CategoryPage from './pages/CategoryPage';
+import Glossary from './pages/Glossary';
+import Statistics from './pages/Statistics';
+import ToolsIndex from './pages/ToolsIndex';
+import ToneGenPage from './pages/tools/ToneGenPage';
+import BPMPage from './pages/tools/BPMPage';
 import About from './pages/About';
 import Contact from './pages/Contact';
 import Privacy from './pages/Privacy';
@@ -34,6 +40,9 @@ const GlobalStyles = () => (
     .prose p { margin-bottom: 1.5em; }
     .prose li { margin-bottom: 0.5em; }
     .prose .lead { font-size: 1.25em; color: #a1a1aa; font-weight: 300; margin-bottom: 2em; }
+    
+    /* Scroll Margin for Anchor Links */
+    .scroll-mt-32 { scroll-margin-top: 8rem; }
   `}</style>
 );
 
@@ -46,6 +55,15 @@ const App: React.FC = () => {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/test/:id" element={<TestPage />} />
+            <Route path="/category/:categoryId" element={<CategoryPage />} />
+            <Route path="/glossary" element={<Glossary />} />
+            <Route path="/statistics" element={<Statistics />} />
+            
+            {/* Tools Routes */}
+            <Route path="/tools" element={<ToolsIndex />} />
+            <Route path="/tools/tone-generator" element={<ToneGenPage />} />
+            <Route path="/tools/bpm-counter" element={<BPMPage />} />
+
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/privacy" element={<Privacy />} />

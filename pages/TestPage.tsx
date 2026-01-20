@@ -1,6 +1,6 @@
 import React, { Suspense } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Cpu, Info, FileText, ChevronRight, Loader2, HelpCircle, BookOpen, Microscope, CheckCircle2, Bookmark } from 'lucide-react';
+import { ArrowLeft, Cpu, Info, FileText, ChevronRight, Loader2, HelpCircle, BookOpen, Microscope, CheckCircle2, Bookmark, BarChart3 } from 'lucide-react';
 import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { Helmet } from 'react-helmet-async';
@@ -143,7 +143,7 @@ const TestPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
         {/* Info Column */}
-        <div className="lg:col-span-3 space-y-6">
+        <aside className="lg:col-span-3 space-y-6">
           <div className="tech-border bg-surface p-6">
              <div className="text-[10px] text-zinc-500 font-mono mb-2 uppercase tracking-wider">Module Type</div>
              <div className="inline-block px-2 py-0.5 bg-white/5 border border-white/10 text-xs text-white mb-6">
@@ -160,7 +160,7 @@ const TestPage: React.FC = () => {
                 <span className="text-white">{testDef.estimatedTime}</span>
              </div>
           </div>
-        </div>
+        </aside>
 
         {/* Test Container */}
         <div className="lg:col-span-9">
@@ -221,23 +221,62 @@ const TestPage: React.FC = () => {
              </div>
           )}
 
-          {/* SEO Rich Content Area */}
+          {/* SEO Rich Content Area (Article) */}
           {testDef.seoContent && (
-             <div className="tech-border bg-surface p-8 animate-in fade-in slide-in-from-bottom-8 mb-8">
+             <article className="tech-border bg-surface p-8 animate-in fade-in slide-in-from-bottom-8 mb-8">
                 <div className="flex items-center gap-3 mb-6">
                    <Info className="text-primary-500" />
                    <h2 className="text-xl font-bold text-white">About This Test</h2>
                 </div>
-                <article 
+                <div 
                    className="prose prose-invert prose-sm max-w-none prose-headings:text-zinc-200 prose-p:text-zinc-400 prose-li:text-zinc-400"
                    dangerouslySetInnerHTML={{ __html: testDef.seoContent }}
                 />
-             </div>
+             </article>
           )}
 
-          {/* Key Concepts (Glossary/Entities) - New for Phase 13 */}
+          {/* Global Benchmarks Table (Featured Snippet Bait) */}
+          {testDef.benchmarks && (
+             <section className="tech-border bg-zinc-900/30 p-8 mb-8 overflow-hidden">
+                <div className="flex items-center gap-3 mb-6">
+                   <BarChart3 className="text-primary-500" size={20} />
+                   <h3 className="text-xl font-bold text-white">Global Statistics</h3>
+                </div>
+                
+                <p className="text-sm text-zinc-400 mb-6">
+                   How do you compare? See the global average scores for the <strong>{testDef.title}</strong> below.
+                </p>
+
+                <div className="overflow-x-auto">
+                   <table className="w-full text-left border-collapse font-mono text-xs md:text-sm">
+                      <thead>
+                         <tr>
+                            {testDef.benchmarks.columns.map((col, idx) => (
+                               <th key={idx} className="p-3 border border-zinc-800 bg-black/50 text-primary-400 uppercase tracking-wider">{col}</th>
+                            ))}
+                         </tr>
+                      </thead>
+                      <tbody>
+                         {testDef.benchmarks.rows.map((row, rIdx) => (
+                            <tr key={rIdx} className="hover:bg-white/5 transition-colors">
+                               {row.map((cell, cIdx) => (
+                                  <td key={cIdx} className="p-3 border border-zinc-800 text-zinc-300">{cell}</td>
+                               ))}
+                            </tr>
+                         ))}
+                      </tbody>
+                   </table>
+                </div>
+                
+                <div className="mt-4 text-[10px] text-zinc-600 font-mono text-right">
+                   SOURCE: INTERNAL_AGGREGATE_DATA_2026
+                </div>
+             </section>
+          )}
+
+          {/* Key Concepts (Glossary/Entities) */}
           {testDef.concepts && testDef.concepts.length > 0 && (
-             <div className="tech-border bg-zinc-900/30 p-8 mb-8">
+             <section className="tech-border bg-zinc-900/30 p-8 mb-8">
                 <div className="flex items-center gap-3 mb-6">
                    <Bookmark className="text-amber-500" size={20} />
                    <h3 className="text-xl font-bold text-white">Key Concepts</h3>
@@ -250,12 +289,12 @@ const TestPage: React.FC = () => {
                       </div>
                    ))}
                 </dl>
-             </div>
+             </section>
           )}
 
           {/* FAQ Section */}
           {testDef.faqs && testDef.faqs.length > 0 && (
-             <div className="tech-border bg-surface p-8 mb-8">
+             <section className="tech-border bg-surface p-8 mb-8">
                 <div className="flex items-center gap-3 mb-6">
                    <HelpCircle className="text-emerald-500" />
                    <h3 className="text-xl font-bold text-white">Common Questions</h3>
@@ -273,7 +312,7 @@ const TestPage: React.FC = () => {
                       </details>
                    ))}
                 </div>
-             </div>
+             </section>
           )}
 
           {/* Scientific Citations (E-E-A-T) */}
@@ -296,7 +335,7 @@ const TestPage: React.FC = () => {
           <div className="space-y-8">
              
              {relatedPosts.length > 0 && (
-                <div>
+                <aside>
                    <h3 className="text-sm font-mono text-zinc-500 uppercase tracking-widest flex items-center gap-2 mb-4">
                       <FileText size={14} /> Related Research Logs
                    </h3>
@@ -322,7 +361,7 @@ const TestPage: React.FC = () => {
                          </Link>
                       ))}
                    </div>
-                </div>
+                </aside>
              )}
 
              {/* Internal Linking Mesh: Recommended Tests */}

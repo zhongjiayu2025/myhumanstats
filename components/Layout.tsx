@@ -109,16 +109,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 [DASHBOARD]
               </Link>
               <Link 
+                to="/tools" 
+                className={`px-4 py-1.5 text-xs font-mono transition-all clip-corner-sm ${location.pathname.startsWith('/tools') ? 'bg-primary-500/10 text-primary-400 border border-primary-500/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}
+              >
+                [TOOLS]
+              </Link>
+              <Link 
                 to="/blog" 
                 className={`px-4 py-1.5 text-xs font-mono transition-all clip-corner-sm ${location.pathname.startsWith('/blog') ? 'bg-primary-500/10 text-primary-400 border border-primary-500/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}
               >
                 [BLOG]
-              </Link>
-              <Link 
-                to="/about" 
-                className={`px-4 py-1.5 text-xs font-mono transition-all clip-corner-sm ${location.pathname === '/about' ? 'bg-primary-500/10 text-primary-400 border border-primary-500/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}
-              >
-                [ABOUT]
               </Link>
             </nav>
             
@@ -179,26 +179,25 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 </div>
              </div>
 
-             {/* Col 2: Popular Tests */}
+             {/* Col 2: Categories */}
              <div>
-                <h4 className="text-xs font-bold text-white uppercase tracking-widest mb-4">Popular Modules</h4>
+                <h4 className="text-xs font-bold text-white uppercase tracking-widest mb-4">Categories</h4>
                 <ul className="space-y-2 text-xs text-zinc-400">
-                   <li><Link to="/test/hearing-age-test" className="hover:text-primary-400 transition-colors">Hearing Age Test</Link></li>
-                   <li><Link to="/test/reaction-time-test" className="hover:text-primary-400 transition-colors">Reaction Time Test</Link></li>
-                   <li><Link to="/test/typing-speed-test" className="hover:text-primary-400 transition-colors">Typing Speed (WPM)</Link></li>
-                   <li><Link to="/test/color-blind-test" className="hover:text-primary-400 transition-colors">Color Blindness</Link></li>
-                   <li><Link to="/test/click-speed-test" className="hover:text-primary-400 transition-colors">CPS Test</Link></li>
+                   <li><Link to="/category/auditory" className="hover:text-primary-400 transition-colors">Auditory Tests</Link></li>
+                   <li><Link to="/category/visual" className="hover:text-primary-400 transition-colors">Visual Tests</Link></li>
+                   <li><Link to="/category/cognitive" className="hover:text-primary-400 transition-colors">Cognitive Tests</Link></li>
+                   <li><Link to="/category/personality" className="hover:text-primary-400 transition-colors">Personality Tests</Link></li>
                 </ul>
              </div>
 
              {/* Col 3: Research */}
              <div>
-                <h4 className="text-xs font-bold text-white uppercase tracking-widest mb-4">Research & Stats</h4>
+                <h4 className="text-xs font-bold text-white uppercase tracking-widest mb-4">Knowledge Base</h4>
                 <ul className="space-y-2 text-xs text-zinc-400">
-                   <li><Link to="/blog/science-behind-hearing-age-test-high-frequency-loss" className="hover:text-primary-400 transition-colors">Science of Hearing</Link></li>
-                   <li><Link to="/blog/reaction-time-and-cognitive-decline" className="hover:text-primary-400 transition-colors">Cognitive Decline</Link></li>
-                   <li><Link to="/sitemap" className="hover:text-primary-400 transition-colors">All Tests Index</Link></li>
-                   <li><Link to="/about" className="hover:text-primary-400 transition-colors">Methodology</Link></li>
+                   <li><Link to="/statistics" className="hover:text-primary-400 transition-colors">Global Benchmarks</Link></li>
+                   <li><Link to="/tools" className="hover:text-primary-400 transition-colors">Utilities & Tools</Link></li>
+                   <li><Link to="/blog" className="hover:text-primary-400 transition-colors">Research Log</Link></li>
+                   <li><Link to="/glossary" className="hover:text-primary-400 transition-colors">System Codex</Link></li>
                 </ul>
              </div>
 
@@ -218,8 +217,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                © 2026 MyHumanStats. All systems nominal.
              </div>
              <div className="flex gap-4">
-                <a href="#" className="text-zinc-600 hover:text-white transition-colors"><Zap size={14} /></a>
-                <a href="#" className="text-zinc-600 hover:text-white transition-colors"><BookOpen size={14} /></a>
+                <Link to="/tools/tone-generator" className="text-zinc-600 hover:text-white transition-colors" aria-label="Tone Generator"><Zap size={14} /></Link>
+                <Link to="/tools/bpm-counter" className="text-zinc-600 hover:text-white transition-colors" aria-label="BPM Counter"><Activity size={14} /></Link>
+                <Link to="/glossary" className="text-zinc-600 hover:text-white transition-colors" aria-label="Glossary"><BookOpen size={14} /></Link>
              </div>
           </div>
         </div>
