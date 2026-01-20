@@ -76,7 +76,7 @@ const DifficultPersonTest: React.FC = () => {
       }));
   };
 
-  const totalScore = Math.round((Object.values(scores).reduce((a: number, b: number) => a + b, 0) / (QUESTIONS.length * 5)) * 100);
+  const totalScore = Math.round(((Object.values(scores) as number[]).reduce((a, b) => a + b, 0) / (QUESTIONS.length * 5)) * 100);
 
   return (
     <div className="max-w-3xl mx-auto text-center select-none">

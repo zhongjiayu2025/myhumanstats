@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import Questionnaire from './Questionnaire';
-import { Activity, AlertOctagon, MousePointer2, Timer } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Activity, AlertOctagon, MousePointer2 } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 // ASRS-v1.1 Part A

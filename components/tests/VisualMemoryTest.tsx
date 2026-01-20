@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { LayoutGrid, Heart, Play, RotateCcw, Volume2, VolumeX } from 'lucide-react';
+import { LayoutGrid, Heart, RotateCcw, Volume2, VolumeX } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 const VisualMemoryTest: React.FC = () => {
@@ -10,7 +10,7 @@ const VisualMemoryTest: React.FC = () => {
   
   // Sequence Logic
   const [sequence, setSequence] = useState<number[]>([]);
-  const [playbackIdx, setPlaybackIdx] = useState<number | null>(null); 
+  // playbackIdx removed as it was unused in render
   const [userStep, setUserStep] = useState(0); 
   
   const [phase, setPhase] = useState<'intro' | 'demo' | 'input' | 'result'>('intro');
@@ -76,8 +76,8 @@ const VisualMemoryTest: React.FC = () => {
        setUserStep(0);
        setTileStatus({});
        
-       // Generate sequence
-       const newSeq = [];
+       // Generate sequence with explicit type
+       const newSeq: number[] = [];
        // Avoid immediate repeats? No, Simon allows repeats.
        for(let i=0; i<length; i++) {
            newSeq.push(Math.floor(Math.random() * (size * size)));
@@ -89,20 +89,17 @@ const VisualMemoryTest: React.FC = () => {
        const interval = setInterval(() => {
            if (i >= newSeq.length) {
                clearInterval(interval);
-               setPlaybackIdx(null);
                setTileStatus({});
                setPhase('input');
                return;
            }
            
            const targetTile = newSeq[i];
-           setPlaybackIdx(targetTile);
            setTileStatus(prev => ({ ...prev, [targetTile]: 'active' }));
            playTone(targetTile, 'normal');
            
            // Flash OFF
            setTimeout(() => {
-               setPlaybackIdx(null);
                setTileStatus(prev => ({ ...prev, [targetTile]: 'idle' }));
            }, 400);
 
