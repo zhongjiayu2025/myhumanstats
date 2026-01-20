@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BookOpen, Zap, FileText, CheckCircle2, History, Rocket, Brain } from 'lucide-react';
+import { BookOpen, Zap, FileText, History, Rocket, Brain, RotateCcw } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 const TEXT_OPTIONS = [
@@ -88,7 +88,7 @@ const ReadingSpeedTest: React.FC = () => {
           rsvpIntervalRef.current = window.setInterval(() => {
               setRsvpIndex(prev => {
                   if (prev >= words.length - 1) {
-                      clearInterval(rsvpIntervalRef.current!);
+                      if (rsvpIntervalRef.current) clearInterval(rsvpIntervalRef.current);
                       setDuration((words.length / targetRsvpWpm) * 60);
                       setTimeout(() => setPhase('quiz'), 500);
                       return prev;
@@ -111,8 +111,7 @@ const ReadingSpeedTest: React.FC = () => {
   };
 
   const calculateResult = (finalDuration: number, finalAnswers: number[]) => {
-    // Standard WPM calculation: (Words / Seconds) * 60
-    // Standard word length is usually normalized to 5 chars, but raw count is ok for estimation
+    // Standard WPM calculation
     const calculatedWpm = mode === 'rsvp' ? targetRsvpWpm : Math.round((words.length / finalDuration) * 60);
     
     let correctCount = 0;
@@ -134,12 +133,8 @@ const ReadingSpeedTest: React.FC = () => {
     saveStat('reading-speed', score);
   };
 
-  // Improved RSVP Rendering with ORP (Optimal Recognition Point) highlighting
   const renderRsvpWord = () => {
       const word = words[rsvpIndex];
-      // ORP is typically slightly left of center. 
-      // Length 1-3: Center. Length 4-7: 2nd letter. Length 8+: 3rd/4th.
-      // Simplified: Math.floor((length - 1) / 2)
       const pivot = word.length > 1 ? Math.floor((word.length - 1) / 2) : 0;
       
       const start = word.slice(0, pivot);
@@ -225,4 +220,86 @@ const ReadingSpeedTest: React.FC = () => {
       {phase === 'reading' && mode === 'standard' && (
         <div className="animate-in fade-in max-w-xl mx-auto">
            <div className="bg-[#fdfbf7] text-black p-8 md:p-12 rounded-lg shadow-2xl border-l-4 border-primary-500 mb-8 font-serif leading-relaxed text-lg">
-               <h3 className="font-bold text
+               <h3 className="font-bold text-2xl mb-4">{activeText.title}</h3>
+               <p>{activeText.content}</p>
+           </div>
+           <button onClick={handleFinishReading} className="btn-primary w-full shadow-lg">
+               I Have Finished Reading
+           </button>
+        </div>
+      )}
+
+      {phase === 'reading' && mode === 'rsvp' && (
+          <div className="flex flex-col items-center justify-center min-h-[400px]">
+              <div className="w-full max-w-md bg-black border border-zinc-700 rounded-lg p-12 text-center relative">
+                  {/* Focus Guides */}
+                  <div className="absolute top-0 bottom-0 left-1/2 w-px bg-zinc-800 -translate-x-1/2"></div>
+                  <div className="absolute left-0 right-0 top-1/2 h-px bg-zinc-800 -translate-y-1/2"></div>
+                  
+                  <div className="relative z-10 flex justify-center">
+                      {renderRsvpWord()}
+                  </div>
+              </div>
+              <div className="mt-8 text-zinc-500 font-mono text-xs">
+                  {Math.round((rsvpIndex / words.length) * 100)}% COMPLETE
+              </div>
+          </div>
+      )}
+
+      {phase === 'quiz' && (
+          <div className="max-w-xl mx-auto animate-in slide-in-from-right">
+              <div className="text-xs font-mono text-zinc-500 mb-8 uppercase tracking-widest">
+                  Comprehension Check {quizAnswers.length + 1} / {activeText.questions.length}
+              </div>
+              
+              <h3 className="text-2xl font-medium text-white mb-8">
+                  {activeText.questions[quizAnswers.length].q}
+              </h3>
+              
+              <div className="space-y-3">
+                  {activeText.questions[quizAnswers.length].options.map((opt, i) => (
+                      <button 
+                         key={i}
+                         onClick={() => handleAnswer(i)}
+                         className="w-full text-left p-4 bg-zinc-900 border border-zinc-800 hover:border-primary-500 hover:bg-zinc-800 transition-all rounded text-zinc-300 hover:text-white"
+                      >
+                          {opt}
+                      </button>
+                  ))}
+              </div>
+          </div>
+      )}
+
+      {phase === 'result' && (
+          <div className="py-12 text-center animate-in zoom-in">
+              <div className="mb-12">
+                  <h2 className="text-sm font-mono text-zinc-500 uppercase tracking-widest mb-2">Effective Reading Speed</h2>
+                  <div className="text-7xl font-bold text-white mb-2">{wpm} <span className="text-2xl text-zinc-600">WPM</span></div>
+                  <div className={`inline-block px-3 py-1 rounded text-xs font-bold ${comprehensionScore === 100 ? 'bg-emerald-900/30 text-emerald-400' : 'bg-yellow-900/30 text-yellow-400'}`}>
+                      {comprehensionScore}% Retention
+                  </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 max-w-md mx-auto mb-12">
+                  <div className="bg-zinc-900 border border-zinc-800 p-4 rounded text-center">
+                      <div className="text-xs text-zinc-500 uppercase mb-1">Raw Speed</div>
+                      <div className="text-xl font-bold text-white">
+                          {mode === 'rsvp' ? targetRsvpWpm : Math.round((words.length / duration) * 60)} WPM
+                      </div>
+                  </div>
+                  <div className="bg-zinc-900 border border-zinc-800 p-4 rounded text-center">
+                      <div className="text-xs text-zinc-500 uppercase mb-1">Time</div>
+                      <div className="text-xl font-bold text-white">{duration.toFixed(1)}s</div>
+                  </div>
+              </div>
+
+              <button onClick={restart} className="btn-secondary flex items-center justify-center gap-2 mx-auto">
+                  <RotateCcw size={16} /> New Test
+              </button>
+          </div>
+      )}
+    </div>
+  );
+};
+
+export default ReadingSpeedTest;
