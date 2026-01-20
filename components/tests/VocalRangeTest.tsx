@@ -1,153 +1,124 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, MicOff, Music, Info, AlertCircle } from 'lucide-react';
+import { Mic, Music, RefreshCw, Volume2, AlertCircle, Check, X, ArrowUp, ArrowDown } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 const NOTES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
-// Standard Vocal Ranges (Approximate centers)
+// Standard Vocal Ranges
 const VOCAL_TYPES = [
-  { name: "Bass", min: "E2", max: "E4", desc: "Deep, dark tones. Rare and resonant.", color: "text-blue-500" },
-  { name: "Baritone", min: "A2", max: "A4", desc: "The most common male voice type. Rich and versatile.", color: "text-cyan-500" },
-  { name: "Tenor", min: "C3", max: "C5", desc: "High male voice. Bright and piercing.", color: "text-teal-500" },
-  { name: "Contralto", min: "F3", max: "F5", desc: "Deep female voice. Heavy and soulful.", color: "text-emerald-500" },
-  { name: "Mezzo-Soprano", min: "A3", max: "A5", desc: "Middle female voice. Darker than soprano.", color: "text-violet-500" },
-  { name: "Soprano", min: "C4", max: "C6", desc: "Highest female voice. Bright and agile.", color: "text-fuchsia-500" }
+  { name: "Bass", min: 40, max: 260, desc: "Deep, dark tones. Rare power in the low end.", color: "text-blue-500" }, // E2-C4 approx
+  { name: "Baritone", min: 55, max: 390, desc: "The most common male voice. Warm and versatile.", color: "text-cyan-500" }, // A2-G4
+  { name: "Tenor", min: 130, max: 520, desc: "High male voice. Bright, ringing quality.", color: "text-teal-500" }, // C3-C5
+  { name: "Contralto", min: 170, max: 690, desc: "Deep female voice. Heavy chest resonance.", color: "text-emerald-500" }, // F3-F5
+  { name: "Mezzo-Soprano", min: 220, max: 880, desc: "Middle female voice. Darker than soprano.", color: "text-violet-500" }, // A3-A5
+  { name: "Soprano", min: 260, max: 1050, desc: "Highest female voice. Bright and agile.", color: "text-fuchsia-500" } // C4-C6
 ];
 
+const FAMOUS_SINGERS = [
+  { name: "Axl Rose", range: "F1-B6", note: "Incredible 6 octave range" },
+  { name: "Mariah Carey", range: "F2-G7", note: "Known for the whistle register" },
+  { name: "Freddie Mercury", range: "F2-F6", note: "Legendary control and power" },
+  { name: "Prince", range: "E2-B6", note: "Versatile falsetto master" },
+  { name: "Beyoncé", range: "A2-E6", note: "Powerful Mezzo-Soprano" },
+  { name: "Elvis Presley", range: "B1-A4", note: "The King's rich Baritone" },
+  { name: "Taylor Swift", range: "C3-G5", note: "Clear country-pop tones" },
+  { name: "Frank Sinatra", range: "G1-G5", note: "Smooth Jazz Baritone" },
+  { name: "Adele", range: "C3-C6", note: "Soulful Mezzo power" },
+  { name: "Bruno Mars", range: "C3-D5", note: "High Tenor agility" }
+];
+
+type Step = 'intro' | 'mic-check' | 'low-test' | 'high-test' | 'result';
+
 const VocalRangeTest: React.FC = () => {
+  const [step, setStep] = useState<Step>('intro');
   const [isListening, setIsListening] = useState(false);
-  const [currentNote, setCurrentNote] = useState<string>('--');
-  const [currentFreq, setCurrentFreq] = useState<number>(0);
-  const [currentVolume, setCurrentVolume] = useState<number>(0);
   
-  // Store frequencies
-  const [minFreq, setMinFreq] = useState<number | null>(null);
-  const [maxFreq, setMaxFreq] = useState<number | null>(null);
+  // Live Audio Data
+  const [pitch, setPitch] = useState<{freq: number, note: string, cents: number} | null>(null);
+  const [volume, setVolume] = useState(0);
   
-  const [classification, setClassification] = useState<typeof VOCAL_TYPES[0] | null>(null);
-  const [error, setError] = useState<string>('');
+  // Results
+  const [lowRecord, setLowRecord] = useState<{freq: number, note: string} | null>(null);
+  const [highRecord, setHighRecord] = useState<{freq: number, note: string} | null>(null);
+  
+  // System
+  const [error, setError] = useState('');
+  const [noiseThreshold, setNoiseThreshold] = useState(-50); // dB
   
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyzerRef = useRef<AnalyserNode | null>(null);
   const rafRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  
-  // Buffer for pitch stabilization
   const pitchBufferRef = useRef<number[]>([]);
-  const STABLE_FRAMES_REQUIRED = 5; // Frames to hold note before registering
-  const MIN_VOLUME_DB = -50;
-
-  // Visualize Waveform
+  
+  // Visualization
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const pitchHistoryRef = useRef<number[]>(new Array(100).fill(0)); // For graph
 
   useEffect(() => {
     return () => stopListening();
   }, []);
 
-  // --- Pitch Detection Logic ---
-
-  const autoCorrelate = (buf: Float32Array, sampleRate: number): { freq: number, volume: number } => {
-    let size = buf.length;
-    let rms = 0;
-    for (let i = 0; i < size; i++) {
-      const val = buf[i];
-      rms += val * val;
-    }
-    rms = Math.sqrt(rms / size);
-    
-    // Volume in dB
-    const db = 20 * Math.log10(rms);
-    
-    // Hard Noise Gate
-    if (db < MIN_VOLUME_DB) return { freq: -1, volume: db };
-
-    // Trim buffer to reduce error
-    let r1 = 0, r2 = size - 1, thres = 0.2;
-    for (let i = 0; i < size / 2; i++) {
-      if (Math.abs(buf[i]) < thres) { r1 = i; break; }
-    }
-    for (let i = 1; i < size / 2; i++) {
-      if (Math.abs(buf[size - i]) < thres) { r2 = size - i; break; }
-    }
-    buf = buf.slice(r1, r2);
-    size = buf.length;
-
-    // Autocorrelation
-    let c = new Array(size).fill(0);
-    for (let i = 0; i < size; i++) {
-      for (let j = 0; j < size - i; j++) {
-        c[i] = c[i] + buf[j] * buf[j + i];
-      }
-    }
-
-    let d = 0; while (c[d] > c[d + 1]) d++;
-    let maxval = -1, maxpos = -1;
-    for (let i = d; i < size; i++) {
-      if (c[i] > maxval) { maxval = c[i]; maxpos = i; }
-    }
-    let T0 = maxpos;
-
-    return { freq: sampleRate / T0, volume: db };
+  // --- Helpers ---
+  const freqToMidi = (freq: number) => {
+      if (freq <= 0) return 0;
+      return 69 + 12 * Math.log2(freq / 440);
   };
-
-  const freqToMidi = (freq: number) => Math.round(12 * (Math.log(freq / 440) / Math.log(2)) + 69);
   
   const midiToNote = (midi: number) => {
-    const noteName = NOTES[midi % 12];
-    const octave = Math.floor(midi / 12) - 1;
-    return `${noteName}${octave}`;
+      const rounded = Math.round(midi);
+      const noteName = NOTES[rounded % 12];
+      const octave = Math.floor(rounded / 12) - 1;
+      return `${noteName}${octave}`;
   };
 
-  const getNoteFromFreq = (freq: number) => {
-    const midi = freqToMidi(freq);
-    return midiToNote(midi);
-  };
-
-  const determineVocalType = (minF: number, maxF: number) => {
-     if (!minF || !maxF) return null;
-     
-     const minMidi = freqToMidi(minF);
-     const maxMidi = freqToMidi(maxF);
-     const userCenter = (minMidi + maxMidi) / 2;
-
-     let closest = null;
-     let minDiff = Infinity;
-
-     VOCAL_TYPES.forEach(type => {
-        const typeMinMidi = nameToMidi(type.min);
-        const typeMaxMidi = nameToMidi(type.max);
-        const typeCenter = (typeMinMidi + typeMaxMidi) / 2;
-        
-        const diff = Math.abs(userCenter - typeCenter);
-        if (diff < minDiff) {
-           minDiff = diff;
-           closest = type;
-        }
-     });
-     return closest;
+  const getNoteData = (freq: number) => {
+      const midiFloat = freqToMidi(freq);
+      const midiInt = Math.round(midiFloat);
+      const note = midiToNote(midiInt);
+      const cents = Math.floor((midiFloat - midiInt) * 100);
+      return { note, cents, midi: midiInt };
   };
 
   const nameToMidi = (noteName: string) => {
      const regex = /([A-G]#?)(\d)/;
      const match = noteName.match(regex);
-     if(!match) return 60; // default C4
+     if(!match) return 60; 
      const note = match[1];
      const oct = parseInt(match[2]);
      const noteIdx = NOTES.indexOf(note);
      return (oct + 1) * 12 + noteIdx;
   };
 
-  // --- Audio Loop ---
+  const playReferenceTone = () => {
+      if (!pitch || !audioContextRef.current) return;
+      const ctx = audioContextRef.current;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.type = 'triangle';
+      osc.frequency.value = pitch.freq;
+      
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.2, ctx.currentTime + 0.1);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1);
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 1);
+  };
 
+  // --- Audio Engine ---
   const startListening = async () => {
     try {
-      setError('');
-      // Request Echo Cancellation off for better music processing
+      if (audioContextRef.current?.state === 'running') return;
+
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
             echoCancellation: false,
-            autoGainControl: false,
-            noiseSuppression: false
+            autoGainControl: false, 
+            noiseSuppression: false 
         } 
       });
       streamRef.current = stream;
@@ -157,8 +128,7 @@ const VocalRangeTest: React.FC = () => {
       
       const source = ctx.createMediaStreamSource(stream);
       const analyzer = ctx.createAnalyser();
-      analyzer.fftSize = 2048;
-      analyzer.smoothingTimeConstant = 0.8; 
+      analyzer.fftSize = 2048; 
       source.connect(analyzer);
       analyzerRef.current = analyzer;
 
@@ -174,20 +144,45 @@ const VocalRangeTest: React.FC = () => {
     if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
     if (audioContextRef.current) audioContextRef.current.close();
     setIsListening(false);
-    pitchBufferRef.current = [];
-    
-    // Save Result if we have valid data
-    if (maxFreq && minFreq) {
-       const type = determineVocalType(minFreq, maxFreq);
-       setClassification(type);
+    audioContextRef.current = null;
+  };
 
-       const maxMidi = freqToMidi(maxFreq);
-       const minMidi = freqToMidi(minFreq);
-       const rangeSemitones = maxMidi - minMidi;
-       
-       const score = Math.min(100, Math.round((rangeSemitones / 36) * 100)); 
-       saveStat('vocal-range', score);
+  // --- Auto-Correlation Pitch Detection ---
+  const autoCorrelate = (buf: Float32Array, sampleRate: number) => {
+    let size = buf.length;
+    let rms = 0;
+    for (let i = 0; i < size; i++) rms += buf[i] * buf[i];
+    rms = Math.sqrt(rms / size);
+    
+    const db = 20 * Math.log10(rms);
+    if (db < noiseThreshold) return -1; // Noise gate
+
+    // Simple Autocorrelation
+    let r1 = 0, r2 = size - 1, thres = 0.2;
+    for (let i = 0; i < size / 2; i++) if (Math.abs(buf[i]) < thres) { r1 = i; break; }
+    for (let i = 1; i < size / 2; i++) if (Math.abs(buf[size - i]) < thres) { r2 = size - i; break; }
+    buf = buf.slice(r1, r2);
+    size = buf.length;
+
+    let c = new Array(size).fill(0);
+    for (let i = 0; i < size; i++) {
+      for (let j = 0; j < size - i; j++) c[i] = c[i] + buf[j] * buf[j + i];
     }
+
+    let d = 0; while (c[d] > c[d + 1]) d++;
+    let maxval = -1, maxpos = -1;
+    for (let i = d; i < size; i++) {
+      if (c[i] > maxval) { maxval = c[i]; maxpos = i; }
+    }
+    let T0 = maxpos;
+
+    // Parabolic interpolation for better precision
+    let x1 = c[T0 - 1], x2 = c[T0], x3 = c[T0 + 1];
+    let a = (x1 + x3 - 2 * x2) / 2;
+    let b = (x3 - x1) / 2;
+    if (a) T0 = T0 - b / (2 * a);
+
+    return sampleRate / T0;
   };
 
   const updateLoop = () => {
@@ -196,321 +191,348 @@ const VocalRangeTest: React.FC = () => {
     const buf = new Float32Array(analyzerRef.current.fftSize);
     analyzerRef.current.getFloatTimeDomainData(buf);
     
-    drawWaveform(buf);
+    // Calculate Volume for visualizer
+    let sum = 0;
+    for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+    const rms = Math.sqrt(sum / buf.length);
+    const db = 20 * Math.log10(rms);
+    setVolume(Math.max(0, (db + 100) / 100)); // Normalize approx 0-1
 
-    const { freq, volume } = autoCorrelate(buf, audioContextRef.current.sampleRate);
-    setCurrentVolume(volume);
+    const freq = autoCorrelate(buf, audioContextRef.current.sampleRate);
 
-    // Filter reasonable voice range (E1 to C7 roughly: 40Hz - 2100Hz)
-    if (freq !== -1 && freq > 40 && freq < 2100) {
-      
-      // STABILIZATION LOGIC
-      // Push to buffer
-      pitchBufferRef.current.push(freq);
-      if (pitchBufferRef.current.length > STABLE_FRAMES_REQUIRED) {
-         pitchBufferRef.current.shift();
-      }
-      
-      // Check consistency
-      const buffer = pitchBufferRef.current;
-      const isStable = buffer.length === STABLE_FRAMES_REQUIRED && 
-                       buffer.every(f => Math.abs(f - buffer[0]) < 2); // Within 2Hz
-
-      if (isStable) {
-        // Use average of buffer for smoothness
-        const avgFreq = buffer.reduce((a,b) => a+b) / buffer.length;
+    // Frequency Validation
+    if (freq !== -1 && freq > 50 && freq < 1500) {
+        pitchBufferRef.current.push(freq);
+        if (pitchBufferRef.current.length > 5) pitchBufferRef.current.shift();
         
-        setCurrentFreq(Math.round(avgFreq));
-        const note = getNoteFromFreq(avgFreq);
-        setCurrentNote(note);
+        // Stabilizer: Median filtering
+        const sorted = [...pitchBufferRef.current].sort((a,b) => a-b);
+        const median = sorted[Math.floor(sorted.length/2)];
         
-        // Only update Min/Max if signal is strong and stable
-        // Add a slight "hold" factor - requires multiple updates to push boundary
-        // For MVP, direct update on stable note is fine
-        setMinFreq(prev => (prev === null || avgFreq < prev) ? avgFreq : prev);
-        setMaxFreq(prev => (prev === null || avgFreq > prev) ? avgFreq : prev);
-      }
-    } else {
-        // Decay visualizer if silent
-        if (freq === -1) {
-             // Optional: visual decay
+        if (Math.abs(median - pitchBufferRef.current[pitchBufferRef.current.length-1]) < 10) {
+            const data = getNoteData(median);
+            setPitch({ freq: median, note: data.note, cents: data.cents });
+            
+            // Push to graph history
+            pitchHistoryRef.current.push(freqToMidi(median));
+            
+            // Capture records
+            if (step === 'low-test') {
+                setLowRecord(prev => (!prev || median < prev.freq) ? {freq: median, note: data.note} : prev);
+            }
+            if (step === 'high-test') {
+                setHighRecord(prev => (!prev || median > prev.freq) ? {freq: median, note: data.note} : prev);
+            }
+        } else {
+            pitchHistoryRef.current.push(0); // Signal unstable
         }
+    } else {
+        pitchHistoryRef.current.push(0); // No signal
     }
+    
+    if (pitchHistoryRef.current.length > 150) pitchHistoryRef.current.shift();
+    drawGraph();
 
     rafRef.current = requestAnimationFrame(updateLoop);
   };
 
-  const drawWaveform = (data: Float32Array) => {
-     const canvas = canvasRef.current;
-     if (!canvas) return;
-     const ctx = canvas.getContext('2d');
-     if (!ctx) return;
-
-     ctx.fillStyle = '#09090b'; // matches bg-surface-900 roughly
-     ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-     ctx.lineWidth = 2;
-     ctx.strokeStyle = '#06b6d4'; // primary-500
-     ctx.beginPath();
-
-     const sliceWidth = canvas.width / data.length;
-     let x = 0;
-
-     for (let i = 0; i < data.length; i++) {
-        const v = data[i] * 4; // amplify
-        const y = (canvas.height / 2) + (v * canvas.height / 2);
-
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-
-        x += sliceWidth;
-     }
-     ctx.stroke();
-  };
-
-  const reset = () => {
-    setMinFreq(null);
-    setMaxFreq(null);
-    setClassification(null);
-    setCurrentFreq(0);
-    setCurrentNote('--');
-    pitchBufferRef.current = [];
-  };
-
-  // --- Virtual Piano Component ---
-  const VirtualPiano = () => {
-    // Range C2 (36) to C6 (84)
-    // Total White Keys: 29
-    // Octave Width concept: 7 white keys.
-    // We will render strict CSS grid or Flex? Flex is easier for responsiveness.
-    
-    const startMidi = 36; // C2
-    const endMidi = 84;   // C6
-    
-    const whiteKeys: { midi: number, note: string }[] = [];
-    const blackKeys: { midi: number }[] = [];
-
-    // Pre-calculate keys
-    for (let i = startMidi; i <= endMidi; i++) {
-        const noteIdx = i % 12;
-        const isBlack = [1, 3, 6, 8, 10].includes(noteIdx);
-        if (!isBlack) {
-            whiteKeys.push({ midi: i, note: midiToNote(i) });
-        } else {
-            blackKeys.push({ midi: i });
-        }
-    }
-
-    const currentMidi = freqToMidi(currentFreq);
-    const minMidi = minFreq ? freqToMidi(minFreq) : -1;
-    const maxMidi = maxFreq ? freqToMidi(maxFreq) : -1;
-
-    // Helper to check range coverage
-    const isInRange = (midi: number) => {
-        if (minMidi === -1 || maxMidi === -1) return false;
-        return midi >= minMidi && midi <= maxMidi;
-    };
-
-    return (
-        <div className="relative w-full h-40 select-none bg-zinc-900 p-1 rounded-lg border border-zinc-800 shadow-xl overflow-hidden">
-            {/* White Keys Layer */}
-            <div className="flex h-full w-full">
-                {whiteKeys.map((key) => {
-                    const isActive = currentMidi === key.midi;
-                    const inRange = isInRange(key.midi);
-                    return (
-                        <div 
-                            key={key.midi} 
-                            className={`
-                                flex-1 border-r border-zinc-300 last:border-0 rounded-b-sm relative
-                                ${isActive ? 'bg-primary-500 !border-primary-600 shadow-[0_0_10px_#06b6d4] z-20' : 'bg-white'}
-                                ${inRange && !isActive ? 'bg-primary-100' : ''}
-                                transition-colors duration-75
-                            `}
-                        >
-                            {/* Key Label (Octaves only) */}
-                            {key.midi % 12 === 0 && (
-                                <span className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[9px] text-zinc-500 font-bold pointer-events-none">
-                                    {key.note}
-                                </span>
-                            )}
-                        </div>
-                    );
-                })}
-            </div>
-
-            {/* Black Keys Layer (Overlay) */}
-            {blackKeys.map((key) => {
-                // Find index of the white key just BEFORE this black key
-                const whiteIndex = whiteKeys.findIndex(w => w.midi === key.midi - 1);
-                
-                const widthPercent = (1 / whiteKeys.length) * 100; // Width of one white key
-                const leftPercent = (whiteIndex + 1) * widthPercent - (widthPercent * 0.3); // Offset left by half black key width
-                
-                const isActive = currentMidi === key.midi;
-                const inRange = isInRange(key.midi);
-
-                return (
-                    <div
-                        key={key.midi}
-                        className={`
-                            absolute h-[60%] w-[1.8%] z-30 rounded-b-sm border-x border-b border-black/50
-                            ${isActive ? 'bg-primary-400 shadow-[0_0_10px_#06b6d4]' : 'bg-black'}
-                            ${inRange && !isActive ? 'bg-zinc-700' : ''}
-                        `}
-                        style={{
-                            left: `${leftPercent}%`,
-                            width: `${widthPercent * 0.6}%` // 60% of white key width
-                        }}
-                    ></div>
-                );
-            })}
-        </div>
-    );
-  };
-
-  return (
-    <div className="max-w-4xl mx-auto text-center space-y-6">
+  const drawGraph = () => {
+      if (!canvasRef.current) return;
+      const ctx = canvasRef.current.getContext('2d');
+      if (!ctx) return;
       
-      {/* Top Header & Classification */}
-      <div className="flex flex-col md:flex-row justify-between items-end border-b border-zinc-800 pb-4 gap-4">
-         <div className="text-left">
-            {/* Optimized Header Title for SEO */}
-            <h2 className="text-xl font-bold text-white uppercase tracking-wider flex items-center gap-2">
-               <Music className="text-primary-500" /> Vocal Range Test & Analyzer
-            </h2>
-            <p className="text-xs text-zinc-500 font-mono mt-1">
-                Begin the <strong>Vocal Range Test</strong> by singing a continuous slide from your lowest chest voice to your highest falsetto.
-            </p>
-         </div>
-         {classification && (
-            <div className="text-right animate-in slide-in-from-right duration-500">
-               <div className="text-[10px] text-zinc-500 uppercase font-mono">Voice Type</div>
-               <div className={`text-3xl font-bold ${classification.color} drop-shadow-md`}>{classification.name}</div>
-            </div>
-         )}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-         
-         {/* Left Col: Live Stats */}
-         <div className="lg:col-span-1 space-y-4">
-            <div className="tech-border bg-black p-6 relative overflow-hidden group">
-               {/* Volume Indicator Background */}
-               <div className="absolute bottom-0 left-0 w-full bg-primary-900/20 transition-all duration-75 ease-out" style={{ height: `${Math.max(0, currentVolume + 60) * 2}%` }}></div>
-
-               <div className="relative z-10">
-                   <div className="text-[10px] text-zinc-500 uppercase font-mono mb-2 flex justify-between">
-                       <span>Pitch Detector</span>
-                       {currentVolume > -40 && <span className="text-primary-500 animate-pulse">● SIGNAL</span>}
-                   </div>
-                   <div className="flex items-baseline gap-2 justify-center py-2">
-                      <span className="text-6xl font-mono font-bold text-white tracking-tighter w-24 text-center">{currentNote}</span>
-                   </div>
-                   <div className="text-center text-xs font-mono text-zinc-600">{currentFreq} Hz</div>
-               </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-               <div className="bg-zinc-900/50 p-3 border border-zinc-800 clip-corner-sm">
-                  <div className="text-[9px] text-zinc-500 uppercase mb-1">Lowest (Min)</div>
-                  <div className="text-xl text-white font-bold">{minFreq ? getNoteFromFreq(minFreq) : '--'}</div>
-               </div>
-               <div className="bg-zinc-900/50 p-3 border border-zinc-800 clip-corner-sm">
-                  <div className="text-[9px] text-zinc-500 uppercase mb-1">Highest (Max)</div>
-                  <div className="text-xl text-white font-bold">{maxFreq ? getNoteFromFreq(maxFreq) : '--'}</div>
-               </div>
-            </div>
-         </div>
-
-         {/* Right Col: Waveform & Piano */}
-         <div className="lg:col-span-2 flex flex-col gap-6">
-            <div className="bg-black border border-zinc-800 relative clip-corner-sm h-[140px] flex items-center justify-center overflow-hidden">
-                <canvas ref={canvasRef} width={600} height={140} className="w-full h-full object-cover opacity-80" />
-                
-                {!isListening && !classification && (
-                   <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-                      <div className="flex flex-col items-center gap-2">
-                         <div className="w-12 h-12 rounded-full bg-zinc-800 flex items-center justify-center">
-                            <Mic size={24} className="text-zinc-400" />
-                         </div>
-                         <p className="text-zinc-400 text-sm font-mono">Microphone Standby</p>
-                      </div>
-                   </div>
-                )}
-            </div>
-
-            <VirtualPiano />
-         </div>
-      </div>
-
-      {/* Control Bar */}
-      <div className="flex flex-col items-center justify-center gap-4 py-4">
-        {error && (
-            <div className="flex items-center gap-2 text-red-400 bg-red-900/20 px-4 py-2 rounded-md border border-red-900/50">
-                <AlertCircle size={16} />
-                <span className="text-sm">{error}</span>
-            </div>
-        )}
-        
-        <div className="flex gap-4">
-           {!isListening ? (
-             <button onClick={startListening} className="btn-primary flex items-center gap-3 px-8 text-lg">
-               <Mic size={20} /> {minFreq ? 'Resume Session' : 'Start Analysis'}
-             </button>
-           ) : (
-             <button onClick={stopListening} className="btn-secondary border-red-500/50 text-red-400 hover:bg-red-900/20 hover:text-red-300 hover:border-red-500 flex items-center gap-3 px-8 text-lg animate-pulse-fast">
-               <MicOff size={20} /> Stop & Save
-             </button>
-           )}
-           
-           {(minFreq || maxFreq) && (
-              <button onClick={reset} className="p-4 border border-zinc-800 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-full transition-colors" title="Reset Data">
-                 <RefreshCw size={20} />
-              </button>
-           )}
-        </div>
-      </div>
+      const width = canvasRef.current.width;
+      const height = canvasRef.current.height;
+      const history = pitchHistoryRef.current;
       
-      {/* Result Card with Keywords */}
-      {classification && !isListening && (
-         <div className="bg-zinc-900/30 border border-zinc-800 p-8 text-left max-w-2xl mx-auto clip-corner-lg animate-in slide-in-from-bottom-8 fade-in duration-500">
-            <div className="flex flex-col md:flex-row gap-6 items-center">
-               <div className="bg-zinc-950 p-4 border border-zinc-800 rounded-full">
-                   <Info size={32} className={classification.color} />
-               </div>
-               <div className="flex-1 text-center md:text-left">
-                  <h3 className="text-xl font-bold text-white mb-2">Vocal Range Test Result: <span className={classification.color}>{classification.name}</span></h3>
-                  <p className="text-zinc-400 text-sm leading-relaxed mb-4">{classification.desc}</p>
+      ctx.clearRect(0, 0, width, height);
+      
+      // Guide Lines (Octaves roughly)
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 1;
+      [36, 48, 60, 72, 84].forEach(midi => {
+          // Approximate scale mapping logic
+          // Let's assume range 30-90 midi for graph
+          const y = height - ((midi - 30) / 60) * height;
+          ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+      });
+
+      // Draw Pitch Line
+      ctx.strokeStyle = '#06b6d4';
+      ctx.lineWidth = 3;
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      
+      let started = false;
+      for (let i = 0; i < history.length; i++) {
+          const val = history[i];
+          if (val === 0) {
+              started = false;
+              continue;
+          }
+          
+          const x = (i / history.length) * width;
+          // Scale MIDI 30 (approx F1) to 90 (approx F6)
+          const y = height - ((val - 30) / 60) * height;
+          
+          if (!started) {
+              ctx.moveTo(x, y);
+              started = true;
+          } else {
+              ctx.lineTo(x, y);
+          }
+      }
+      ctx.stroke();
+  };
+
+  // --- Logic Flows ---
+  const advanceStep = () => {
+      if (step === 'intro') {
+          startListening();
+          setStep('mic-check');
+      } else if (step === 'mic-check') {
+          setStep('low-test');
+      } else if (step === 'low-test') {
+          setStep('high-test');
+      } else if (step === 'high-test') {
+          stopListening();
+          setStep('result');
+          saveResult();
+      }
+  };
+
+  const saveResult = () => {
+      if (lowRecord && highRecord) {
+          const minMidi = freqToMidi(lowRecord.freq);
+          const maxMidi = freqToMidi(highRecord.freq);
+          const range = maxMidi - minMidi;
+          const score = Math.min(100, Math.round((range / 36) * 100)); // 3 octaves = 100%
+          saveStat('vocal-range', score);
+      }
+  };
+
+  const findClosestSinger = () => {
+      if (!lowRecord || !highRecord) return null;
+      const userLow = freqToMidi(lowRecord.freq);
+      const userHigh = freqToMidi(highRecord.freq);
+      const userCenter = (userLow + userHigh) / 2;
+
+      let bestMatch = null;
+      let minDiff = Infinity;
+
+      FAMOUS_SINGERS.forEach(singer => {
+          const [minStr, maxStr] = singer.range.split('-');
+          const singerLow = nameToMidi(minStr);
+          const singerHigh = nameToMidi(maxStr);
+          const singerCenter = (singerLow + singerHigh) / 2;
+          
+          const diff = Math.abs(userCenter - singerCenter);
+          if (diff < minDiff) {
+              minDiff = diff;
+              bestMatch = singer;
+          }
+      });
+      return bestMatch;
+  };
+
+  const getVoiceType = () => {
+      if (!lowRecord || !highRecord) return null;
+      const userLow = freqToMidi(lowRecord.freq);
+      const userHigh = freqToMidi(highRecord.freq);
+      const userCenter = (userLow + userHigh) / 2;
+      
+      let bestType = VOCAL_TYPES[0];
+      let minDiff = Infinity;
+      
+      VOCAL_TYPES.forEach(type => {
+          const typeCenter = (freqToMidi(type.min) + freqToMidi(type.max)) / 2;
+          const diff = Math.abs(userCenter - typeCenter);
+          if (diff < minDiff) {
+              minDiff = diff;
+              bestType = type;
+          }
+      });
+      return bestType;
+  };
+
+  // --- RENDER ---
+  
+  // 1. Result Screen
+  if (step === 'result' && lowRecord && highRecord) {
+      const singer = findClosestSinger();
+      const voiceType = getVoiceType();
+      
+      return (
+          <div className="max-w-2xl mx-auto animate-in zoom-in duration-500">
+              <div className="bg-black border border-zinc-800 p-8 rounded-2xl relative overflow-hidden">
+                  <div className="absolute inset-0 bg-grid opacity-20"></div>
                   
-                  <div className="grid grid-cols-2 gap-4 text-xs font-mono">
-                     <div className="bg-black/50 p-2 border border-zinc-800 rounded">
-                        <span className="text-zinc-500 block">STANDARD RANGE</span>
-                        <span className="text-white">{classification.min} - {classification.max}</span>
-                     </div>
-                     <div className="bg-black/50 p-2 border border-zinc-800 rounded">
-                        <span className="text-zinc-500 block">YOUR RANGE</span>
-                        <span className="text-primary-400 font-bold">{minFreq ? getNoteFromFreq(minFreq) : '?'} - {maxFreq ? getNoteFromFreq(maxFreq) : '?'}</span>
-                     </div>
+                  <div className="relative z-10 text-center">
+                      <h2 className="text-sm font-mono text-zinc-500 uppercase tracking-widest mb-2">Vocal Analysis Complete</h2>
+                      <div className={`text-5xl font-bold mb-4 text-glow ${voiceType?.color}`}>{voiceType?.name}</div>
+                      <p className="text-zinc-400 mb-8 max-w-md mx-auto">{voiceType?.desc}</p>
+                      
+                      <div className="grid grid-cols-2 gap-4 mb-8">
+                          <div className="bg-zinc-900/50 p-4 rounded border border-zinc-800">
+                              <div className="text-xs text-zinc-500 uppercase mb-1">Lowest</div>
+                              <div className="text-2xl font-mono text-white">{lowRecord.note} <span className="text-sm text-zinc-600">({Math.round(lowRecord.freq)}Hz)</span></div>
+                          </div>
+                          <div className="bg-zinc-900/50 p-4 rounded border border-zinc-800">
+                              <div className="text-xs text-zinc-500 uppercase mb-1">Highest</div>
+                              <div className="text-2xl font-mono text-white">{highRecord.note} <span className="text-sm text-zinc-600">({Math.round(highRecord.freq)}Hz)</span></div>
+                          </div>
+                      </div>
+
+                      {singer && (
+                          <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl flex items-center gap-4 text-left">
+                              <div className="w-16 h-16 bg-gradient-to-br from-primary-500 to-purple-600 rounded-full flex items-center justify-center text-xl font-bold text-white shrink-0">
+                                  {singer.name[0]}
+                              </div>
+                              <div>
+                                  <div className="text-xs text-primary-400 font-bold uppercase tracking-wider mb-1">Voice Match Detected</div>
+                                  <h3 className="text-xl font-bold text-white">{singer.name}</h3>
+                                  <p className="text-xs text-zinc-500 mt-1">{singer.note}</p>
+                              </div>
+                          </div>
+                      )}
                   </div>
+              </div>
+              <div className="mt-8 flex justify-center gap-4">
+                  <button onClick={() => { setStep('intro'); setLowRecord(null); setHighRecord(null); }} className="btn-secondary flex items-center gap-2">
+                      <RefreshCw size={16} /> Retest
+                  </button>
+              </div>
+          </div>
+      );
+  }
+
+  // 2. Wizard Flow
+  return (
+    <div className="max-w-3xl mx-auto py-8 text-center select-none">
+       {/* Header */}
+       <div className="mb-8">
+           <div className="inline-flex items-center gap-2 px-3 py-1 bg-zinc-900 rounded-full border border-zinc-800 text-[10px] text-zinc-500 font-mono uppercase mb-4">
+               <Music size={12} />
+               <span>Vocal Range Finder</span>
+           </div>
+           
+           <div className="flex justify-center gap-2 mb-8">
+               {['intro', 'mic-check', 'low-test', 'high-test'].map((s, i) => {
+                   const active = ['intro', 'mic-check', 'low-test', 'high-test'].indexOf(step) >= i;
+                   return <div key={s} className={`w-2 h-2 rounded-full transition-colors ${active ? 'bg-primary-500' : 'bg-zinc-800'}`}></div>
+               })}
+           </div>
+       </div>
+
+       {/* Main Card */}
+       <div className="bg-surface border border-zinc-800 p-8 rounded-2xl min-h-[450px] flex flex-col justify-between relative overflow-hidden">
+           
+           {/* Live Graph Background (Active during test) */}
+           {(step === 'low-test' || step === 'high-test') && (
+               <div className="absolute inset-0 opacity-20 pointer-events-none">
+                   <canvas ref={canvasRef} width={800} height={400} className="w-full h-full" />
                </div>
-            </div>
-         </div>
-      )}
+           )}
 
-      {/* SEO Optimized Footer Section */}
-      <div className="mt-8 border-t border-zinc-800 pt-6 text-left">
-         <h4 className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest mb-2">Technical Analysis Protocol</h4>
-         <p className="text-xs text-zinc-500 leading-relaxed max-w-3xl">
-            Our <strong>Vocal Range Test</strong> utilizes real-time frequency analysis (FFT) to map your vocal cords' capabilities against standardized musical classifications. Unlike a subjective <strong>vocal range test</strong>, this digital tool measures precise Hertz values to determine if you are a Bass, Baritone, Tenor, Alto, Mezzo-Soprano, or Soprano. For the most accurate <strong>Vocal Range Test</strong> results, ensure you are in a quiet environment and warm up your voice beforehand.
-         </p>
-      </div>
+           {step === 'intro' && (
+               <div className="animate-in fade-in zoom-in">
+                   <div className="w-20 h-20 bg-zinc-900 rounded-full flex items-center justify-center mx-auto mb-6 border border-zinc-800 shadow-inner">
+                       <Mic size={32} className="text-zinc-400" />
+                   </div>
+                   <h1 className="text-2xl font-bold text-white mb-4">Let's find your voice type.</h1>
+                   <p className="text-zinc-400 text-sm mb-8 leading-relaxed max-w-md mx-auto">
+                       We will measure your lowest and highest comfortable notes to classify you as a Bass, Tenor, Soprano, etc.
+                       <br/><br/>
+                       <strong>Note:</strong> Sing comfortably. Do not strain.
+                   </p>
+                   {error && <div className="text-red-500 text-xs mb-4 bg-red-900/20 p-2 rounded">{error}</div>}
+                   <button onClick={advanceStep} className="btn-primary">Start Calibration</button>
+               </div>
+           )}
 
+           {step === 'mic-check' && (
+               <div className="animate-in slide-in-from-right">
+                   <h2 className="text-xl font-bold text-white mb-2">Microphone Check</h2>
+                   <p className="text-zinc-400 text-sm mb-8">Make some noise to verify input level.</p>
+                   
+                   <div className="w-48 h-48 mx-auto mb-8 relative flex items-center justify-center">
+                        {/* Circular Progress for volume */}
+                        <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="45" fill="none" stroke="#27272a" strokeWidth="8" />
+                            <circle 
+                                cx="50" cy="50" r="45" fill="none" stroke="#06b6d4" strokeWidth="8"
+                                strokeDasharray="283"
+                                strokeDashoffset={283 - (Math.min(1, volume * 1.5) * 283)}
+                                className="transition-all duration-75"
+                            />
+                        </svg>
+                        <Mic size={48} className={volume > 0.1 ? 'text-white' : 'text-zinc-700'} />
+                   </div>
+                   
+                   <button onClick={advanceStep} disabled={volume < 0.05} className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed">
+                       {volume > 0.05 ? "Signal Good - Continue" : "Waiting for Signal..."}
+                   </button>
+               </div>
+           )}
+
+           {(step === 'low-test' || step === 'high-test') && (
+               <div className="animate-in slide-in-from-right relative z-10">
+                   <h2 className="text-xl font-bold text-white mb-2">
+                       {step === 'low-test' ? "Lowest Note Challenge" : "Highest Note Challenge"}
+                   </h2>
+                   <p className="text-zinc-400 text-sm mb-6">
+                       {step === 'low-test' 
+                           ? "Relax your throat and hum 'Ahhh' as low as you can." 
+                           : "Now go high! Sing 'Eeee' or a siren sound up to your limit."}
+                   </p>
+                   
+                   {/* Tuner Visualization */}
+                   <div className="relative h-24 bg-black/50 border border-zinc-700 rounded-xl overflow-hidden flex flex-col items-center justify-center mb-6 backdrop-blur-sm">
+                        {pitch ? (
+                            <>
+                                <div className="text-4xl font-bold text-white font-mono flex items-baseline gap-2">
+                                    {pitch.note} <span className="text-xs text-zinc-500 font-sans">{pitch.freq.toFixed(0)} Hz</span>
+                                </div>
+                                <div className="w-48 h-1 bg-zinc-700 mt-2 relative rounded-full">
+                                    <div 
+                                        className={`absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full transition-all duration-100 ${Math.abs(pitch.cents) < 10 ? 'bg-emerald-500' : 'bg-primary-500'}`}
+                                        style={{ left: `calc(50% + ${pitch.cents}px)` }}
+                                    ></div>
+                                </div>
+                                <div className="flex justify-between w-48 mt-1 text-[9px] text-zinc-600 font-mono">
+                                    <span>FLAT</span>
+                                    <span>SHARP</span>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="text-zinc-600 font-mono animate-pulse">LISTENING...</div>
+                        )}
+                   </div>
+                   
+                   <div className="bg-zinc-900/80 p-4 rounded mb-8 flex items-center justify-between border border-zinc-700 backdrop-blur-md">
+                       <span className="text-xs text-zinc-500 uppercase">
+                           {step === 'low-test' ? "Best Low" : "Best High"}
+                       </span>
+                       <span className="text-2xl font-mono text-primary-400 font-bold">
+                           {(step === 'low-test' ? lowRecord?.note : highRecord?.note) || '--'}
+                       </span>
+                   </div>
+
+                   <div className="flex gap-4">
+                       <button onClick={playReferenceTone} className="flex-1 py-4 bg-zinc-800 hover:bg-zinc-700 rounded border border-zinc-600 text-zinc-300 text-xs font-bold uppercase flex flex-col items-center justify-center gap-1 transition-colors">
+                           <Volume2 size={16} /> Play Tone
+                       </button>
+                       <button onClick={advanceStep} disabled={step === 'low-test' ? !lowRecord : !highRecord} className="flex-[2] btn-primary">
+                           {step === 'low-test' ? "Confirm Lowest Note" : "Analyze Results"}
+                       </button>
+                   </div>
+                   
+               </div>
+           )}
+
+       </div>
     </div>
   );
 };
-
-// Add RefreshCw icon manually since it was removed from import but used in reset button
-import { RefreshCw } from 'lucide-react';
 
 export default VocalRangeTest;
