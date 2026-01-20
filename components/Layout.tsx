@@ -50,7 +50,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       "@type": "SearchAction",
       "target": {
         "@type": "EntryPoint",
-        "urlTemplate": "https://myhumanstats.org/#/search?q={search_term_string}"
+        "urlTemplate": "https://myhumanstats.org/search?q={search_term_string}"
       },
       "query-input": "required name=search_term_string"
     }
@@ -141,7 +141,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                      <span className="w-1.5 h-1.5 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-pulse"></span>
                      <span className="text-[10px] text-zinc-400 font-mono tracking-widest">ONLINE</span>
                   </div>
-                  <span className="text-[9px] text-zinc-700 font-mono">V.2.0.4.BUILD</span>
+                  <span className="text-[9px] text-zinc-700 font-mono">V.2.0.5.BUILD</span>
                </div>
             </div>
           </div>

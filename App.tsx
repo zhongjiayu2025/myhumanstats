@@ -1,5 +1,5 @@
 import React from 'react';
-import { HashRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
@@ -41,7 +41,7 @@ const App: React.FC = () => {
   return (
     <HelmetProvider>
       <GlobalStyles />
-      <HashRouter>
+      <BrowserRouter>
         <Layout>
           <Routes>
             <Route path="/" element={<Dashboard />} />
@@ -56,7 +56,7 @@ const App: React.FC = () => {
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Layout>
-      </HashRouter>
+      </BrowserRouter>
     </HelmetProvider>
   );
 };
