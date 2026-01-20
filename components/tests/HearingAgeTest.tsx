@@ -1,9 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, RefreshCcw, Check, Headphones, Volume2, ArrowRight, Minus, Plus } from 'lucide-react';
+import { Play, RefreshCcw, Check, Headphones, Volume2, ArrowRight, Minus, Plus, AlertTriangle, Info } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 import ShareCard from '../ShareCard';
 
 type EarSide = 'left' | 'right';
+
+// ISO 7029 Approximation for Age vs High Freq Cutoff
+const AGE_CURVE = [
+  { age: 10, freq: 20000 },
+  { age: 20, freq: 17000 },
+  { age: 30, freq: 15000 },
+  { age: 40, freq: 12000 },
+  { age: 50, freq: 10500 },
+  { age: 60, freq: 8000 },
+  { age: 80, freq: 4000 },
+];
 
 const HearingAgeTest: React.FC = () => {
   // System State
@@ -18,6 +29,7 @@ const HearingAgeTest: React.FC = () => {
   // Data State
   const [results, setResults] = useState<{left: number | null, right: number | null}>({ left: null, right: null });
   const [vizData, setVizData] = useState<number[]>(new Array(32).fill(0));
+  const [sampleRate, setSampleRate] = useState<number>(0);
 
   // A11y
   const [a11yAnnouncement, setA11yAnnouncement] = useState("");
@@ -28,19 +40,23 @@ const HearingAgeTest: React.FC = () => {
   const gainRef = useRef<GainNode | null>(null);
   const pannerRef = useRef<StereoPannerNode | null>(null);
   const analyzerRef = useRef<AnalyserNode | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
+  
+  // Loop Refs
+  const visualizerRafRef = useRef<number | null>(null);
+  const sweepRafRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
 
   // Constants
   const START_FREQ = 22000;
   const END_FREQ = 8000;
-  const SWEEP_DURATION = 20000; // Slower sweep for better accuracy (20s)
+  const SWEEP_DURATION = 20000; // 20s sweep
 
   // --- Initialization & Cleanup ---
   useEffect(() => {
-    // Basic init check
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    ctx.close();
+    // Check hardware sample rate
+    const tempCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    setSampleRate(tempCtx.sampleRate);
+    tempCtx.close();
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (phase !== 'testing') return;
@@ -70,7 +86,15 @@ const HearingAgeTest: React.FC = () => {
   // --- Core Audio Engine ---
   const startTone = (freq: number, type: OscillatorType = 'sine', side: EarSide | 'both' = 'both', vol: number = 0.1) => {
       const ctx = initAudio();
-      stopAudio(); // Safety clear
+      
+      // Don't fully stop if just changing parameters in manual mode to prevent clicking
+      // But for safety in this implementation, we re-create the graph to ensure clean state
+      if (oscillatorRef.current) {
+          try { oscillatorRef.current.stop(); oscillatorRef.current.disconnect(); } catch(e){}
+      }
+      if (gainRef.current) {
+          gainRef.current.disconnect();
+      }
 
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -82,9 +106,9 @@ const HearingAgeTest: React.FC = () => {
       
       panner.pan.value = side === 'left' ? -1 : side === 'right' ? 1 : 0;
       
-      // Soft start to avoid pop
+      // Soft envelope to avoid clicking
       gain.gain.setValueAtTime(0, ctx.currentTime);
-      gain.gain.linearRampToValueAtTime(vol, ctx.currentTime + 0.1);
+      gain.gain.linearRampToValueAtTime(vol, ctx.currentTime + 0.05);
 
       analyzer.fftSize = 256;
       analyzer.smoothingTimeConstant = 0.5;
@@ -96,7 +120,6 @@ const HearingAgeTest: React.FC = () => {
 
       osc.start();
       
-      // Store refs
       oscillatorRef.current = osc;
       gainRef.current = gain;
       pannerRef.current = panner;
@@ -107,33 +130,49 @@ const HearingAgeTest: React.FC = () => {
   };
 
   const stopAudio = () => {
-    if (oscillatorRef.current) {
+    // Clear Loops
+    if (sweepRafRef.current) {
+        cancelAnimationFrame(sweepRafRef.current);
+        sweepRafRef.current = null;
+    }
+    if (visualizerRafRef.current) {
+        cancelAnimationFrame(visualizerRafRef.current);
+        visualizerRafRef.current = null;
+    }
+
+    if (oscillatorRef.current && audioContextRef.current && gainRef.current) {
         const ctx = audioContextRef.current;
-        if (ctx && gainRef.current) {
-            // Soft stop
+        // Soft release
+        try {
             gainRef.current.gain.cancelScheduledValues(ctx.currentTime);
+            gainRef.current.gain.setValueAtTime(gainRef.current.gain.value, ctx.currentTime);
             gainRef.current.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.05);
-            oscillatorRef.current.stop(ctx.currentTime + 0.05);
-        } else {
-            try { oscillatorRef.current.stop(); } catch(e){}
+            oscillatorRef.current.stop(ctx.currentTime + 0.06);
+        } catch (e) {
+            // Fallback if context is weird
         }
+        
+        // Cleanup refs after fade out
         setTimeout(() => {
             oscillatorRef.current?.disconnect();
+            gainRef.current?.disconnect();
             oscillatorRef.current = null;
+            gainRef.current = null;
         }, 100);
     }
-    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+    
     setIsPlaying(false);
     setVizData(new Array(32).fill(0));
   };
 
   const drawVisualizer = () => {
-      if (!analyzerRef.current) return;
+      if (!analyzerRef.current || !oscillatorRef.current) return;
+      
       const bufferLength = analyzerRef.current.frequencyBinCount;
       const dataArray = new Uint8Array(bufferLength);
       analyzerRef.current.getByteFrequencyData(dataArray);
 
-      // Downsample for UI
+      // Downsample
       const bars = 32;
       const step = Math.floor(bufferLength / bars);
       const lowRes = [];
@@ -144,9 +183,7 @@ const HearingAgeTest: React.FC = () => {
       }
       setVizData(lowRes);
 
-      if (isPlaying) {
-          animationFrameRef.current = requestAnimationFrame(drawVisualizer);
-      }
+      visualizerRafRef.current = requestAnimationFrame(drawVisualizer);
   };
 
   // --- Logic Flows ---
@@ -158,43 +195,50 @@ const HearingAgeTest: React.FC = () => {
       
       if (mode === 'auto') {
           startTimeRef.current = Date.now();
+          
           const animateSweep = () => {
-              if (!oscillatorRef.current) return;
+              if (!oscillatorRef.current || !audioContextRef.current) return;
               
               const elapsed = Date.now() - startTimeRef.current;
               const progress = Math.min(elapsed / SWEEP_DURATION, 1);
               
-              // Linear drop is often easier for users to time than logarithmic for this specific test style
+              // Linear drop
               const currentFreq = START_FREQ - (progress * (START_FREQ - END_FREQ));
               
               setFrequency(Math.round(currentFreq));
-              if (oscillatorRef.current && audioContextRef.current) {
-                  oscillatorRef.current.frequency.setValueAtTime(currentFreq, audioContextRef.current.currentTime);
-              }
+              oscillatorRef.current.frequency.setValueAtTime(currentFreq, audioContextRef.current.currentTime);
               
-              // Visualizer loop handles drawing via requestAnimationFrame if isPlaying is true
-
               if (progress < 1) {
-                  animationFrameRef.current = requestAnimationFrame(animateSweep);
+                  sweepRafRef.current = requestAnimationFrame(animateSweep);
               } else {
                   stopAudio();
               }
           };
           
-          if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-          animationFrameRef.current = requestAnimationFrame(animateSweep);
+          if (sweepRafRef.current) cancelAnimationFrame(sweepRafRef.current);
+          sweepRafRef.current = requestAnimationFrame(animateSweep);
       }
   };
 
   const stopAndRecord = () => {
       stopAudio();
-      setResults(prev => ({ ...prev, [activeSide]: frequency }));
-      setA11yAnnouncement(`Recorded ${frequency} Hz for ${activeSide} ear.`);
+      
+      if (mode === 'auto') {
+          // Auto mode switches to manual for fine tuning
+          setMode('manual');
+          setA11yAnnouncement(`Sweep paused at ${frequency} Hz. Use manual controls to fine tune.`);
+      } else {
+          // Manual mode confirms result
+          setResults(prev => ({ ...prev, [activeSide]: frequency }));
+          setA11yAnnouncement(`Recorded ${frequency} Hz for ${activeSide} ear.`);
+      }
   };
 
   const manualAdjust = (delta: number) => {
       const newFreq = Math.min(START_FREQ, Math.max(END_FREQ, frequency + delta));
       setFrequency(newFreq);
+      
+      // If playing, update live. If not, play short blip? No, user must hold Play.
       if (isPlaying && oscillatorRef.current && audioContextRef.current) {
           oscillatorRef.current.frequency.setValueAtTime(newFreq, audioContextRef.current.currentTime);
       }
@@ -203,11 +247,11 @@ const HearingAgeTest: React.FC = () => {
   // --- Helpers ---
   const getAgeFromFreq = (freq: number) => {
       if (freq > 19000) return "< 20";
-      if (freq > 17000) return "20-24";
-      if (freq > 16000) return "25-29";
-      if (freq > 15000) return "30-39";
-      if (freq > 12000) return "40-49";
-      if (freq > 10000) return "50-59";
+      if (freq > 17000) return "20 - 24";
+      if (freq > 16000) return "25 - 29";
+      if (freq > 15000) return "30 - 39";
+      if (freq > 12000) return "40 - 49";
+      if (freq > 10000) return "50 - 59";
       return "60+";
   };
 
@@ -215,17 +259,50 @@ const HearingAgeTest: React.FC = () => {
       const l = results.left || 0;
       const r = results.right || 0;
       const best = Math.max(l, r);
-      // Normalized score 0-100
       const range = START_FREQ - END_FREQ;
       return Math.max(0, Math.min(100, Math.round(((best - END_FREQ) / range) * 100)));
   };
 
-  useEffect(() => {
-      if (results.left && results.right && phase !== 'report') {
-          // Delay slightly to let user see the number
-          // Actually, let user manually click "View Report" so they can retry one side if they want
-      }
-  }, [results, phase]);
+  // --- Graph Component ---
+  const AgeFreqChart = ({ userFreq }: { userFreq: number }) => {
+      const width = 300;
+      const height = 150;
+      const pad = 20;
+      
+      const minAge = 10; const maxAge = 80;
+      const minF = 4000; const maxF = 20000;
+      
+      const getX = (age: number) => pad + ((age - minAge) / (maxAge - minAge)) * (width - 2*pad);
+      const getY = (f: number) => height - pad - ((f - minF) / (maxF - minF)) * (height - 2*pad);
+      
+      const points = AGE_CURVE.map(p => `${getX(p.age)},${getY(p.freq)}`).join(' ');
+      
+      const userAgeEst = parseInt(getAgeFromFreq(userFreq).replace(/\D/g, '')) || 30; 
+      const userX = getX(Math.max(10, Math.min(80, userAgeEst)));
+      const userY = getY(userFreq);
+
+      return (
+          <div className="relative w-full max-w-[300px] mx-auto bg-zinc-900 border border-zinc-800 rounded p-4">
+              <div className="absolute top-2 right-4 text-[10px] text-zinc-500">Global Average</div>
+              <svg width="100%" viewBox={`0 0 ${width} ${height}`} className="overflow-visible">
+                  {/* Grid */}
+                  <line x1={pad} y1={height-pad} x2={width-pad} y2={height-pad} stroke="#333" strokeWidth="1" />
+                  <line x1={pad} y1={pad} x2={pad} y2={height-pad} stroke="#333" strokeWidth="1" />
+                  
+                  {/* The Curve */}
+                  <polyline points={points} fill="none" stroke="#52525b" strokeWidth="2" strokeDasharray="4 2" />
+                  
+                  {/* User Point */}
+                  <circle cx={userX} cy={userY} r="6" fill="#06b6d4" className="animate-pulse" />
+                  <text x={userX} y={userY - 10} fill="#06b6d4" fontSize="10" textAnchor="middle" fontWeight="bold">YOU</text>
+                  
+                  {/* Labels */}
+                  <text x={width/2} y={height+10} fill="#71717a" fontSize="10" textAnchor="middle">Age (Years)</text>
+                  <text x={0} y={height/2} fill="#71717a" fontSize="10" transform={`rotate(-90 5,${height/2})`} textAnchor="middle">Freq (Hz)</text>
+              </svg>
+          </div>
+      );
+  };
 
 
   // --- RENDERERS ---
@@ -238,10 +315,21 @@ const HearingAgeTest: React.FC = () => {
                       <Volume2 size={32} className="text-primary-500" />
                   </div>
                   <h2 className="text-2xl font-bold text-white mb-4 uppercase tracking-wider">Calibration Protocol</h2>
-                  <p className="text-zinc-400 text-sm leading-relaxed mb-8 max-w-md mx-auto">
-                      <strong>WARNING:</strong> High-frequency sounds can be damaging at high volumes. 
-                      <br/>Please calibrate your system volume using the reference tone below.
-                  </p>
+                  
+                  <div className="bg-red-900/10 border border-red-500/30 p-4 rounded text-left mb-6">
+                      <div className="flex items-center gap-2 text-red-400 font-bold text-sm mb-2">
+                          <AlertTriangle size={16} /> Hardware Warning
+                      </div>
+                      <p className="text-xs text-red-200 leading-relaxed">
+                          Bluetooth headphones and cheap speakers often cannot play sounds above 16,000 Hz. 
+                          For accurate results, use <strong>Wired Headphones</strong> or high-quality monitors.
+                          {sampleRate < 44100 && (
+                              <span className="block mt-2 font-mono text-red-400 uppercase">
+                                  Error: Device Sample Rate {sampleRate}Hz is too low. Results will be inaccurate.
+                              </span>
+                          )}
+                      </p>
+                  </div>
 
                   <div className="bg-zinc-900/50 p-6 rounded-lg border border-zinc-800 mb-8">
                       <div className="text-xs font-mono text-zinc-500 uppercase mb-4">1.0 kHz Reference Tone</div>
@@ -252,7 +340,7 @@ const HearingAgeTest: React.FC = () => {
                           {isPlaying ? <><div className="w-2 h-2 bg-white rounded-full animate-pulse"/> Stop Tone</> : <Play size={16} />}
                       </button>
                       <p className="text-[10px] text-zinc-600 mt-4 leading-relaxed">
-                          Adjust your device volume until this tone is <strong>clearly audible but comfortable</strong>. <br/>Do not change your volume after this step.
+                          Adjust your volume until this tone is audible but <strong>comfortable</strong>. Do not change volume during the test.
                       </p>
                   </div>
 
@@ -270,50 +358,51 @@ const HearingAgeTest: React.FC = () => {
   if (phase === 'report') {
       const score = calculateFinalScore();
       saveStat('hearing-age', score);
+      const bestFreq = Math.max(results.left || 0, results.right || 0);
 
       return (
-          <div className="max-w-2xl mx-auto animate-in zoom-in duration-500">
+          <div className="max-w-3xl mx-auto animate-in zoom-in duration-500">
               <div className="tech-border bg-black p-8 md:p-12 clip-corner-lg relative overflow-hidden">
                   <div className="absolute inset-0 bg-grid opacity-20"></div>
                   
-                  <div className="relative z-10">
-                      <div className="flex justify-between items-start mb-8">
-                          <div>
-                              <h2 className="text-sm font-mono text-zinc-500 uppercase tracking-widest mb-1">Audiometry Report</h2>
-                              <div className="text-3xl font-bold text-white">Binaural Analysis</div>
-                          </div>
-                          <div className="text-right">
+                  <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-8 items-center mb-8">
+                      <div>
+                          <h2 className="text-sm font-mono text-zinc-500 uppercase tracking-widest mb-1">Audiometry Report</h2>
+                          <div className="text-3xl font-bold text-white mb-6">Binaural Analysis</div>
+                          
+                          <div className="mb-6">
                               <div className="text-sm font-mono text-zinc-500 uppercase tracking-widest mb-1">Biological Age</div>
-                              <div className="text-4xl font-bold text-primary-400 text-glow">
-                                  {getAgeFromFreq(Math.max(results.left || 0, results.right || 0))} <span className="text-lg text-zinc-600">YRS</span>
+                              <div className="text-5xl font-bold text-primary-400 text-glow">
+                                  {getAgeFromFreq(bestFreq)} <span className="text-lg text-zinc-600">YRS</span>
+                              </div>
+                          </div>
+
+                          <div className="flex gap-4 mb-4">
+                              <div className="flex-1 bg-zinc-900/50 border border-zinc-800 p-3 rounded">
+                                  <div className="text-[10px] text-zinc-500 uppercase">Left Ear</div>
+                                  <div className="text-lg font-mono text-white">{results.left?.toLocaleString()} Hz</div>
+                              </div>
+                              <div className="flex-1 bg-zinc-900/50 border border-zinc-800 p-3 rounded">
+                                  <div className="text-[10px] text-zinc-500 uppercase">Right Ear</div>
+                                  <div className="text-lg font-mono text-white">{results.right?.toLocaleString()} Hz</div>
                               </div>
                           </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-6 mb-8">
-                          <div className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-lg text-center">
-                              <div className="flex justify-center mb-2"><Headphones size={24} className="text-zinc-600"/></div>
-                              <div className="text-xs text-zinc-500 uppercase mb-2">Left Ear</div>
-                              <div className="text-2xl font-mono text-white">{results.left?.toLocaleString()} Hz</div>
-                          </div>
-                          <div className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-lg text-center">
-                              <div className="flex justify-center mb-2"><Headphones size={24} className="text-zinc-600 scale-x-[-1]"/></div>
-                              <div className="text-xs text-zinc-500 uppercase mb-2">Right Ear</div>
-                              <div className="text-2xl font-mono text-white">{results.right?.toLocaleString()} Hz</div>
-                          </div>
-                      </div>
+                      {/* Chart */}
+                      <AgeFreqChart userFreq={bestFreq} />
+                  </div>
 
-                      <div className="flex gap-4 justify-center">
-                          <button onClick={() => { setPhase('testing'); setResults({left:null, right:null}); }} className="btn-secondary flex items-center gap-2">
-                              <RefreshCcw size={16} /> New Test
-                          </button>
-                      </div>
-                      
+                  <div className="flex flex-col items-center gap-6 border-t border-zinc-800 pt-8">
                       <ShareCard 
                           testName="Hearing Age"
-                          scoreDisplay={`${Math.max(results.left || 0, results.right || 0).toLocaleString()} Hz`}
-                          resultLabel={`Result: ${getAgeFromFreq(Math.max(results.left || 0, results.right || 0))} Yrs`}
+                          scoreDisplay={`${bestFreq.toLocaleString()} Hz`}
+                          resultLabel={`Ear Age: ${getAgeFromFreq(bestFreq)}`}
                       />
+                      
+                      <button onClick={() => { setPhase('testing'); setResults({left:null, right:null}); }} className="btn-secondary flex items-center gap-2">
+                          <RefreshCcw size={16} /> New Test
+                      </button>
                   </div>
               </div>
           </div>
@@ -333,8 +422,12 @@ const HearingAgeTest: React.FC = () => {
            {/* Top Bar: L/R Switcher */}
            <div className="flex border-b border-zinc-800">
                <button 
-                  onClick={() => { stopAudio(); setActiveSide('left'); }}
-                  className={`flex-1 py-4 flex items-center justify-center gap-2 transition-all ${activeSide === 'left' ? 'bg-zinc-900 text-white shadow-[inset_0_-2px_0_#06b6d4]' : 'text-zinc-600 hover:text-zinc-400 hover:bg-zinc-950'}`}
+                  onClick={() => { stopAudio(); setActiveSide('left'); setMode('auto'); }}
+                  disabled={!!results.left}
+                  className={`flex-1 py-4 flex items-center justify-center gap-2 transition-all 
+                    ${activeSide === 'left' ? 'bg-zinc-900 text-white shadow-[inset_0_-2px_0_#06b6d4]' : 'text-zinc-600 hover:text-zinc-400'}
+                    ${results.left ? 'opacity-50 cursor-not-allowed' : ''}
+                  `}
                >
                   <span className="font-bold">L</span>
                   <span className="text-xs font-mono uppercase">Left Ear</span>
@@ -342,8 +435,12 @@ const HearingAgeTest: React.FC = () => {
                </button>
                <div className="w-px bg-zinc-800"></div>
                <button 
-                  onClick={() => { stopAudio(); setActiveSide('right'); }}
-                  className={`flex-1 py-4 flex items-center justify-center gap-2 transition-all ${activeSide === 'right' ? 'bg-zinc-900 text-white shadow-[inset_0_-2px_0_#06b6d4]' : 'text-zinc-600 hover:text-zinc-400 hover:bg-zinc-950'}`}
+                  onClick={() => { stopAudio(); setActiveSide('right'); setMode('auto'); }}
+                  disabled={!!results.right}
+                  className={`flex-1 py-4 flex items-center justify-center gap-2 transition-all 
+                    ${activeSide === 'right' ? 'bg-zinc-900 text-white shadow-[inset_0_-2px_0_#06b6d4]' : 'text-zinc-600 hover:text-zinc-400'}
+                    ${results.right ? 'opacity-50 cursor-not-allowed' : ''}
+                  `}
                >
                   <span className="font-bold">R</span>
                   <span className="text-xs font-mono uppercase">Right Ear</span>
@@ -352,7 +449,7 @@ const HearingAgeTest: React.FC = () => {
            </div>
 
            {/* Main Display Area */}
-           <div className="p-8 md:p-12 text-center relative">
+           <div className="p-8 md:p-12 text-center relative min-h-[400px] flex flex-col justify-center">
                {/* Background Fx */}
                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-zinc-900/50 via-black to-black pointer-events-none"></div>
                
@@ -364,7 +461,7 @@ const HearingAgeTest: React.FC = () => {
                    <div className="text-sm font-mono text-primary-500 mb-12">HERTZ</div>
 
                    {/* Visualizer Bar */}
-                   <div className="h-16 flex items-end justify-center gap-[2px] mb-12 px-12 opacity-80">
+                   <div className="h-16 flex items-end justify-center gap-[2px] mb-8 px-12 opacity-80">
                         {vizData.map((val, i) => (
                             <div 
                                 key={i} 
@@ -379,25 +476,7 @@ const HearingAgeTest: React.FC = () => {
 
                    {/* Controls */}
                    <div className="max-w-md mx-auto">
-                       {/* Mode Switcher */}
-                       <div className="flex justify-center mb-8">
-                           <div className="inline-flex bg-zinc-900 p-1 rounded border border-zinc-800">
-                               <button 
-                                  onClick={() => { setMode('auto'); stopAudio(); }}
-                                  className={`px-4 py-1 text-xs rounded transition-all ${mode === 'auto' ? 'bg-primary-600 text-black font-bold' : 'text-zinc-500 hover:text-white'}`}
-                               >
-                                  Auto Sweep
-                               </button>
-                               <button 
-                                  onClick={() => { setMode('manual'); stopAudio(); }}
-                                  className={`px-4 py-1 text-xs rounded transition-all ${mode === 'manual' ? 'bg-primary-600 text-black font-bold' : 'text-zinc-500 hover:text-white'}`}
-                               >
-                                  Manual Tune
-                               </button>
-                           </div>
-                       </div>
-
-                       {/* Action Buttons */}
+                       {/* Contextual Action Buttons */}
                        {mode === 'auto' ? (
                            <button 
                               onClick={isPlaying ? stopAndRecord : startSweep}
@@ -412,8 +491,13 @@ const HearingAgeTest: React.FC = () => {
                               {isPlaying ? "I Hear It (Stop)" : `Start ${activeSide === 'left' ? 'Left' : 'Right'} Sweep`}
                            </button>
                        ) : (
-                           // Manual Controls
-                           <div className="space-y-4">
+                           // Manual Fine Tuning Controls
+                           <div className="space-y-4 animate-in slide-in-from-bottom-4">
+                               <div className="flex items-center justify-center gap-2 mb-2">
+                                   <Info size={14} className="text-primary-500" />
+                                   <span className="text-xs text-primary-400 font-bold uppercase">Fine Tune Mode Active</span>
+                               </div>
+                               
                                <div className="flex gap-4 items-center">
                                    <button onMouseDown={() => manualAdjust(-100)} className="w-12 h-12 bg-zinc-800 rounded flex items-center justify-center hover:bg-zinc-700 active:bg-primary-600 transition-colors"><Minus size={20} className="text-zinc-300" /></button>
                                    <input 
@@ -422,32 +506,44 @@ const HearingAgeTest: React.FC = () => {
                                       max={START_FREQ}
                                       step={50}
                                       value={frequency}
-                                      onChange={(e) => manualAdjust(parseInt(e.target.value) - frequency)} // Delta calc
+                                      onChange={(e) => manualAdjust(parseInt(e.target.value) - frequency)} 
                                       className="flex-1 h-12 bg-zinc-900 rounded appearance-none cursor-pointer accent-primary-500 px-2"
                                    />
                                    <button onMouseDown={() => manualAdjust(100)} className="w-12 h-12 bg-zinc-800 rounded flex items-center justify-center hover:bg-zinc-700 active:bg-primary-600 transition-colors"><Plus size={20} className="text-zinc-300" /></button>
                                </div>
+                               
                                <div className="flex gap-4">
                                    <button 
                                       onMouseDown={() => startTone(frequency, 'sine', activeSide)}
                                       onMouseUp={stopAudio}
                                       onMouseLeave={stopAudio}
-                                      className="flex-1 py-4 bg-zinc-800 hover:bg-primary-600 hover:text-black text-white font-bold rounded uppercase tracking-wider transition-colors"
+                                      className="flex-1 py-4 bg-zinc-800 hover:bg-primary-600 hover:text-black text-white font-bold rounded uppercase tracking-wider transition-colors border border-zinc-700"
                                    >
-                                      Hold to Play
+                                      Hold to Check
                                    </button>
                                    <button 
-                                      onClick={stopAndRecord}
-                                      className="flex-1 py-4 bg-emerald-600 hover:bg-emerald-500 text-black font-bold rounded uppercase tracking-wider transition-colors"
+                                      onClick={() => {
+                                          stopAudio();
+                                          setResults(prev => ({ ...prev, [activeSide]: frequency }));
+                                          // Auto advance side if needed
+                                          if (activeSide === 'left' && !results.right) {
+                                              setActiveSide('right');
+                                              setMode('auto');
+                                              setFrequency(START_FREQ);
+                                          }
+                                      }}
+                                      className="flex-1 py-4 bg-emerald-600 hover:bg-emerald-500 text-black font-bold rounded uppercase tracking-wider transition-colors shadow-[0_0_15px_rgba(16,185,129,0.3)]"
                                    >
-                                      Confirm Threshold
+                                      Confirm {frequency}Hz
                                    </button>
                                </div>
+                               <p className="text-[10px] text-zinc-500">Tap "Hold to Check". If silent, press <span className="font-bold text-zinc-300">-</span>. If audible, press <span className="font-bold text-zinc-300">+</span>.</p>
                            </div>
                        )}
                        
                        <div className="mt-6 text-[10px] text-zinc-600 font-mono">
-                           {mode === 'auto' ? "PRESS SPACEBAR TO START / STOP" : "ADJUST FREQUENCY UNTIL BARELY AUDIBLE"}
+                           {mode === 'auto' && !isPlaying && "PRESS SPACEBAR TO START"}
+                           {mode === 'auto' && isPlaying && "PRESS SPACEBAR WHEN SOUND IS AUDIBLE"}
                        </div>
                    </div>
                </div>
