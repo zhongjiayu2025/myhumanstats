@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Zap, AlertTriangle, CheckCircle, Share2, Check } from 'lucide-react';
+import { Zap, AlertTriangle, CheckCircle, Share2, Check, Monitor } from 'lucide-react';
 import { saveStat } from '../../lib/core';
+import { Link } from 'react-router-dom';
 
 enum GameState { IDLE, WAITING, READY, RESULT, EARLY }
 
@@ -113,9 +114,17 @@ const ReactionTimeTest: React.FC = () => {
         )}
       </div>
 
-      <div className="mt-6 flex justify-between text-zinc-600 font-mono text-[10px] uppercase">
-        <span>Reflex_Monitor_v1.0</span>
-        <span>Avg_Human_Latency: 273ms</span>
+      <div className="mt-6 border-t border-zinc-800 pt-4 flex flex-col md:flex-row justify-between text-zinc-600 font-mono text-[10px] uppercase gap-2">
+        <div className="flex gap-4">
+           <span>Reflex_Monitor_v1.0</span>
+           <span>Avg_Human_Latency: 273ms</span>
+        </div>
+        
+        {/* Hardware Link */}
+        <Link to="/tools/hz-test" className="flex items-center gap-1 hover:text-primary-500 transition-colors">
+           <Monitor size={12} />
+           <span>Laggy? Check Screen Hz</span>
+        </Link>
       </div>
     </div>
   );

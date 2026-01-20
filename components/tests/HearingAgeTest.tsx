@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Play, RefreshCcw, AlertTriangle, Sliders, Keyboard, Share2, Check, Wrench } from 'lucide-react';
+import { Play, RefreshCcw, AlertTriangle, Sliders, Keyboard, Share2, Check, Wrench, Headphones } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 import ShareCard from '../ShareCard';
 import { Link } from 'react-router-dom';
@@ -249,14 +249,21 @@ const HearingAgeTest: React.FC = () => {
                     <p>2. <button onClick={playCalibrationTone} className="text-primary-400 underline hover:text-primary-300">Test 1kHz Tone</button> to set a safe volume before the <strong>Hearing Age Test</strong> begins.</p>
                     <p>3. This module generates high-frequency sine waves to assess auditory decline.</p>
                 </div>
-                <button 
-                    onClick={() => setWarningAccepted(true)}
-                    disabled={sampleRate < 40000}
-                    className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
-                    aria-label="Acknowledge and Start Hearing Test"
-                >
-                    Acknowledge & Initialize
-                </button>
+                
+                {/* Cross-Sell Hardware Check */}
+                <div className="flex gap-2">
+                   <button 
+                       onClick={() => setWarningAccepted(true)}
+                       disabled={sampleRate < 40000}
+                       className="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                       aria-label="Acknowledge and Start Hearing Test"
+                   >
+                       Acknowledge & Initialize
+                   </button>
+                   <Link to="/tools/stereo-test" className="px-4 bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-white hover:border-zinc-600 transition-colors rounded" title="Test Headphones First">
+                      <Headphones size={20} />
+                   </Link>
+                </div>
             </div>
          </div>
       )
@@ -443,9 +450,12 @@ const HearingAgeTest: React.FC = () => {
                     </p>
                  </div>
                  {/* Internal Link to Tool */}
-                 <div className="mt-2 pl-3">
+                 <div className="mt-2 pl-3 flex flex-col gap-1">
                     <Link to="/tools/tone-generator" className="text-[10px] text-primary-500 hover:text-white font-mono flex items-center gap-1">
                        <Wrench size={10} /> Need a manual Tone Generator?
+                    </Link>
+                    <Link to="/tools/stereo-test" className="text-[10px] text-primary-500 hover:text-white font-mono flex items-center gap-1">
+                       <Headphones size={10} /> Check Headphones Stereo Balance
                     </Link>
                  </div>
               </div>

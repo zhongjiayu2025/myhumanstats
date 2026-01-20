@@ -10,6 +10,10 @@ import Statistics from './pages/Statistics';
 import ToolsIndex from './pages/ToolsIndex';
 import ToneGenPage from './pages/tools/ToneGenPage';
 import BPMPage from './pages/tools/BPMPage';
+import DeadPixelPage from './pages/tools/DeadPixelPage';
+import StereoTestPage from './pages/tools/StereoTestPage';
+import RefreshRatePage from './pages/tools/RefreshRatePage';
+import MicTestPage from './pages/tools/MicTestPage';
 import About from './pages/About';
 import Contact from './pages/Contact';
 import Privacy from './pages/Privacy';
@@ -63,6 +67,10 @@ const App: React.FC = () => {
             <Route path="/tools" element={<ToolsIndex />} />
             <Route path="/tools/tone-generator" element={<ToneGenPage />} />
             <Route path="/tools/bpm-counter" element={<BPMPage />} />
+            <Route path="/tools/dead-pixel-test" element={<DeadPixelPage />} />
+            <Route path="/tools/stereo-test" element={<StereoTestPage />} />
+            <Route path="/tools/hz-test" element={<RefreshRatePage />} />
+            <Route path="/tools/mic-test" element={<MicTestPage />} />
 
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
