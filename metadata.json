@@ -1,0 +1,7 @@
+{
+  "name": "MyHumanStats",
+  "description": "Quantify Yourself. A personal digital ability dashboard to measure your auditory, visual, cognitive, and personality traits.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
