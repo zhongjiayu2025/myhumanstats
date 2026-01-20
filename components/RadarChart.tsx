@@ -51,10 +51,10 @@ const StatsRadar: React.FC<StatsRadarProps> = ({ data }) => {
       
       <ResponsiveContainer width="100%" height="100%">
         <RadarChart cx="50%" cy="50%" outerRadius="70%" data={data}>
-          <PolarGrid gridType="polygon" stroke="#27272a" strokeWidth={1} />
+          <PolarGrid stroke="#27272a" strokeWidth={1} />
           <PolarAngleAxis 
             dataKey="category" 
-            tick={{ fill: '#52525b', fontSize: 10, fontFamily: 'JetBrains Mono', fontWeight: 500 }} 
+            tick={{ fill: '#52525b', fontSize: 10, fontFamily: 'JetBrains Mono', fontWeight: 500 } as any} 
             tickLine={false}
           />
           <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
