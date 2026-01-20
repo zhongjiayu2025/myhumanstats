@@ -1,16 +1,30 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Square, Settings2, Activity } from 'lucide-react';
+import { Play, Square, Settings2, Activity, Headphones, Sliders } from 'lucide-react';
 import SEO from '../../components/SEO';
 import Breadcrumbs from '../../components/Breadcrumbs';
 
+const PRESETS = [
+  { name: 'Standard (440Hz)', left: 440, right: 440 },
+  { name: 'Delta (Sleep)', left: 200, right: 202 }, // 2Hz beat
+  { name: 'Theta (Deep Med)', left: 200, right: 206 }, // 6Hz beat
+  { name: 'Alpha (Relax)', left: 200, right: 210 }, // 10Hz beat
+  { name: 'Beta (Focus)', left: 200, right: 220 }, // 20Hz beat
+  { name: 'Mosquito (17.4k)', left: 17400, right: 17400 },
+];
+
 const ToneGenPage: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [freq, setFreq] = useState(440);
+  const [mode, setMode] = useState<'mono' | 'binaural'>('mono');
+  
+  // Params
+  const [freqL, setFreqL] = useState(440);
+  const [freqR, setFreqR] = useState(440); // Used in binaural
   const [waveType, setWaveType] = useState<OscillatorType>('sine');
   const [volume, setVolume] = useState(0.5);
   
   const audioCtxRef = useRef<AudioContext | null>(null);
-  const oscRef = useRef<OscillatorNode | null>(null);
+  const oscLRef = useRef<OscillatorNode | null>(null);
+  const oscRRef = useRef<OscillatorNode | null>(null);
   const gainRef = useRef<GainNode | null>(null);
 
   const initAudio = () => {
@@ -22,70 +36,115 @@ const ToneGenPage: React.FC = () => {
   };
 
   const togglePlay = () => {
-     if (isPlaying) {
-        stop();
-     } else {
-        start();
-     }
+     if (isPlaying) stop();
+     else start();
   };
 
   const start = () => {
      const ctx = initAudio();
-     const osc = ctx.createOscillator();
      const gain = ctx.createGain();
-     
-     osc.type = waveType;
-     osc.frequency.setValueAtTime(freq, ctx.currentTime);
-     
-     gain.gain.setValueAtTime(0, ctx.currentTime);
-     gain.gain.linearRampToValueAtTime(volume, ctx.currentTime + 0.05);
-     
-     osc.connect(gain);
-     gain.connect(ctx.destination);
-     osc.start();
-     
-     oscRef.current = osc;
      gainRef.current = gain;
+     
+     // Soft start
+     gain.gain.setValueAtTime(0, ctx.currentTime);
+     gain.gain.linearRampToValueAtTime(volume, ctx.currentTime + 0.1);
+     gain.connect(ctx.destination);
+
+     if (mode === 'mono') {
+         // Mono: One Osc -> Center
+         const osc = ctx.createOscillator();
+         osc.type = waveType;
+         osc.frequency.value = freqL;
+         osc.connect(gain);
+         osc.start();
+         oscLRef.current = osc;
+     } else {
+         // Binaural: L -> Left Panner, R -> Right Panner
+         const pannerL = ctx.createStereoPanner();
+         pannerL.pan.value = -1;
+         pannerL.connect(gain);
+
+         const pannerR = ctx.createStereoPanner();
+         pannerR.pan.value = 1;
+         pannerR.connect(gain);
+
+         const oscL = ctx.createOscillator();
+         oscL.type = waveType;
+         oscL.frequency.value = freqL;
+         oscL.connect(pannerL);
+         oscL.start();
+         oscLRef.current = oscL;
+
+         const oscR = ctx.createOscillator();
+         oscR.type = waveType;
+         oscR.frequency.value = freqR;
+         oscR.connect(pannerR);
+         oscR.start();
+         oscRRef.current = oscR;
+     }
+     
      setIsPlaying(true);
   };
 
   const stop = () => {
-     if (oscRef.current && gainRef.current && audioCtxRef.current) {
+     if (audioCtxRef.current && gainRef.current) {
         const now = audioCtxRef.current.currentTime;
         gainRef.current.gain.cancelScheduledValues(now);
-        gainRef.current.gain.linearRampToValueAtTime(0, now + 0.05);
-        oscRef.current.stop(now + 0.05);
+        gainRef.current.gain.linearRampToValueAtTime(0, now + 0.1);
+        
+        const stopTime = now + 0.15;
+        if (oscLRef.current) oscLRef.current.stop(stopTime);
+        if (oscRRef.current) oscRRef.current.stop(stopTime);
         
         setTimeout(() => {
-           oscRef.current?.disconnect();
+           oscLRef.current?.disconnect();
+           oscRRef.current?.disconnect();
            gainRef.current?.disconnect();
-           oscRef.current = null;
+           oscLRef.current = null;
+           oscRRef.current = null;
            gainRef.current = null;
-        }, 60);
+        }, 200);
      }
      setIsPlaying(false);
   };
 
-  // Real-time updates
+  // Live Update
   useEffect(() => {
-     if (oscRef.current && audioCtxRef.current) {
-        oscRef.current.frequency.setValueAtTime(freq, audioCtxRef.current.currentTime);
-        oscRef.current.type = waveType;
-     }
-     if (gainRef.current && audioCtxRef.current) {
-        gainRef.current.gain.setTargetAtTime(volume, audioCtxRef.current.currentTime, 0.05);
-     }
-  }, [freq, waveType, volume]);
+     if (!isPlaying || !audioCtxRef.current) return;
+     const now = audioCtxRef.current.currentTime;
 
-  useEffect(() => {
-     return () => stop();
-  }, []);
+     if (oscLRef.current) {
+         oscLRef.current.frequency.setTargetAtTime(freqL, now, 0.1);
+         oscLRef.current.type = waveType;
+     }
+     if (oscRRef.current && mode === 'binaural') {
+         oscRRef.current.frequency.setTargetAtTime(freqR, now, 0.1);
+         oscRRef.current.type = waveType;
+     }
+     if (gainRef.current) {
+         gainRef.current.gain.setTargetAtTime(volume, now, 0.1);
+     }
+  }, [freqL, freqR, volume, waveType, mode, isPlaying]);
+
+  // Handle Preset
+  const loadPreset = (p: typeof PRESETS[0]) => {
+      setFreqL(p.left);
+      if (p.left !== p.right) {
+          setMode('binaural');
+          setFreqR(p.right);
+      } else {
+          setMode('mono');
+          setFreqR(p.right);
+      }
+  };
+
+  const beatFreq = Math.abs(freqL - freqR).toFixed(1);
 
   return (
     <div className="max-w-4xl mx-auto py-12 px-4 animate-in fade-in">
        <SEO 
-          title="Online Tone Generator (Free)"
-          description="Generate pure sine, square, sawtooth, and triangle waves. Adjust frequency from 1Hz to 22kHz. Free online audio test signal tool."
+          title="Online Tone Generator + Binaural Beats"
+          description="Generate pure sine waves and binaural beats. Customize Left/Right frequencies for brainwave entrainment (Alpha, Theta)."
        />
        
        <Breadcrumbs items={[{ label: 'Tools', path: '/tools' }, { label: 'Tone Generator' }]} />
@@ -94,59 +153,84 @@ const ToneGenPage: React.FC = () => {
           
           {/* Tool Interface */}
           <div className="bg-black border border-zinc-800 rounded-xl p-8 shadow-2xl relative overflow-hidden">
-             {/* Decor */}
-             <div className="absolute top-0 right-0 p-4 opacity-10">
-                <Settings2 size={120} />
-             </div>
-
+             
              <div className="relative z-10 space-y-8">
-                <div className="flex items-center gap-3 mb-6">
-                   <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse" style={{ opacity: isPlaying ? 1 : 0.2 }}></div>
-                   <h1 className="text-2xl font-bold text-white">Signal Generator</h1>
+                <div className="flex items-center justify-between mb-2">
+                   <div className="flex items-center gap-3">
+                       <div className={`w-3 h-3 rounded-full ${isPlaying ? 'bg-emerald-500 animate-pulse' : 'bg-red-500 opacity-20'}`}></div>
+                       <h1 className="text-2xl font-bold text-white">Signal Gen</h1>
+                   </div>
+                   {/* Mode Toggle */}
+                   <div className="flex bg-zinc-900 rounded p-1 border border-zinc-800">
+                       <button onClick={() => { setMode('mono'); stop(); }} className={`px-3 py-1 text-xs rounded ${mode === 'mono' ? 'bg-zinc-700 text-white' : 'text-zinc-500'}`}>Mono</button>
+                       <button onClick={() => { setMode('binaural'); stop(); }} className={`px-3 py-1 text-xs rounded ${mode === 'binaural' ? 'bg-primary-600 text-white' : 'text-zinc-500'}`}>Binaural</button>
+                   </div>
                 </div>
 
                 {/* Display */}
-                <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 text-center">
-                   <input 
-                      type="number" 
-                      value={freq}
-                      onChange={(e) => setFreq(Number(e.target.value))}
-                      className="bg-transparent text-6xl font-mono font-bold text-white text-center w-full focus:outline-none"
-                   />
-                   <div className="text-zinc-500 font-mono text-sm mt-2">HERTZ (Hz)</div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 text-center">
+                        <div className="text-xs text-zinc-500 font-mono mb-2">{mode === 'binaural' ? 'LEFT EAR' : 'FREQUENCY'}</div>
+                        <input 
+                            type="number" 
+                            value={freqL}
+                            onChange={(e) => setFreqL(Number(e.target.value))}
+                            className="bg-transparent text-4xl font-mono font-bold text-white text-center w-full focus:outline-none"
+                        />
+                        <div className="text-zinc-600 font-mono text-[10px]">HERTZ</div>
+                    </div>
+                    
+                    {mode === 'binaural' ? (
+                        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 text-center">
+                            <div className="text-xs text-zinc-500 font-mono mb-2">RIGHT EAR</div>
+                            <input 
+                                type="number" 
+                                value={freqR}
+                                onChange={(e) => setFreqR(Number(e.target.value))}
+                                className="bg-transparent text-4xl font-mono font-bold text-white text-center w-full focus:outline-none"
+                            />
+                            <div className="text-zinc-600 font-mono text-[10px]">HERTZ</div>
+                        </div>
+                    ) : (
+                        <div className="bg-zinc-900/30 border border-zinc-800 rounded-lg p-6 flex flex-col justify-center items-center opacity-50">
+                            <span className="text-xs text-zinc-500">Enable Binaural Mode to split channels</span>
+                        </div>
+                    )}
                 </div>
+
+                {/* Beat Frequency Display */}
+                {mode === 'binaural' && (
+                    <div className="text-center p-2 bg-primary-900/20 border border-primary-900/50 rounded">
+                        <div className="text-xs text-primary-400 font-mono uppercase tracking-widest">Beat Frequency</div>
+                        <div className="text-xl font-bold text-white">{beatFreq} Hz</div>
+                        <div className="text-[10px] text-zinc-500">
+                            {Number(beatFreq) < 4 ? 'Delta (Deep Sleep)' : Number(beatFreq) < 8 ? 'Theta (Meditation)' : Number(beatFreq) < 14 ? 'Alpha (Relaxation)' : 'Beta (Focus)'}
+                        </div>
+                    </div>
+                )}
 
                 {/* Controls */}
                 <div className="space-y-6">
-                   {/* Frequency Slider */}
+                   {/* Frequency Slider L */}
                    <div>
-                      <div className="flex justify-between text-xs text-zinc-500 font-mono mb-2">
-                         <span>20 Hz</span>
-                         <span>Frequency</span>
-                         <span>20,000 Hz</span>
-                      </div>
                       <input 
-                         type="range" min="20" max="20000" step="1" 
-                         value={freq} 
-                         onChange={(e) => setFreq(Number(e.target.value))}
-                         className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-primary-500"
+                         type="range" min="20" max="1000" step="1" 
+                         value={freqL} 
+                         onChange={(e) => setFreqL(Number(e.target.value))}
+                         className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white"
                       />
                    </div>
-
-                   {/* Volume Slider */}
-                   <div>
-                      <div className="flex justify-between text-xs text-zinc-500 font-mono mb-2">
-                         <span>0%</span>
-                         <span>Volume</span>
-                         <span>100%</span>
-                      </div>
-                      <input 
-                         type="range" min="0" max="1" step="0.01" 
-                         value={volume} 
-                         onChange={(e) => setVolume(Number(e.target.value))}
-                         className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-primary-500"
-                      />
-                   </div>
+                   {/* Frequency Slider R */}
+                   {mode === 'binaural' && (
+                       <div>
+                          <input 
+                             type="range" min="20" max="1000" step="1" 
+                             value={freqR} 
+                             onChange={(e) => setFreqR(Number(e.target.value))}
+                             className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-primary-500"
+                          />
+                       </div>
+                   )}
 
                    {/* Wave Type */}
                    <div className="grid grid-cols-4 gap-2">
@@ -154,7 +238,7 @@ const ToneGenPage: React.FC = () => {
                          <button 
                             key={t}
                             onClick={() => setWaveType(t as OscillatorType)}
-                            className={`py-2 text-[10px] font-bold uppercase rounded border ${waveType === t ? 'bg-primary-900/30 border-primary-500 text-primary-400' : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-white'}`}
+                            className={`py-2 text-[10px] font-bold uppercase rounded border ${waveType === t ? 'bg-zinc-800 border-zinc-600 text-white' : 'bg-zinc-950 border-zinc-800 text-zinc-600 hover:text-zinc-400'}`}
                          >
                             {t}
                          </button>
@@ -164,40 +248,42 @@ const ToneGenPage: React.FC = () => {
                    {/* Play Button */}
                    <button 
                       onClick={togglePlay}
-                      className={`w-full py-4 rounded-lg font-bold text-lg uppercase tracking-widest flex items-center justify-center gap-3 transition-all ${isPlaying ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-primary-600 hover:bg-primary-500 text-black'}`}
+                      className={`w-full py-4 rounded-lg font-bold text-lg uppercase tracking-widest flex items-center justify-center gap-3 transition-all ${isPlaying ? 'bg-red-600 hover:bg-red-500 text-white' : 'bg-white hover:bg-zinc-200 text-black'}`}
                    >
-                      {isPlaying ? <><Square size={20} fill="currentColor"/> Stop Signal</> : <><Play size={20} fill="currentColor"/> Generate Tone</>}
+                      {isPlaying ? <><Square size={20} fill="currentColor"/> STOP</> : <><Play size={20} fill="currentColor"/> GENERATE</>}
                    </button>
                 </div>
              </div>
           </div>
 
-          {/* SEO Content / Sidebar */}
+          {/* Sidebar / Presets */}
           <div className="space-y-8">
-             <article className="prose prose-invert prose-sm text-zinc-400">
-                <h2 className="text-white">About This Tool</h2>
-                <p>
-                   This <strong>Online Tone Generator</strong> creates a precise audio signal directly in your browser using the Web Audio API. It requires no downloads and works on mobile and desktop.
-                </p>
-                <h3 className="text-white">Common Uses</h3>
-                <ul className="list-disc pl-4 space-y-2">
-                   <li><strong>Speaker Testing:</strong> Use low frequencies (20-100Hz) to test subwoofers.</li>
-                   <li><strong>Tinnitus Relief:</strong> Some users find relief (masking) by matching their tinnitus frequency.</li>
-                   <li><strong>Sound Engineering:</strong> Use Pink/White noise (coming soon) or sine sweeps to calibrate room acoustics.</li>
-                   <li><strong>Hearing Check:</strong> While not a medical test, you can check your upper hearing limit (try 15,000Hz).</li>
-                </ul>
-             </article>
-
-             <div className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-lg">
-                <div className="flex items-center gap-2 mb-4 text-white font-bold">
-                   <Activity size={20} className="text-primary-500" />
-                   <span>Related Tests</span>
-                </div>
-                <div className="space-y-3">
-                   <a href="/test/hearing-age-test" className="block text-sm text-zinc-400 hover:text-primary-400 underline decoration-zinc-700 underline-offset-4">Hearing Age Test</a>
-                   <a href="/test/perfect-pitch-test" className="block text-sm text-zinc-400 hover:text-primary-400 underline decoration-zinc-700 underline-offset-4">Perfect Pitch Test</a>
-                </div>
+             
+             <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+                 <h3 className="text-white font-bold mb-4 flex items-center gap-2"><Sliders size={16} /> Quick Presets</h3>
+                 <div className="grid grid-cols-2 gap-2">
+                     {PRESETS.map(p => (
+                         <button 
+                            key={p.name}
+                            onClick={() => loadPreset(p)}
+                            className="text-left p-3 bg-black border border-zinc-800 hover:border-zinc-600 rounded text-xs text-zinc-400 hover:text-white transition-colors"
+                         >
+                             {p.name}
+                         </button>
+                     ))}
+                 </div>
              </div>
+
+             <article className="prose prose-invert prose-sm text-zinc-400">
+                <h2 className="text-white">Binaural Beats Guide</h2>
+                <p>
+                   When two slightly different frequencies are played in each ear (using headphones), the brain perceives a third "phantom" sound called a <strong>Binaural Beat</strong>. This frequency is simply the difference between the two tones.
+                </p>
+                <div className="flex items-center gap-2 text-primary-400 text-xs font-bold bg-primary-900/10 p-3 rounded border border-primary-900/30">
+                    <Headphones size={16} />
+                    HEADPHONES REQUIRED FOR BINAURAL MODE
+                </div>
+             </article>
           </div>
 
        </div>

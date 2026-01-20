@@ -35,21 +35,72 @@ const FAMOUS_SINGERS: SingerProfile[] = [
 
 type Step = 'intro' | 'mic-check' | 'low-test' | 'high-test' | 'result';
 
+// --- Visual Piano Component ---
+const VisualPiano: React.FC<{ activeMidi: number | null; range?: { min: number, max: number } }> = ({ activeMidi, range }) => {
+    // Generate C2 (36) to C6 (84)
+    const START_KEY = 36;
+    const END_KEY = 84;
+    const keys = [];
+    
+    for (let i = START_KEY; i <= END_KEY; i++) {
+        const isBlack = [1, 3, 6, 8, 10].includes(i % 12);
+        keys.push({ midi: i, isBlack });
+    }
+
+    return (
+        <div className="flex justify-center items-start h-24 relative bg-zinc-800 p-1 rounded-b-lg shadow-xl overflow-hidden">
+            {keys.map((k) => {
+                // If it's a black key, we render it differently (absolute pos usually, but here flex with negative margin)
+                // Simplified flex approach:
+                // Black keys float on top. This is complex in pure CSS flex.
+                // Let's use a standard "White Key" loop and interject Black Keys absolute.
+                // Or simply render a flat list where black keys are narrow?
+                // Better: Standard piano roll logic.
+                if (k.isBlack) return null; // We'll handle black keys inside the white key loop next to it
+                
+                // Find associated black key (next note)
+                const nextMidi = k.midi + 1;
+                const hasBlack = [1, 3, 6, 8, 10].includes(nextMidi % 12) && nextMidi <= END_KEY;
+                
+                const isActive = activeMidi === k.midi;
+                const isInRange = range && k.midi >= range.min && k.midi <= range.max;
+                
+                return (
+                    <div key={k.midi} className="relative">
+                        {/* White Key */}
+                        <div 
+                            className={`w-6 h-24 border-r border-zinc-400 rounded-b-sm transition-colors duration-100 
+                                ${isActive ? 'bg-primary-500 shadow-[0_0_10px_#06b6d4] z-10' : isInRange ? 'bg-emerald-100' : 'bg-white'}`}
+                        ></div>
+                        
+                        {/* Black Key (Overlay) */}
+                        {hasBlack && (
+                            <div 
+                                className={`absolute top-0 -right-2 w-4 h-16 z-20 rounded-b-sm border border-zinc-900 transition-colors duration-100
+                                    ${activeMidi === nextMidi ? 'bg-primary-500 shadow-[0_0_10px_#06b6d4]' : range && nextMidi >= range.min && nextMidi <= range.max ? 'bg-emerald-800' : 'bg-black'}`}
+                            ></div>
+                        )}
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
 const VocalRangeTest: React.FC = () => {
   const [step, setStep] = useState<Step>('intro');
-  const [, setIsListening] = useState(false); // Used setter only
+  const [, setIsListening] = useState(false);
   
   // Live Audio Data
-  const [pitch, setPitch] = useState<{freq: number, note: string, cents: number} | null>(null);
+  const [pitch, setPitch] = useState<{freq: number, note: string, cents: number, midi: number} | null>(null);
   const [volume, setVolume] = useState(0);
   
   // Results
-  const [lowRecord, setLowRecord] = useState<{freq: number, note: string} | null>(null);
-  const [highRecord, setHighRecord] = useState<{freq: number, note: string} | null>(null);
+  const [lowRecord, setLowRecord] = useState<{freq: number, note: string, midi: number} | null>(null);
+  const [highRecord, setHighRecord] = useState<{freq: number, note: string, midi: number} | null>(null);
   
   // System
   const [error, setError] = useState('');
-  // Fixed threshold, setter removed to avoid TS error
   const noiseThreshold = -50; // dB
   
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -58,10 +109,6 @@ const VocalRangeTest: React.FC = () => {
   const streamRef = useRef<MediaStream | null>(null);
   const pitchBufferRef = useRef<number[]>([]);
   
-  // Visualization
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const pitchHistoryRef = useRef<number[]>(new Array(100).fill(0)); // For graph
-
   useEffect(() => {
     return () => stopListening();
   }, []);
@@ -198,16 +245,14 @@ const VocalRangeTest: React.FC = () => {
     const buf = new Float32Array(analyzerRef.current.fftSize);
     analyzerRef.current.getFloatTimeDomainData(buf);
     
-    // Calculate Volume for visualizer
     let sum = 0;
     for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
     const rms = Math.sqrt(sum / buf.length);
     const db = 20 * Math.log10(rms);
-    setVolume(Math.max(0, (db + 100) / 100)); // Normalize approx 0-1
+    setVolume(Math.max(0, (db + 100) / 100)); 
 
     const freq = autoCorrelate(buf, audioContextRef.current.sampleRate);
 
-    // Frequency Validation
     if (freq !== -1 && freq > 50 && freq < 1500) {
         pitchBufferRef.current.push(freq);
         if (pitchBufferRef.current.length > 5) pitchBufferRef.current.shift();
@@ -218,78 +263,19 @@ const VocalRangeTest: React.FC = () => {
         
         if (Math.abs(median - pitchBufferRef.current[pitchBufferRef.current.length-1]) < 10) {
             const data = getNoteData(median);
-            setPitch({ freq: median, note: data.note, cents: data.cents });
-            
-            // Push to graph history
-            pitchHistoryRef.current.push(freqToMidi(median));
+            setPitch({ freq: median, note: data.note, cents: data.cents, midi: data.midi });
             
             // Capture records
             if (step === 'low-test') {
-                setLowRecord(prev => (!prev || median < prev.freq) ? {freq: median, note: data.note} : prev);
+                setLowRecord(prev => (!prev || median < prev.freq) ? {freq: median, note: data.note, midi: data.midi} : prev);
             }
             if (step === 'high-test') {
-                setHighRecord(prev => (!prev || median > prev.freq) ? {freq: median, note: data.note} : prev);
+                setHighRecord(prev => (!prev || median > prev.freq) ? {freq: median, note: data.note, midi: data.midi} : prev);
             }
-        } else {
-            pitchHistoryRef.current.push(0); // Signal unstable
         }
-    } else {
-        pitchHistoryRef.current.push(0); // No signal
     }
     
-    if (pitchHistoryRef.current.length > 150) pitchHistoryRef.current.shift();
-    drawGraph();
-
     rafRef.current = requestAnimationFrame(updateLoop);
-  };
-
-  const drawGraph = () => {
-      if (!canvasRef.current) return;
-      const ctx = canvasRef.current.getContext('2d');
-      if (!ctx) return;
-      
-      const width = canvasRef.current.width;
-      const height = canvasRef.current.height;
-      const history = pitchHistoryRef.current;
-      
-      ctx.clearRect(0, 0, width, height);
-      
-      // Guide Lines (Octaves roughly)
-      ctx.strokeStyle = '#333';
-      ctx.lineWidth = 1;
-      [36, 48, 60, 72, 84].forEach(midi => {
-          // Approximate scale mapping logic
-          // Let's assume range 30-90 midi for graph
-          const y = height - ((midi - 30) / 60) * height;
-          ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
-      });
-
-      // Draw Pitch Line
-      ctx.strokeStyle = '#06b6d4';
-      ctx.lineWidth = 3;
-      ctx.lineJoin = 'round';
-      ctx.beginPath();
-      
-      let started = false;
-      for (let i = 0; i < history.length; i++) {
-          const val = history[i];
-          if (val === 0) {
-              started = false;
-              continue;
-          }
-          
-          const x = (i / history.length) * width;
-          // Scale MIDI 30 (approx F1) to 90 (approx F6)
-          const y = height - ((val - 30) / 60) * height;
-          
-          if (!started) {
-              ctx.moveTo(x, y);
-              started = true;
-          } else {
-              ctx.lineTo(x, y);
-          }
-      }
-      ctx.stroke();
   };
 
   // --- Logic Flows ---
@@ -379,6 +365,10 @@ const VocalRangeTest: React.FC = () => {
                       <div className={`text-5xl font-bold mb-4 text-glow ${voiceType?.color}`}>{voiceType?.name}</div>
                       <p className="text-zinc-400 mb-8 max-w-md mx-auto">{voiceType?.desc}</p>
                       
+                      <div className="mb-8">
+                          <VisualPiano activeMidi={null} range={{ min: lowRecord.midi, max: highRecord.midi }} />
+                      </div>
+
                       <div className="grid grid-cols-2 gap-4 mb-8">
                           <div className="bg-zinc-900/50 p-4 rounded border border-zinc-800">
                               <div className="text-xs text-zinc-500 uppercase mb-1">Lowest</div>
@@ -434,13 +424,6 @@ const VocalRangeTest: React.FC = () => {
        {/* Main Card */}
        <div className="bg-surface border border-zinc-800 p-8 rounded-2xl min-h-[450px] flex flex-col justify-between relative overflow-hidden">
            
-           {/* Live Graph Background (Active during test) */}
-           {(step === 'low-test' || step === 'high-test') && (
-               <div className="absolute inset-0 opacity-20 pointer-events-none">
-                   <canvas ref={canvasRef} width={800} height={400} className="w-full h-full" />
-               </div>
-           )}
-
            {step === 'intro' && (
                <div className="animate-in fade-in zoom-in">
                    <div className="w-20 h-20 bg-zinc-900 rounded-full flex items-center justify-center mx-auto mb-6 border border-zinc-800 shadow-inner">
@@ -514,6 +497,11 @@ const VocalRangeTest: React.FC = () => {
                         ) : (
                             <div className="text-zinc-600 font-mono animate-pulse">LISTENING...</div>
                         )}
+                   </div>
+                   
+                   {/* REAL TIME VISUAL PIANO */}
+                   <div className="mb-8">
+                       <VisualPiano activeMidi={pitch?.midi || null} />
                    </div>
                    
                    <div className="bg-zinc-900/80 p-4 rounded mb-8 flex items-center justify-between border border-zinc-700 backdrop-blur-md">

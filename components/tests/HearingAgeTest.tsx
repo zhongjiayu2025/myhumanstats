@@ -1,19 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, RefreshCcw, Check, Volume2, ArrowRight, Minus, Plus, AlertTriangle, Info } from 'lucide-react';
+import { Play, RefreshCcw, Check, Volume2, ArrowRight, Minus, Plus, AlertTriangle, Info, Activity } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 import ShareCard from '../ShareCard';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceDot, ReferenceLine } from 'recharts';
 
 type EarSide = 'left' | 'right';
 
-// ISO 7029 Approximation for Age vs High Freq Cutoff
-const AGE_CURVE = [
-  { age: 10, freq: 20000 },
-  { age: 20, freq: 17000 },
-  { age: 30, freq: 15000 },
-  { age: 40, freq: 12000 },
-  { age: 50, freq: 10500 },
-  { age: 60, freq: 8000 },
-  { age: 80, freq: 4000 },
+// ISO 7029 Approximation Data for Chart
+const AGE_DATA = [
+  { age: 10, freq: 20000, label: '20k' },
+  { age: 20, freq: 17000, label: '17k' },
+  { age: 30, freq: 15000, label: '15k' },
+  { age: 40, freq: 12000, label: '12k' },
+  { age: 50, freq: 10500, label: '10.5k' },
+  { age: 60, freq: 8000, label: '8k' },
+  { age: 70, freq: 6000, label: '6k' },
+  { age: 80, freq: 4000, label: '4k' },
 ];
 
 const HearingAgeTest: React.FC = () => {
@@ -87,8 +89,6 @@ const HearingAgeTest: React.FC = () => {
   const startTone = (freq: number, type: OscillatorType = 'sine', side: EarSide | 'both' = 'both', vol: number = 0.1) => {
       const ctx = initAudio();
       
-      // Don't fully stop if just changing parameters in manual mode to prevent clicking
-      // But for safety in this implementation, we re-create the graph to ensure clean state
       if (oscillatorRef.current) {
           try { oscillatorRef.current.stop(); oscillatorRef.current.disconnect(); } catch(e){}
       }
@@ -106,7 +106,7 @@ const HearingAgeTest: React.FC = () => {
       
       panner.pan.value = side === 'left' ? -1 : side === 'right' ? 1 : 0;
       
-      // Soft envelope to avoid clicking
+      // Soft envelope
       gain.gain.setValueAtTime(0, ctx.currentTime);
       gain.gain.linearRampToValueAtTime(vol, ctx.currentTime + 0.05);
 
@@ -130,7 +130,6 @@ const HearingAgeTest: React.FC = () => {
   };
 
   const stopAudio = () => {
-    // Clear Loops
     if (sweepRafRef.current) {
         cancelAnimationFrame(sweepRafRef.current);
         sweepRafRef.current = null;
@@ -142,17 +141,13 @@ const HearingAgeTest: React.FC = () => {
 
     if (oscillatorRef.current && audioContextRef.current && gainRef.current) {
         const ctx = audioContextRef.current;
-        // Soft release
         try {
             gainRef.current.gain.cancelScheduledValues(ctx.currentTime);
             gainRef.current.gain.setValueAtTime(gainRef.current.gain.value, ctx.currentTime);
             gainRef.current.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.05);
             oscillatorRef.current.stop(ctx.currentTime + 0.06);
-        } catch (e) {
-            // Fallback if context is weird
-        }
+        } catch (e) {}
         
-        // Cleanup refs after fade out
         setTimeout(() => {
             oscillatorRef.current?.disconnect();
             gainRef.current?.disconnect();
@@ -172,7 +167,6 @@ const HearingAgeTest: React.FC = () => {
       const dataArray = new Uint8Array(bufferLength);
       analyzerRef.current.getByteFrequencyData(dataArray);
 
-      // Downsample
       const bars = 32;
       const step = Math.floor(bufferLength / bars);
       const lowRes = [];
@@ -186,8 +180,6 @@ const HearingAgeTest: React.FC = () => {
       visualizerRafRef.current = requestAnimationFrame(drawVisualizer);
   };
 
-  // --- Logic Flows ---
-
   const startSweep = () => {
       setFrequency(START_FREQ);
       startTone(START_FREQ, 'sine', activeSide, 0.1);
@@ -195,14 +187,10 @@ const HearingAgeTest: React.FC = () => {
       
       if (mode === 'auto') {
           startTimeRef.current = Date.now();
-          
           const animateSweep = () => {
               if (!oscillatorRef.current || !audioContextRef.current) return;
-              
               const elapsed = Date.now() - startTimeRef.current;
               const progress = Math.min(elapsed / SWEEP_DURATION, 1);
-              
-              // Linear drop
               const currentFreq = START_FREQ - (progress * (START_FREQ - END_FREQ));
               
               setFrequency(Math.round(currentFreq));
@@ -214,7 +202,6 @@ const HearingAgeTest: React.FC = () => {
                   stopAudio();
               }
           };
-          
           if (sweepRafRef.current) cancelAnimationFrame(sweepRafRef.current);
           sweepRafRef.current = requestAnimationFrame(animateSweep);
       }
@@ -222,13 +209,10 @@ const HearingAgeTest: React.FC = () => {
 
   const stopAndRecord = () => {
       stopAudio();
-      
       if (mode === 'auto') {
-          // Auto mode switches to manual for fine tuning
           setMode('manual');
           setA11yAnnouncement(`Sweep paused at ${frequency} Hz. Use manual controls to fine tune.`);
       } else {
-          // Manual mode confirms result
           setResults(prev => ({ ...prev, [activeSide]: frequency }));
           setA11yAnnouncement(`Recorded ${frequency} Hz for ${activeSide} ear.`);
       }
@@ -237,14 +221,11 @@ const HearingAgeTest: React.FC = () => {
   const manualAdjust = (delta: number) => {
       const newFreq = Math.min(START_FREQ, Math.max(END_FREQ, frequency + delta));
       setFrequency(newFreq);
-      
-      // If playing, update live. If not, play short blip? No, user must hold Play.
       if (isPlaying && oscillatorRef.current && audioContextRef.current) {
           oscillatorRef.current.frequency.setValueAtTime(newFreq, audioContextRef.current.currentTime);
       }
   };
 
-  // --- Helpers ---
   const getAgeFromFreq = (freq: number) => {
       if (freq > 19000) return "< 20";
       if (freq > 17000) return "20 - 24";
@@ -262,48 +243,6 @@ const HearingAgeTest: React.FC = () => {
       const range = START_FREQ - END_FREQ;
       return Math.max(0, Math.min(100, Math.round(((best - END_FREQ) / range) * 100)));
   };
-
-  // --- Graph Component ---
-  const AgeFreqChart = ({ userFreq }: { userFreq: number }) => {
-      const width = 300;
-      const height = 150;
-      const pad = 20;
-      
-      const minAge = 10; const maxAge = 80;
-      const minF = 4000; const maxF = 20000;
-      
-      const getX = (age: number) => pad + ((age - minAge) / (maxAge - minAge)) * (width - 2*pad);
-      const getY = (f: number) => height - pad - ((f - minF) / (maxF - minF)) * (height - 2*pad);
-      
-      const points = AGE_CURVE.map(p => `${getX(p.age)},${getY(p.freq)}`).join(' ');
-      
-      const userAgeEst = parseInt(getAgeFromFreq(userFreq).replace(/\D/g, '')) || 30; 
-      const userX = getX(Math.max(10, Math.min(80, userAgeEst)));
-      const userY = getY(userFreq);
-
-      return (
-          <div className="relative w-full max-w-[300px] mx-auto bg-zinc-900 border border-zinc-800 rounded p-4">
-              <div className="absolute top-2 right-4 text-[10px] text-zinc-500">Global Average</div>
-              <svg width="100%" viewBox={`0 0 ${width} ${height}`} className="overflow-visible">
-                  {/* Grid */}
-                  <line x1={pad} y1={height-pad} x2={width-pad} y2={height-pad} stroke="#333" strokeWidth="1" />
-                  <line x1={pad} y1={pad} x2={pad} y2={height-pad} stroke="#333" strokeWidth="1" />
-                  
-                  {/* The Curve */}
-                  <polyline points={points} fill="none" stroke="#52525b" strokeWidth="2" strokeDasharray="4 2" />
-                  
-                  {/* User Point */}
-                  <circle cx={userX} cy={userY} r="6" fill="#06b6d4" className="animate-pulse" />
-                  <text x={userX} y={userY - 10} fill="#06b6d4" fontSize="10" textAnchor="middle" fontWeight="bold">YOU</text>
-                  
-                  {/* Labels */}
-                  <text x={width/2} y={height+10} fill="#71717a" fontSize="10" textAnchor="middle">Age (Years)</text>
-                  <text x={0} y={height/2} fill="#71717a" fontSize="10" transform={`rotate(-90 5,${height/2})`} textAnchor="middle">Freq (Hz)</text>
-              </svg>
-          </div>
-      );
-  };
-
 
   // --- RENDERERS ---
 
@@ -359,6 +298,14 @@ const HearingAgeTest: React.FC = () => {
       const score = calculateFinalScore();
       saveStat('hearing-age', score);
       const bestFreq = Math.max(results.left || 0, results.right || 0);
+      
+      // Calculate approximate age for plotting
+      let estimatedAge = 80;
+      if (bestFreq > 19000) estimatedAge = 15;
+      else if (bestFreq > 4000) {
+          // Linear interp approximation for graph plotting
+          estimatedAge = 10 + (20000 - bestFreq) / 228; 
+      }
 
       return (
           <div className="max-w-3xl mx-auto animate-in zoom-in duration-500">
@@ -389,8 +336,35 @@ const HearingAgeTest: React.FC = () => {
                           </div>
                       </div>
 
-                      {/* Chart */}
-                      <AgeFreqChart userFreq={bestFreq} />
+                      {/* Professional Chart */}
+                      <div className="h-64 w-full bg-zinc-900/30 border border-zinc-800 rounded p-2 relative">
+                          <div className="absolute top-2 right-2 flex items-center gap-1 text-[9px] text-zinc-500 font-mono">
+                              <Activity size={10} /> ISO_7029_CURVE
+                          </div>
+                          <ResponsiveContainer width="100%" height="100%">
+                              <AreaChart data={AGE_DATA} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
+                                  <defs>
+                                      <linearGradient id="colorFreq" x1="0" y1="0" x2="0" y2="1">
+                                          <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3}/>
+                                          <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
+                                      </linearGradient>
+                                  </defs>
+                                  <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                                  <XAxis dataKey="age" stroke="#555" fontSize={10} tickLine={false} axisLine={false} unit="yr" />
+                                  <YAxis dataKey="freq" stroke="#555" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => `${val/1000}k`} />
+                                  <Tooltip 
+                                      contentStyle={{ backgroundColor: '#000', borderColor: '#333', fontSize: '12px' }}
+                                      itemStyle={{ color: '#06b6d4' }}
+                                      labelStyle={{ color: '#888' }}
+                                  />
+                                  <Area type="monotone" dataKey="freq" stroke="#52525b" fill="url(#colorFreq)" strokeWidth={2} strokeDasharray="5 5" name="Avg Limit" />
+                                  
+                                  {/* User Point */}
+                                  <ReferenceDot x={estimatedAge} y={bestFreq} r={6} fill="#06b6d4" stroke="#fff" />
+                                  <ReferenceLine x={estimatedAge} stroke="#06b6d4" strokeDasharray="3 3" />
+                              </AreaChart>
+                          </ResponsiveContainer>
+                      </div>
                   </div>
 
                   <div className="flex flex-col items-center gap-6 border-t border-zinc-800 pt-8">
@@ -399,7 +373,6 @@ const HearingAgeTest: React.FC = () => {
                           scoreDisplay={`${bestFreq.toLocaleString()} Hz`}
                           resultLabel={`Ear Age: ${getAgeFromFreq(bestFreq)}`}
                       />
-                      
                       <button onClick={() => { setPhase('testing'); setResults({left:null, right:null}); }} className="btn-secondary flex items-center gap-2">
                           <RefreshCcw size={16} /> New Test
                       </button>
@@ -412,14 +385,9 @@ const HearingAgeTest: React.FC = () => {
   // Phase: Testing
   return (
     <div className="max-w-3xl mx-auto select-none">
-       <div aria-live="polite" className="sr-only">
-         {a11yAnnouncement}
-       </div>
+       <div aria-live="polite" className="sr-only">{a11yAnnouncement}</div>
 
-       {/* Device Frame */}
        <div className="tech-border bg-black relative clip-corner-lg overflow-hidden border-zinc-800">
-           
-           {/* Top Bar: L/R Switcher */}
            <div className="flex border-b border-zinc-800">
                <button 
                   onClick={() => { stopAudio(); setActiveSide('left'); setMode('auto'); }}
@@ -448,9 +416,7 @@ const HearingAgeTest: React.FC = () => {
                </button>
            </div>
 
-           {/* Main Display Area */}
            <div className="p-8 md:p-12 text-center relative min-h-[400px] flex flex-col justify-center">
-               {/* Background Fx */}
                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-zinc-900/50 via-black to-black pointer-events-none"></div>
                
                <div className="relative z-10">
@@ -474,9 +440,7 @@ const HearingAgeTest: React.FC = () => {
                         ))}
                    </div>
 
-                   {/* Controls */}
                    <div className="max-w-md mx-auto">
-                       {/* Contextual Action Buttons */}
                        {mode === 'auto' ? (
                            <button 
                               onClick={isPlaying ? stopAndRecord : startSweep}
@@ -491,7 +455,6 @@ const HearingAgeTest: React.FC = () => {
                               {isPlaying ? "I Hear It (Stop)" : `Start ${activeSide === 'left' ? 'Left' : 'Right'} Sweep`}
                            </button>
                        ) : (
-                           // Manual Fine Tuning Controls
                            <div className="space-y-4 animate-in slide-in-from-bottom-4">
                                <div className="flex items-center justify-center gap-2 mb-2">
                                    <Info size={14} className="text-primary-500" />
@@ -525,7 +488,6 @@ const HearingAgeTest: React.FC = () => {
                                       onClick={() => {
                                           stopAudio();
                                           setResults(prev => ({ ...prev, [activeSide]: frequency }));
-                                          // Auto advance side if needed
                                           if (activeSide === 'left' && !results.right) {
                                               setActiveSide('right');
                                               setMode('auto');
@@ -537,7 +499,6 @@ const HearingAgeTest: React.FC = () => {
                                       Confirm {frequency}Hz
                                    </button>
                                </div>
-                               <p className="text-[10px] text-zinc-500">Tap "Hold to Check". If silent, press <span className="font-bold text-zinc-300">-</span>. If audible, press <span className="font-bold text-zinc-300">+</span>.</p>
                            </div>
                        )}
                        
@@ -549,7 +510,6 @@ const HearingAgeTest: React.FC = () => {
                </div>
            </div>
 
-           {/* Footer Status */}
            <div className="bg-zinc-900 border-t border-zinc-800 px-6 py-3 flex justify-between items-center text-xs text-zinc-500 font-mono">
                <div className="flex gap-4">
                    <span className={activeSide === 'left' ? 'text-primary-400' : ''}>L: {results.left ? `${results.left} Hz` : '--'}</span>

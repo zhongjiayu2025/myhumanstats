@@ -1,133 +1,234 @@
-import React, { useState } from 'react';
-import { Brain } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Brain, Trophy, RotateCcw, Banana } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
+interface Node {
+  id: number;
+  val: number;
+  col: number;
+  row: number;
+}
+
 const ChimpTest: React.FC = () => {
-  const [level, setLevel] = useState(4); // Starts at 4 numbers
+  const [phase, setPhase] = useState<'intro' | 'play' | 'result'>('intro');
+  const [level, setLevel] = useState(4);
   const [strikes, setStrikes] = useState(0);
-  const [phase, setPhase] = useState<'start' | 'play' | 'result'>('start');
-  const [grid, setGrid] = useState<{id: number, val: number}[]>([]);
+  const [nodes, setNodes] = useState<Node[]>([]);
   const [nextNum, setNextNum] = useState(1);
-  const [hideNumbers, setHideNumbers] = useState(false);
+  const [isMasked, setIsMasked] = useState(false);
+  const [lives, setLives] = useState(3);
+  
+  // New state for reveal logic
+  const [isRevealing, setIsRevealing] = useState(false);
+  const [wrongClickId, setWrongClickId] = useState<number | null>(null);
 
-  const ROWS = 5;
-  const COLS = 8;
+  const GRID_COLS = 8;
+  const GRID_ROWS = 5;
 
-  const startGame = () => {
-     setLevel(4);
-     setStrikes(0);
-     startLevel(4);
+  const startTest = () => {
+      setLives(3);
+      setLevel(4);
+      setStrikes(0);
+      startLevel(4);
   };
 
   const startLevel = (numCount: number) => {
-     setPhase('play');
-     setNextNum(1);
-     setHideNumbers(false);
-
-     // Generate positions
-     const positions = new Set<number>();
-     while(positions.size < numCount) {
-        positions.add(Math.floor(Math.random() * (ROWS * COLS)));
-     }
-     
-     const newGrid = Array.from(positions).map((pos, i) => ({
-        id: pos,
-        val: i + 1
-     }));
-     setGrid(newGrid);
+      setPhase('play');
+      setNextNum(1);
+      setIsMasked(false);
+      setIsRevealing(false);
+      setWrongClickId(null);
+      
+      const positions = new Set<string>();
+      const newNodes: Node[] = [];
+      
+      for(let i=1; i<=numCount; i++) {
+          let r, c, key;
+          do {
+              r = Math.floor(Math.random() * GRID_ROWS);
+              c = Math.floor(Math.random() * GRID_COLS);
+              key = `${r}-${c}`;
+          } while(positions.has(key));
+          
+          positions.add(key);
+          newNodes.push({ id: i, val: i, row: r, col: c });
+      }
+      setNodes(newNodes);
   };
 
-  const handleClick = (item: {id: number, val: number}) => {
-     if (item.val === nextNum) {
-        // Correct
-        if (item.val === 1) {
-           setHideNumbers(true);
-        }
-        
-        setNextNum(n => n + 1);
-        
-        // Remove item from grid visually (or just mark strictly)
-        // Let's filter it out
-        setGrid(g => g.filter(x => x.val !== item.val));
+  const handleNodeClick = (clickedNode: Node) => {
+      if (isRevealing) return;
 
-        if (grid.length === 1) {
-           // Level Complete (last item clicked)
-           if (level < 20) {
-              setLevel(l => l + 1);
-              startLevel(level + 1);
-           } else {
-              finish();
-           }
-        }
-     } else {
-        // Wrong
-        setStrikes(s => s + 1);
-        if (strikes >= 2) {
-           finish();
-        } else {
-           // Restart same level or downgrade? usually continue but strikes count
-           // Simple version: Reset to same level
-           startLevel(level);
-        }
-     }
+      // Correct Click
+      if (clickedNode.val === nextNum) {
+          // Trigger Masking on first click
+          if (clickedNode.val === 1) {
+              setIsMasked(true);
+          }
+
+          setNextNum(n => n + 1);
+          // Just visually hide/remove the node
+          setNodes(prev => prev.filter(n => n.val !== clickedNode.val));
+
+          // Level Complete
+          if (nodes.length === 1) {
+              const nextLevel = level + 1;
+              setLevel(nextLevel);
+              setTimeout(() => startLevel(nextLevel), 500);
+          }
+      } 
+      // Incorrect Click
+      else {
+          setStrikes(s => s + 1);
+          setLives(l => l - 1);
+          setWrongClickId(clickedNode.val);
+          setIsRevealing(true); // Trigger reveal mode
+          
+          setTimeout(() => {
+              if (lives - 1 <= 0) {
+                  finish();
+              } else {
+                  // Retry same level
+                  startLevel(level);
+              }
+          }, 2500); // 2.5s to review mistakes
+      }
   };
 
   const finish = () => {
-     setPhase('result');
-     // Max level ~15-20. 
-     const score = Math.min(100, Math.round((level / 15) * 100));
-     saveStat('chimp-test', score);
+      setPhase('result');
+      const raw = Math.max(0, level - 4);
+      const score = Math.min(100, Math.round((raw / 16) * 100));
+      saveStat('chimp-test', score);
   };
 
   return (
-    <div className="max-w-3xl mx-auto select-none">
-       {phase === 'start' || phase === 'result' ? (
-          <div className="text-center py-12">
-             <Brain size={64} className="mx-auto text-zinc-700 mb-6" />
-             <h2 className="text-3xl font-bold text-white mb-2">{phase === 'result' ? 'Test Over' : 'Chimp Test'}</h2>
-             <p className="text-zinc-400 mb-8 max-w-md mx-auto">
-                {phase === 'result' 
-                  ? `You memorized ${level} numbers.` 
-                  : "Click the numbers in order. They will disappear after the first click. Test your working memory."}
-             </p>
-             <button onClick={startGame} className="btn-primary">
-                {phase === 'start' ? 'Start Test' : 'Try Again'}
-             </button>
-          </div>
-       ) : (
-          <div>
-             <div className="flex justify-between items-center mb-6 px-4">
-                <div className="text-zinc-500 font-mono text-xs">NUMBERS: <span className="text-white text-lg">{level}</span></div>
-                <div className="text-zinc-500 font-mono text-xs">STRIKES: <span className="text-white text-lg">{strikes}/3</span></div>
-             </div>
-             
-             <div className="relative w-full aspect-[8/5] bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-                {grid.map(item => {
-                   const r = Math.floor(item.id / COLS);
-                   const c = item.id % COLS;
-                   return (
-                      <div 
-                         key={item.val}
-                         onClick={() => handleClick(item)}
-                         className="absolute w-[11%] aspect-square flex items-center justify-center rounded-lg border-2 border-white/10 bg-surface hover:bg-zinc-700 cursor-pointer transition-transform active:scale-95 shadow-lg"
-                         style={{ 
-                            top: `${(r / ROWS) * 100}%`,
-                            left: `${(c / COLS) * 100}%`,
-                            margin: '1%'
-                         }}
-                      >
-                         <span className={`text-2xl font-bold text-white ${hideNumbers && item.val > 1 ? 'opacity-0' : 'opacity-100'}`}>
-                            {item.val}
-                         </span>
-                         {hideNumbers && item.val > 1 && (
-                            <div className="absolute inset-2 bg-white rounded-sm opacity-90"></div>
-                         )}
-                      </div>
-                   );
-                })}
-             </div>
-          </div>
+    <div className="max-w-4xl mx-auto select-none">
+       
+       {phase === 'intro' && (
+           <div className="text-center py-16 animate-in fade-in zoom-in">
+               <div className="w-24 h-24 bg-zinc-900 border border-zinc-800 rounded-full flex items-center justify-center mx-auto mb-6">
+                   <Brain size={48} className="text-primary-500" />
+               </div>
+               <h1 className="text-4xl font-bold text-white mb-4">Are You Smarter Than a Chimp?</h1>
+               <p className="text-zinc-400 text-lg max-w-lg mx-auto mb-8 leading-relaxed">
+                   This test is based on the research of Tetsuro Matsuzawa. 
+                   <br/>Click the numbers in order (1, 2, 3...). 
+                   <br/><strong className="text-white">Crucial:</strong> After you click '1', all other numbers will be masked. You must remember their positions.
+               </p>
+               <button onClick={startTest} className="btn-primary">Start Challenge</button>
+           </div>
        )}
+
+       {phase === 'play' && (
+           <div className="animate-in fade-in">
+               {/* HUD */}
+               <div className="flex justify-between items-end mb-6 px-4 border-b border-zinc-800 pb-4">
+                   <div>
+                       <div className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest">Numbers</div>
+                       <div className="text-3xl font-bold text-white font-mono">{level}</div>
+                   </div>
+                   <div className="flex gap-2">
+                       {[...Array(3)].map((_, i) => (
+                           <Banana 
+                              key={i} 
+                              size={24} 
+                              className={`transition-all ${i < lives ? 'text-yellow-500 fill-yellow-500' : 'text-zinc-800 fill-zinc-800'}`} 
+                           />
+                       ))}
+                   </div>
+               </div>
+
+               {/* Game Board */}
+               <div className="relative w-full aspect-[8/5] bg-[#0c0c0e] border border-zinc-800 rounded-xl shadow-2xl mx-auto max-w-[800px] overflow-hidden">
+                   <div className="absolute inset-0 bg-grid opacity-5 pointer-events-none"></div>
+
+                   {/* Normal Play Nodes */}
+                   {!isRevealing && nodes.map((node) => (
+                       <div
+                          key={node.val}
+                          onMouseDown={(e) => { e.preventDefault(); handleNodeClick(node); }}
+                          className={`
+                              absolute flex items-center justify-center rounded-lg cursor-pointer transition-all duration-100 active:scale-90
+                              ${isMasked 
+                                  ? 'bg-white/10 backdrop-blur-sm border border-white/40 shadow-[0_0_15px_rgba(255,255,255,0.1)] hover:bg-white/20' 
+                                  : 'bg-white border-2 border-white text-black shadow-[0_4px_0_#ccc] active:shadow-none active:translate-y-[4px]'}
+                          `}
+                          style={{
+                              left: `${(node.col / GRID_COLS) * 100}%`,
+                              top: `${(node.row / GRID_ROWS) * 100}%`,
+                              width: `${(1/GRID_COLS)*85}%`,
+                              height: `${(1/GRID_ROWS)*85}%`,
+                              marginLeft: `${(1/GRID_COLS)*7.5}%`,
+                              marginTop: `${(1/GRID_ROWS)*7.5}%`,
+                          }}
+                       >
+                           {!isMasked && (
+                               <span className="text-3xl md:text-4xl font-black font-sans select-none">{node.val}</span>
+                           )}
+                       </div>
+                   ))}
+
+                   {/* Reveal Mode Nodes (Re-render everything to show correct order) */}
+                   {isRevealing && (
+                       <>
+                           {/* Generate full set of nodes for this level to show what was missed */}
+                           {/* NOTE: In a real app we'd store the initial state. For now we use `nodes` state which holds remaining unclicked ones. 
+                               Ideally we want to show ALL numbers 1..Level. 
+                               But since we removed clicked ones from `nodes`, we only show remaining. 
+                               For better UX, we should keep all nodes in state and mark `clicked` boolean. 
+                               Refactoring to that is safer.
+                           */}
+                           {/* Just show remaining nodes revealed for now */}
+                           {nodes.map((node) => (
+                               <div
+                                  key={node.val}
+                                  className={`
+                                      absolute flex items-center justify-center rounded-lg border-2
+                                      ${node.val === nextNum ? 'bg-emerald-500/20 border-emerald-500 text-emerald-500' : ''}
+                                      ${node.val === wrongClickId ? 'bg-red-500/20 border-red-500 text-red-500 animate-pulse' : 'bg-zinc-800/50 border-zinc-600 text-zinc-500'}
+                                  `}
+                                  style={{
+                                      left: `${(node.col / GRID_COLS) * 100}%`,
+                                      top: `${(node.row / GRID_ROWS) * 100}%`,
+                                      width: `${(1/GRID_COLS)*85}%`,
+                                      height: `${(1/GRID_ROWS)*85}%`,
+                                      marginLeft: `${(1/GRID_COLS)*7.5}%`,
+                                      marginTop: `${(1/GRID_ROWS)*7.5}%`,
+                                  }}
+                               >
+                                   <span className="text-3xl md:text-4xl font-bold">{node.val}</span>
+                               </div>
+                           ))}
+                           <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+                               <div className="bg-black/80 px-6 py-3 rounded-xl border border-red-500/50 text-red-500 font-bold text-xl uppercase tracking-widest animate-in zoom-in">
+                                   Strike!
+                               </div>
+                           </div>
+                       </>
+                   )}
+               </div>
+           </div>
+       )}
+
+       {phase === 'result' && (
+           <div className="text-center py-16 animate-in zoom-in">
+               <Trophy size={64} className="mx-auto text-yellow-500 mb-6" />
+               <h2 className="text-sm font-mono text-zinc-500 uppercase tracking-widest mb-2">Working Memory Capacity</h2>
+               <div className="text-6xl font-bold text-white mb-6">{level} <span className="text-2xl text-zinc-600">Items</span></div>
+               
+               <p className="text-zinc-400 mb-8 max-w-sm mx-auto">
+                   {level > 9 ? "Superhuman. You rival Ayumu the chimp." :
+                    level > 6 ? "Excellent. Well above human average." :
+                    "Average human range (5-7)."}
+               </p>
+               
+               <button onClick={startTest} className="btn-secondary flex items-center justify-center gap-2 mx-auto">
+                   <RotateCcw size={16} /> Try Again
+               </button>
+           </div>
+       )}
+
     </div>
   );
 };

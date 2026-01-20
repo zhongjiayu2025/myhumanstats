@@ -2,47 +2,47 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Activity, Play, MousePointer2, RefreshCcw, Music2, TrendingUp, BarChart3, Wrench } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 import { Link } from 'react-router-dom';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Cell, LineChart, Line, CartesianGrid } from 'recharts';
 
 const RhythmTest: React.FC = () => {
   const [phase, setPhase] = useState<'idle' | 'listening' | 'tapping' | 'result'>('idle');
   const [count, setCount] = useState(0);
   const [taps, setTaps] = useState<{timestamp: number, interval: number, deviation: number}[]>([]);
   const [score, setScore] = useState(0);
+  const [activeBeat, setActiveBeat] = useState(-1); // For visual metronome
   
   // Stats
   const [stats, setStats] = useState({ avgError: 0, stdDev: 0, tendency: 'Stable' });
+  const [histData, setHistData] = useState<any[]>([]);
+  const [driftData, setDriftData] = useState<any[]>([]);
 
   const audioCtxRef = useRef<AudioContext | null>(null);
   const lastTapTimeRef = useRef<number>(0);
-  const startTimeRef = useRef<number>(0); // Reference for the grid
+  const startTimeRef = useRef<number>(0); 
   
   const BPM = 120;
   const INTERVAL_MS = 60000 / BPM; // 500ms per beat
   const LISTENING_BEATS = 4;
   const TARGET_TAPS = 20; 
 
-  // --- Audio Engine ---
   const playClick = (time: number, type: 'strong' | 'weak' = 'strong') => {
     const ctx = audioCtxRef.current;
     if (!ctx) return;
 
-    // Professional Metronome Click Synthesis
-    // High-pass filtered square/sine mix for a sharp "woodblock" type sound
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     const filter = ctx.createBiquadFilter();
 
     osc.frequency.setValueAtTime(type === 'strong' ? 1000 : 800, time);
     osc.frequency.exponentialRampToValueAtTime(100, time + 0.05);
-    osc.type = 'triangle'; // Richer than sine
+    osc.type = 'triangle'; 
     
-    // High-pass filter to remove muddy low-end, making the transient clearer
     filter.type = 'highpass';
     filter.frequency.value = 300;
 
     gain.gain.setValueAtTime(0, time);
-    gain.gain.linearRampToValueAtTime(type === 'strong' ? 0.3 : 0.15, time + 0.002); // Fast attack
-    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.08); // Short decay
+    gain.gain.linearRampToValueAtTime(type === 'strong' ? 0.3 : 0.15, time + 0.002);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.08);
 
     osc.connect(filter);
     filter.connect(gain);
@@ -58,27 +58,26 @@ const RhythmTest: React.FC = () => {
     setTaps([]);
     setCount(0);
     setPhase('listening');
+    setActiveBeat(-1);
     
     audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
     const ctx = audioCtxRef.current;
     if (ctx.state === 'suspended') ctx.resume();
 
-    // Schedule audio a bit in the future
     const audioStartTime = ctx.currentTime + 0.5;
     
     // Establishing the Time Grid based on performance.now()
-    // We approximate the start time in performance timeline
     startTimeRef.current = performance.now() + 500; 
 
     // Schedule Listening Beats
     for (let i = 0; i < LISTENING_BEATS; i++) {
       playClick(audioStartTime + i * (INTERVAL_MS / 1000), i === 0 ? 'strong' : 'weak');
+      // Visual Metronome logic
+      setTimeout(() => setActiveBeat(i), 500 + (i * INTERVAL_MS));
     }
 
-    // Switch UI phase after listening
     setTimeout(() => {
         setPhase('tapping');
-        // Reset last tap ref to theoretically correct time for Interval calculation
         lastTapTimeRef.current = startTimeRef.current + (LISTENING_BEATS - 1) * INTERVAL_MS; 
     }, 500 + (LISTENING_BEATS * INTERVAL_MS));
 
@@ -134,16 +133,12 @@ const RhythmTest: React.FC = () => {
   const finishTest = (finalTaps: typeof taps) => {
     setPhase('result');
     
-    // Analysis
-    // 1. Stability (Jitter) -> Standard Deviation of Intervals
     const meanInterval = finalTaps.reduce((acc, t) => acc + t.interval, 0) / finalTaps.length;
     const variance = finalTaps.reduce((acc, t) => acc + Math.pow(t.interval - meanInterval, 2), 0) / finalTaps.length;
     const stdDev = Math.sqrt(variance);
 
-    // 2. Bias (Drift/Latency) -> Average Deviation from Grid
     const avgDeviation = finalTaps.reduce((acc, t) => acc + t.deviation, 0) / finalTaps.length;
     
-    // Score Calculation
     const score = Math.max(0, Math.min(100, Math.round(100 - (stdDev * 2) - (Math.abs(avgDeviation) * 0.2))));
     
     setScore(score);
@@ -153,10 +148,29 @@ const RhythmTest: React.FC = () => {
         tendency: avgDeviation < -15 ? 'Rushing' : avgDeviation > 15 ? 'Dragging' : 'Precise'
     });
     
+    // 1. Histogram Data
+    const bins = Array.from({length: 11}, (_, i) => ({
+        range: (i - 5) * 20, 
+        label: `${(i-5)*20}ms`,
+        count: 0
+    }));
+    
+    finalTaps.forEach(t => {
+        const binIndex = Math.max(0, Math.min(10, Math.floor((t.deviation + 110) / 20)));
+        bins[binIndex].count++;
+    });
+    setHistData(bins);
+
+    // 2. Drift Line Chart Data
+    const drifts = finalTaps.map((t, i) => ({
+        beat: i + 1,
+        deviation: Math.round(t.deviation)
+    }));
+    setDriftData(drifts);
+
     saveStat('rhythm-test', score);
   };
 
-  // Render Helpers
   const getLastTapDeviation = () => {
       if (taps.length === 0) return 0;
       return taps[taps.length - 1].deviation;
@@ -198,11 +212,10 @@ const RhythmTest: React.FC = () => {
                 <div className="w-24 h-24 rounded-full border-2 border-zinc-700 bg-zinc-900 flex items-center justify-center mx-auto mb-6 group cursor-pointer hover:border-primary-500 hover:bg-zinc-800 transition-all" onClick={startTest}>
                     <Play size={32} className="text-zinc-500 group-hover:text-primary-400 ml-1 transition-colors" />
                 </div>
-                {/* Optimized H2 matches Primary Keyword */}
                 <h2 className="text-2xl font-bold text-white mb-2">Rhythm Test</h2>
                 <p className="text-zinc-400 text-sm max-w-md mx-auto mb-6 leading-relaxed">
                     <strong>Synchronization-Continuation Task</strong><br/>
-                    Master this <strong>Rhythm Test</strong>. Listen to 4 beats, then continue tapping blindly. This test measures your beat perception and internal clock stability.
+                    Listen to 4 beats, then continue tapping blindly to the grid. Measures your internal clock stability and drift.
                 </p>
                 <div className="inline-flex items-center gap-2 px-3 py-1 bg-zinc-900 border border-zinc-800 rounded text-[10px] text-zinc-500 font-mono">
                     <span>TIP: USE KEYBOARD SPACEBAR</span>
@@ -214,11 +227,14 @@ const RhythmTest: React.FC = () => {
             <div className="flex flex-col items-center gap-8">
                 <div className="relative w-32 h-32 flex items-center justify-center">
                     <div className="absolute inset-0 border-4 border-zinc-800 rounded-full"></div>
-                    <div className="absolute inset-0 border-4 border-primary-500 rounded-full animate-ping opacity-20"></div>
-                    <Music2 size={48} className="text-primary-500 animate-bounce" />
+                    {/* Visual Metronome */}
+                    <div 
+                        className={`absolute inset-0 border-4 border-primary-500 rounded-full transition-all duration-100 ${activeBeat >= 0 ? 'scale-110 opacity-100' : 'scale-100 opacity-20'}`}
+                    ></div>
+                    <Music2 size={48} className={`text-primary-500 transition-transform ${activeBeat >= 0 ? 'scale-125' : 'scale-100'}`} />
                 </div>
-                <div className="text-sm font-mono text-primary-400 animate-pulse uppercase tracking-widest">
-                    Listen & Sync...
+                <div className="text-sm font-mono text-primary-400 uppercase tracking-widest">
+                    Listen & Sync... {activeBeat >= 0 ? activeBeat + 1 : ''}
                 </div>
             </div>
         )}
@@ -290,33 +306,45 @@ const RhythmTest: React.FC = () => {
                      </div>
                 </div>
 
-                <div className="bg-black border border-zinc-800 p-4 rounded-lg mb-6 relative h-48 overflow-hidden">
-                    <div className="absolute top-1/2 left-0 right-0 h-px bg-zinc-800 border-t border-dashed border-zinc-700"></div>
-                    <div className="absolute top-2 left-2 text-[9px] text-zinc-600 font-mono">LATE (+150ms)</div>
-                    <div className="absolute bottom-2 left-2 text-[9px] text-zinc-600 font-mono">EARLY (-150ms)</div>
-                    <div className="relative w-full h-full flex items-center justify-between px-4">
-                        {taps.map((t, i) => {
-                            const yPos = Math.max(-70, Math.min(70, t.deviation / 2));
-                            return (
-                                <div key={i} className="flex flex-col items-center group relative h-full justify-center" style={{ width: `${100/taps.length}%` }}>
-                                    <div 
-                                        className={`w-1.5 h-1.5 rounded-full ${getDeviationColor(t.deviation)} transition-all z-10`}
-                                        style={{ transform: `translateY(${yPos}px)` }}
-                                    ></div>
-                                    <div 
-                                        className={`w-px bg-zinc-800 absolute top-1/2`}
-                                        style={{ height: `${Math.abs(yPos)}px`, transform: yPos > 0 ? 'translateY(0)' : `translateY(${yPos}px)` }}
-                                    ></div>
-                                </div>
-                            )
-                        })}
+                {/* Dual Charts */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                    {/* Histogram */}
+                    <div className="h-48 w-full bg-black/30 border border-zinc-800 rounded p-4 relative">
+                        <div className="absolute top-2 left-2 text-[10px] text-zinc-500 font-mono">DISTRIBUTION</div>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={histData}>
+                                <ReferenceLine x="0ms" stroke="#10b981" strokeDasharray="3 3" />
+                                <XAxis dataKey="label" stroke="#555" fontSize={9} tickLine={false} axisLine={false} />
+                                <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ backgroundColor: '#09090b', border: '1px solid #27272a', fontSize: '12px' }} />
+                                <Bar dataKey="count" radius={[2, 2, 0, 0]}>
+                                    {histData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={Math.abs(entry.range) < 30 ? '#10b981' : Math.abs(entry.range) < 60 ? '#facc15' : '#ef4444'} />
+                                    ))}
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+
+                    {/* Drift Line Chart */}
+                    <div className="h-48 w-full bg-black/30 border border-zinc-800 rounded p-4 relative">
+                        <div className="absolute top-2 left-2 text-[10px] text-zinc-500 font-mono">TEMPO DRIFT</div>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={driftData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                                <XAxis dataKey="beat" stroke="#555" fontSize={9} tickLine={false} axisLine={false} tickFormatter={(val) => `B${val}`} />
+                                <YAxis stroke="#555" fontSize={9} tickLine={false} axisLine={false} />
+                                <ReferenceLine y={0} stroke="#10b981" strokeDasharray="3 3" />
+                                <Tooltip cursor={{stroke: '#333'}} contentStyle={{ backgroundColor: '#09090b', border: '1px solid #27272a', fontSize: '12px' }} />
+                                <Line type="monotone" dataKey="deviation" stroke="#06b6d4" strokeWidth={2} dot={{r: 2, fill: '#06b6d4'}} />
+                            </LineChart>
+                        </ResponsiveContainer>
                     </div>
                 </div>
 
                 <div className="bg-zinc-900/50 p-4 border border-zinc-800 text-xs text-zinc-400 leading-relaxed mb-6">
-                    {score > 90 ? "Metronomic precision. Your Rhythm Test results suggest an incredible internal clock." :
-                     score > 70 ? "Solid rhythm. Your Rhythm Test indicates a stable internal clock with minor deviations." :
-                     "Inconsistent timing. This Rhythm Test detected significant jitter or drift."}
+                    {score > 90 ? "Metronomic precision. Your internal clock is rock solid." :
+                     score > 70 ? "Solid rhythm. Minor drift is natural for humans." :
+                     "Significant drift detected. Practice with a metronome to internalize the grid."}
                 </div>
 
                 <button onClick={() => setPhase('idle')} className="btn-secondary w-full flex justify-center items-center gap-2">
@@ -335,7 +363,6 @@ const RhythmTest: React.FC = () => {
           <p className="text-xs text-zinc-500 leading-relaxed">
              Why take a <strong>Rhythm Test</strong>? This tool serves as a precise <strong>rhythm test</strong> designed to quantify temporal consistency. Unlike a standard metronome check, this online <strong>rhythm test</strong> analyzes milliseconds of drift to provide a comprehensive aptitude score.
           </p>
-          {/* Internal Link */}
           <div className="mt-2">
              <Link to="/tools/bpm-counter" className="text-[10px] text-primary-500 hover:text-white font-mono flex items-center gap-1">
                 <Wrench size={10} /> Calculate BPM manually? Use BPM Counter

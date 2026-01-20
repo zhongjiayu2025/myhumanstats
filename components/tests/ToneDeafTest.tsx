@@ -1,12 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ArrowUp, ArrowDown, Play, Check, X, RotateCcw, Volume2, Ear, BarChart3, Info } from 'lucide-react';
+import { ArrowUp, ArrowDown, Play, Check, X, RotateCcw, Volume2, Ear, BarChart3, Info, GitMerge } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 const ToneDeafTest: React.FC = () => {
   const [stage, setStage] = useState<'intro' | 'playing' | 'guessing' | 'feedback' | 'result'>('intro');
   const [level, setLevel] = useState(1);
   const [score, setScore] = useState(0);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [frequencies, setFrequencies] = useState<{f1: number, f2: number} | null>(null);
   
   const [correctAnswer, setCorrectAnswer] = useState<'higher' | 'lower'>('higher');
@@ -25,17 +24,12 @@ const ToneDeafTest: React.FC = () => {
   const TOTAL_LEVELS = 10;
   const BASE_FREQ = 440; // A4 Standard
 
-  // Difficulty Curve: Level 1 (Wait, huge diff) -> Level 10 (Tiny diff)
-  // Optimization: Adjusted curve to be slightly more forgiving in early levels
+  // Difficulty Curve
   const getDiffForLevel = (lvl: number) => {
-      // Level 1: 50Hz (Very obvious)
-      // Level 10: 1-2Hz (Extremely hard)
-      // Exponential decay
       return Math.max(1.5, Math.round(50 * Math.pow(0.55, lvl - 1) * 10) / 10);
   };
 
   const calculateCents = (f1: number, f2: number) => {
-      // Formula: 1200 * log2(f2/f1)
       return Math.abs(Math.round(1200 * Math.log2(f2 / f1)));
   };
 
@@ -44,7 +38,7 @@ const ToneDeafTest: React.FC = () => {
   }, []);
 
   // --- Visualization Logic ---
-  const drawVisualizer = (isActive: boolean, frequency: number) => {
+  const drawVisualizer = (isActive: boolean, frequency: number, isInterference = false) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -53,13 +47,11 @@ const ToneDeafTest: React.FC = () => {
     const width = canvas.width;
     const height = canvas.height;
     
-    // Clear & BG
     ctx.clearRect(0, 0, width, height);
     ctx.fillStyle = '#09090b'; 
     ctx.fillRect(0, 0, width, height);
 
     if (!isActive) {
-        // Flat line with subtle noise to show system is "on"
         ctx.beginPath();
         ctx.moveTo(0, height / 2);
         ctx.lineTo(width, height / 2);
@@ -72,31 +64,37 @@ const ToneDeafTest: React.FC = () => {
     const time = Date.now() / 1000;
     ctx.beginPath();
     ctx.lineWidth = 2;
-    ctx.strokeStyle = '#06b6d4'; // primary-500
+    ctx.strokeStyle = '#06b6d4';
 
     // Draw Sine Wave
-    // We adjust wavelength visually so high pitch looks tighter
     const wavelength = 30000 / frequency; 
     
     for (let x = 0; x < width; x++) {
-        // Apply a window function to fade edges (Hanning window approx)
         const window = Math.sin((x / width) * Math.PI);
-        const y = Math.sin((x / wavelength) - (time * 25)) * (height / 3) * window + (height / 2);
+        let y = 0;
+        
+        if (isInterference && frequencies) {
+            // Visualize the beat frequency physically
+            const y1 = Math.sin((x / wavelength) - (time * 25));
+            const diff = Math.abs(frequencies.f1 - frequencies.f2);
+            // Modulation wave
+            const mod = Math.cos(time * diff * Math.PI); 
+            y = y1 * mod * (height / 3) * window + (height / 2);
+        } else {
+            y = Math.sin((x / wavelength) - (time * 25)) * (height / 3) * window + (height / 2);
+        }
         
         if (x === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
     }
     ctx.stroke();
 
-    animationRef.current = requestAnimationFrame(() => drawVisualizer(true, frequency));
+    animationRef.current = requestAnimationFrame(() => drawVisualizer(true, frequency, isInterference));
   };
 
   const stopAudio = () => {
       if (oscRef.current) {
-          try { 
-              oscRef.current.stop(); 
-              oscRef.current.disconnect(); 
-          } catch (e) {}
+          try { oscRef.current.stop(); oscRef.current.disconnect(); } catch (e) {}
           oscRef.current = null;
       }
       if (gainRef.current) {
@@ -107,30 +105,61 @@ const ToneDeafTest: React.FC = () => {
       drawVisualizer(false, 0);
   };
 
+  const initAudioCtx = () => {
+      if (!audioCtxRef.current) {
+          audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      if (audioCtxRef.current.state === 'suspended') audioCtxRef.current.resume();
+      return audioCtxRef.current;
+  };
+
+  // Play two tones simultaneously to hear the "beats"
+  const playInterference = () => {
+      if (!frequencies) return;
+      stopAudio();
+      
+      const ctx = initAudioCtx();
+      const now = ctx.currentTime;
+      const duration = 2.0;
+
+      const masterGain = ctx.createGain();
+      masterGain.connect(ctx.destination);
+      masterGain.gain.setValueAtTime(0.1, now);
+      masterGain.gain.linearRampToValueAtTime(0.1, now + duration - 0.1);
+      masterGain.gain.linearRampToValueAtTime(0, now + duration);
+
+      const osc1 = ctx.createOscillator();
+      osc1.frequency.value = frequencies.f1;
+      osc1.connect(masterGain);
+
+      const osc2 = ctx.createOscillator();
+      osc2.frequency.value = frequencies.f2;
+      osc2.connect(masterGain);
+
+      osc1.start(now);
+      osc2.start(now);
+      osc1.stop(now + duration);
+      osc2.stop(now + duration);
+
+      drawVisualizer(true, frequencies.f1, true);
+      setTimeout(() => stopAudio(), duration * 1000);
+  };
+
   const playToneSequence = useCallback(async () => {
     if (stage === 'playing') return;
     setStage('playing');
     setUserGuess(null);
     
-    if (!audioCtxRef.current) {
-        audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
-    const ctx = audioCtxRef.current;
-    if (ctx.state === 'suspended') await ctx.resume();
-
+    const ctx = initAudioCtx();
     const diff = getDiffForLevel(level);
     
-    // Randomize: Is second tone higher or lower?
     const isHigher = Math.random() > 0.5;
     setCorrectAnswer(isHigher ? 'higher' : 'lower');
     
-    // Jitter Base Freq: +/- 30Hz random offset so users don't memorize 440
-    // This tests Relative Pitch, not Absolute Pitch
     const jitter = (Math.random() * 60) - 30;
     const roundBase = BASE_FREQ + jitter; 
     const freq2 = isHigher ? roundBase + diff : roundBase - diff;
 
-    // Store precise values for display
     setFrequencies({ f1: Math.round(roundBase * 10)/10, f2: Math.round(freq2 * 10)/10 });
 
     const playSingleTone = (freq: number, duration: number) => new Promise<void>((resolve) => {
@@ -140,12 +169,11 @@ const ToneDeafTest: React.FC = () => {
         osc.type = 'sine'; 
         osc.frequency.value = freq;
         
-        // Professional Audio Envelope: Prevent "Pop/Click" artifacts
         const now = ctx.currentTime;
         gain.gain.setValueAtTime(0.0001, now);
-        gain.gain.exponentialRampToValueAtTime(0.3, now + 0.04); // Smooth Attack
+        gain.gain.exponentialRampToValueAtTime(0.3, now + 0.04);
         gain.gain.setValueAtTime(0.3, now + duration - 0.04);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + duration); // Smooth Release
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
 
         osc.connect(gain);
         gain.connect(ctx.destination);
@@ -163,7 +191,6 @@ const ToneDeafTest: React.FC = () => {
         }, duration * 1000);
     });
 
-    // Sequence: Tone A (600ms) -> Silence (400ms) -> Tone B (600ms)
     await playSingleTone(roundBase, 0.6);
     await new Promise(r => setTimeout(r, 400)); 
     await playSingleTone(freq2, 0.6);
@@ -171,7 +198,6 @@ const ToneDeafTest: React.FC = () => {
     setStage('guessing');
   }, [level, stage]);
 
-  // Keyboard controls
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
         if (stage !== 'guessing') return;
@@ -187,10 +213,9 @@ const ToneDeafTest: React.FC = () => {
     setUserGuess(guess);
     const isCorrect = guess === correctAnswer;
     
-    // Haptic Feedback (if supported)
     if (navigator.vibrate) {
-        if (isCorrect) navigator.vibrate(50); // Short buzz
-        else navigator.vibrate([50, 50, 50]); // Double buzz pattern
+        if (isCorrect) navigator.vibrate(50);
+        else navigator.vibrate([50, 50, 50]);
     }
 
     setStage('feedback');
@@ -204,8 +229,9 @@ const ToneDeafTest: React.FC = () => {
             } else {
                 finishGame(score + 1); 
             }
-        }, 2200); // 2.2s delay to read the cents data
+        }, 2200);
     } else {
+        // Longer pause on failure to allow user to use "Compare" feature
         setTimeout(() => {
             if (level < TOTAL_LEVELS) {
                 setLevel(l => l + 1);
@@ -213,7 +239,7 @@ const ToneDeafTest: React.FC = () => {
             } else {
                 finishGame(score);
             }
-        }, 2500);
+        }, 4000); 
     }
   };
 
@@ -233,7 +259,6 @@ const ToneDeafTest: React.FC = () => {
   return (
     <div className="max-w-xl mx-auto text-center select-none">
       
-      {/* HUD Header */}
       {(stage !== 'intro' && stage !== 'result') && (
         <div className="flex justify-between items-end border-b border-zinc-800 pb-4 mb-6">
            <div className="text-left">
@@ -242,7 +267,6 @@ const ToneDeafTest: React.FC = () => {
                   <div className="text-xl text-white font-mono font-bold">
                      {getDiffForLevel(level)} Hz
                   </div>
-                  {/* Visual Difficulty Indicator */}
                   <div className="flex items-center h-4 gap-[2px]">
                       <div className="w-0.5 h-full bg-zinc-600"></div>
                       <div className="h-[2px] bg-primary-500 shadow-[0_0_5px_#06b6d4] transition-all duration-500 ease-out" style={{ width: `${Math.max(2, getDiffForLevel(level) * 1.5)}px` }}></div>
@@ -257,7 +281,6 @@ const ToneDeafTest: React.FC = () => {
         </div>
       )}
 
-      {/* Main Area */}
       <div className="relative min-h-[360px] flex flex-col items-center justify-center">
         
         {stage === 'intro' && (
@@ -284,11 +307,9 @@ const ToneDeafTest: React.FC = () => {
             </div>
         )}
 
-        {/* Game Stages */}
         {(stage === 'playing' || stage === 'guessing' || stage === 'feedback') && (
             <div className="w-full max-w-sm mx-auto space-y-6 relative">
                 
-                {/* Visualizer Canvas */}
                 <div className={`
                     w-full h-32 bg-black border relative overflow-hidden clip-corner-sm transition-colors duration-200
                     ${stage === 'feedback' && userGuess === correctAnswer ? 'border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.1)]' : ''}
@@ -296,7 +317,6 @@ const ToneDeafTest: React.FC = () => {
                 `}>
                     <canvas ref={canvasRef} width={400} height={128} className="w-full h-full" />
                     
-                    {/* Playing Indicator */}
                     {stage === 'playing' && (
                         <div className="absolute top-2 right-2 flex items-center gap-1.5 px-2 py-1 bg-primary-900/50 rounded-sm">
                             <div className="w-1.5 h-1.5 rounded-full bg-primary-400 animate-pulse"></div>
@@ -304,7 +324,6 @@ const ToneDeafTest: React.FC = () => {
                         </div>
                     )}
 
-                    {/* Feedback Overlay: The Reveal */}
                     {stage === 'feedback' && frequencies && (
                         <div className="absolute inset-0 bg-black/90 backdrop-blur-[2px] flex flex-col items-center justify-center animate-in fade-in duration-300">
                             
@@ -322,15 +341,24 @@ const ToneDeafTest: React.FC = () => {
                                 </div>
                             </div>
                             
-                            <div className="bg-zinc-900 px-3 py-1 rounded-full border border-zinc-800 flex items-center gap-2">
-                                <span className="text-xs text-zinc-500 font-mono">DELTA:</span>
-                                <span className="text-sm font-bold text-primary-400">{calculateCents(frequencies.f1, frequencies.f2)} Cents</span>
+                            <div className="flex items-center gap-4">
+                                <div className="bg-zinc-900 px-3 py-1 rounded-full border border-zinc-800 flex items-center gap-2">
+                                    <span className="text-xs text-zinc-500 font-mono">DELTA:</span>
+                                    <span className="text-sm font-bold text-primary-400">{calculateCents(frequencies.f1, frequencies.f2)} Cents</span>
+                                </div>
+                                
+                                {/* Educational Feature */}
+                                <button 
+                                    onClick={playInterference}
+                                    className="px-3 py-1 bg-indigo-900/50 hover:bg-indigo-900 border border-indigo-500/50 rounded-full flex items-center gap-2 text-xs font-bold text-indigo-300 transition-colors"
+                                >
+                                    <GitMerge size={12} /> Play Interference
+                                </button>
                             </div>
                         </div>
                     )}
                 </div>
 
-                {/* Controls */}
                 <div className="grid grid-cols-2 gap-4">
                     <button 
                         onClick={() => handleGuess('higher')}
@@ -363,7 +391,6 @@ const ToneDeafTest: React.FC = () => {
                     </button>
                 </div>
 
-                {/* Status Bar */}
                 <div className="h-10 flex items-center justify-center">
                     {stage === 'feedback' ? (
                         <div className={`flex items-center gap-2 font-bold uppercase tracking-widest animate-in zoom-in duration-300 ${userGuess === correctAnswer ? 'text-emerald-500' : 'text-red-500'}`}>
@@ -385,7 +412,6 @@ const ToneDeafTest: React.FC = () => {
             </div>
         )}
 
-        {/* Result Stage */}
         {stage === 'result' && (
             <div className="max-w-md w-full animate-in slide-in-from-bottom-4 fade-in duration-500">
                 <div className="tech-border bg-black p-8 clip-corner-lg mb-6 text-center">
@@ -424,13 +450,14 @@ const ToneDeafTest: React.FC = () => {
 
       </div>
       
-      {/* SEO Footer / Clinical Context */}
       <div className="mt-12 border-t border-zinc-800 pt-6 text-left">
           <h4 className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest mb-2 flex items-center gap-2">
              <BarChart3 size={12} /> Clinical Context: Cents & Amusia
           </h4>
           <p className="text-xs text-zinc-500 leading-relaxed">
-             This <strong>Tone Deaf Test</strong> evaluates your Just Noticeable Difference (JND) in frequency. In music theory, a <strong>Cent</strong> is a logarithmic unit of measure for musical intervals (100 Cents = 1 Semitone). Humans with <strong>Amusia (Tone Deafness)</strong> often cannot distinguish differences greater than 100 Cents, whereas trained musicians can often detect differences as small as 10-20 Cents.
+             This <strong>Tone Deaf Test</strong> evaluates your Just Noticeable Difference (JND) in frequency. In music theory, a <strong>Cent</strong> is a logarithmic unit of measure for musical intervals (100 Cents = 1 Semitone). 
+             <br/><br/>
+             <strong>Tip:</strong> If you struggle to hear the difference, use the "Play Interference" button. This plays both tones together, creating a "wobble" (beat frequency) equal to the difference in Hertz. Learning to hear this wobble is a key skill in tuning instruments.
           </p>
       </div>
 

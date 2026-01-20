@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Volume2, Activity, AlertTriangle, ShieldAlert, Play, Square, Headphones, Wind } from 'lucide-react';
+import { Volume2, Activity, AlertTriangle, ShieldAlert, Play, Square, Headphones, Wind, Radar } from 'lucide-react';
 import { saveStat } from '../../lib/core';
+import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar as RechartRadar, ResponsiveContainer } from 'recharts';
 
 // --- Types ---
 type Phase = 'warning' | 'intro' | 'audio-test' | 'questionnaire' | 'result';
@@ -181,8 +182,8 @@ const MisophoniaTest: React.FC = () => {
           oscRef.current = osc;
 
       } else if (type === 'organic') {
-          // ORGANIC: Mouth sounds / Crunching
-          // Filtered noise bursts with varying lengths
+          // ORGANIC: Improved "Chewing" Sound
+          // Wet filter sweeps + amplitude modulation
           const buffer = createNoiseBuffer(ctx);
 
           const playChew = () => {
@@ -190,27 +191,34 @@ const MisophoniaTest: React.FC = () => {
              source.buffer = buffer;
              
              const gain = ctx.createGain();
+             
+             // Dynamic Lowpass filter for "squishy" sound
              const filter = ctx.createBiquadFilter();
              filter.type = 'lowpass';
-             filter.frequency.value = 600 + Math.random() * 400; // Varying texture
+             filter.Q.value = 8; // High resonance for wetness
 
              source.connect(filter);
              filter.connect(gain);
              gain.connect(masterGain);
 
              const now = ctx.currentTime;
-             const duration = 0.2 + Math.random() * 0.3; // 200-500ms
+             const duration = 0.3 + Math.random() * 0.3; // 300-600ms
+
+             // Filter Sweep (Wah-wah effect)
+             filter.frequency.setValueAtTime(200, now);
+             filter.frequency.linearRampToValueAtTime(800 + Math.random() * 400, now + (duration * 0.5));
+             filter.frequency.linearRampToValueAtTime(200, now + duration);
 
              source.start(now);
              source.stop(now + duration + 0.1);
 
+             // Amplitude Envelope
              gain.gain.setValueAtTime(0, now);
-             gain.gain.linearRampToValueAtTime(0.4, now + 0.05);
+             gain.gain.linearRampToValueAtTime(0.6, now + 0.1); // Slower attack
              gain.gain.exponentialRampToValueAtTime(0.01, now + duration);
           };
 
           playChew();
-          // Irregular intervals are MORE annoying
           const scheduleNext = () => {
               if (!isPlaying) return;
               const nextDelay = 800 + Math.random() * 1500;
@@ -537,6 +545,13 @@ const MisophoniaTest: React.FC = () => {
   const avgDiscomfort = (triggerScores.repetitive + triggerScores['high-freq'] + triggerScores.organic) / 3;
   const totalScore = Math.min(100, Math.round((avgDiscomfort * 5) + surveyScore));
   
+  const radarData = [
+      { subject: 'Mechanical', A: triggerScores.repetitive * 10, fullMark: 100 },
+      { subject: 'High Freq', A: triggerScores['high-freq'] * 10, fullMark: 100 },
+      { subject: 'Organic', A: triggerScores.organic * 10, fullMark: 100 },
+      { subject: 'Survey', A: surveyScore * 2, fullMark: 100 }, // Approximate scale
+  ];
+
   return (
     <div className="max-w-2xl mx-auto text-center animate-in zoom-in duration-500">
         <div className="tech-border bg-black p-10 clip-corner-lg relative overflow-hidden">
@@ -553,24 +568,17 @@ const MisophoniaTest: React.FC = () => {
                 </div>
             </div>
 
-            {/* Trigger Breakdown */}
-            <div className="mb-8">
-               <h4 className="text-[10px] text-zinc-500 uppercase font-mono mb-3 text-left">Specific Triggers (0-10)</h4>
-               <div className="space-y-3">
-                   {[
-                       { l: 'Mechanical/Repetitive', v: triggerScores.repetitive },
-                       { l: 'High Frequency', v: triggerScores['high-freq'] },
-                       { l: 'Organic (Mouth Sounds)', v: triggerScores.organic }
-                   ].map((t, i) => (
-                       <div key={i} className="flex items-center gap-4 text-xs">
-                           <span className="w-32 text-left text-zinc-400">{t.l}</span>
-                           <div className="flex-1 h-2 bg-zinc-900 rounded-full overflow-hidden">
-                               <div className={`h-full ${t.v > 7 ? 'bg-red-500' : t.v > 4 ? 'bg-yellow-500' : 'bg-emerald-500'}`} style={{ width: `${t.v * 10}%` }}></div>
-                           </div>
-                           <span className="w-6 font-mono text-white">{t.v}</span>
-                       </div>
-                   ))}
-               </div>
+            {/* Radar Chart */}
+            <div className="h-64 w-full mb-8 relative">
+                <div className="absolute top-0 right-0 text-[10px] font-mono text-zinc-500 flex items-center gap-1"><Radar size={12}/> TRIGGER PROFILE</div>
+                <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
+                        <PolarGrid stroke="#333" />
+                        <PolarAngleAxis dataKey="subject" tick={{ fill: '#71717a', fontSize: 10 }} />
+                        <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                        <RechartRadar name="Sensitivity" dataKey="A" stroke="#ef4444" strokeWidth={2} fill="#ef4444" fillOpacity={0.3} />
+                    </RadarChart>
+                </ResponsiveContainer>
             </div>
 
             <div className="bg-zinc-900/50 p-4 border border-zinc-800 text-left mb-8">

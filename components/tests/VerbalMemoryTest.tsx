@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Book, RotateCcw, Brain } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Book, RotateCcw, Brain, Zap, ArrowLeft, ArrowRight, Heart, HeartCrack } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 const WORD_BANK = [
@@ -20,7 +20,10 @@ const VerbalMemoryTest: React.FC = () => {
   const [currentWord, setCurrentWord] = useState('');
   const [seenWords, setSeenWords] = useState<Set<string>>(new Set());
   
-  // Weights: higher chance to show SEEN word as pool grows
+  // UX State
+  const [combo, setCombo] = useState(0);
+  const [animClass, setAnimClass] = useState(''); // Control swipe animations
+
   useEffect(() => {
     if (phase === 'play') {
        nextTurn();
@@ -28,56 +31,81 @@ const VerbalMemoryTest: React.FC = () => {
   }, [phase]);
 
   const nextTurn = () => {
-      // Logic: 
-      // If seenWords is empty, must show new.
-      // If seenWords has items, ~40% chance to show seen, 60% new?
-      // We want to scale difficulty.
-      
+      // 40% chance to show seen word IF we have seen words
       const showSeen = seenWords.size > 0 && Math.random() > 0.6;
       
       if (showSeen) {
           const words = Array.from(seenWords);
+          // Try to avoid the very last word to make it slightly harder? Or just random.
           const randomSeen = words[Math.floor(Math.random() * words.length)];
           setCurrentWord(randomSeen);
       } else {
-          // Pick a word NOT in seenWords
           let newWord = WORD_BANK[Math.floor(Math.random() * WORD_BANK.length)];
-          while (seenWords.has(newWord)) {
+          let safety = 0;
+          while (seenWords.has(newWord) && safety < 50) {
              newWord = WORD_BANK[Math.floor(Math.random() * WORD_BANK.length)];
+             safety++;
           }
           setCurrentWord(newWord);
       }
+      // Reset anim
+      setAnimClass('animate-in zoom-in duration-300'); 
   };
 
-  const handleGuess = (guess: 'seen' | 'new') => {
+  const handleGuess = useCallback((guess: 'seen' | 'new') => {
+      if (phase !== 'play') return;
+
       const isActuallySeen = seenWords.has(currentWord);
       
       let correct = false;
       if (guess === 'seen' && isActuallySeen) correct = true;
       if (guess === 'new' && !isActuallySeen) correct = true;
 
-      if (correct) {
-          setScore(s => s + 1);
-          if (!isActuallySeen) {
-              setSeenWords(prev => new Set(prev).add(currentWord));
-          }
-          nextTurn();
-      } else {
-          const newLives = lives - 1;
-          setLives(newLives);
-          if (newLives <= 0) {
-              finish();
-          } else {
-              // Still add it to seen if it was new, effectively
-              if (!isActuallySeen) setSeenWords(prev => new Set(prev).add(currentWord));
+      // Animate OUT
+      setAnimClass(guess === 'seen' ? 'animate-out slide-out-to-left opacity-0 duration-200' : 'animate-out slide-out-to-right opacity-0 duration-200');
+
+      setTimeout(() => {
+          if (correct) {
+              setScore(s => s + 1);
+              setCombo(c => c + 1);
+              if (!isActuallySeen) {
+                  setSeenWords(prev => new Set(prev).add(currentWord));
+              }
               nextTurn();
+          } else {
+              setCombo(0);
+              const newLives = lives - 1;
+              setLives(newLives);
+              
+              if (newLives <= 0) {
+                  finish();
+              } else {
+                  if (!isActuallySeen) setSeenWords(prev => new Set(prev).add(currentWord));
+                  nextTurn();
+              }
           }
-      }
-  };
+      }, 200); // Wait for animation
+  }, [phase, currentWord, seenWords, lives]);
+
+  // Keyboard Shortcuts
+  useEffect(() => {
+      const handleKey = (e: KeyboardEvent) => {
+          if (phase === 'play') {
+              if (e.key === 'ArrowLeft') handleGuess('seen');
+              if (e.key === 'ArrowRight') handleGuess('new');
+          } else if (phase === 'intro' || phase === 'result') {
+              if (e.code === 'Space' || e.key === 'Enter') {
+                  if (phase === 'result') restart();
+                  else setPhase('play');
+              }
+          }
+      };
+      window.addEventListener('keydown', handleKey);
+      return () => window.removeEventListener('keydown', handleKey);
+  }, [phase, handleGuess]);
 
   const finish = () => {
       setPhase('result');
-      // Score: >50 is usually expert. 
       const normalized = Math.min(100, Math.round((score / 50) * 100));
       saveStat('verbal-memory', normalized);
   };
@@ -85,6 +113,7 @@ const VerbalMemoryTest: React.FC = () => {
   const restart = () => {
       setScore(0);
       setLives(3);
+      setCombo(0);
       setSeenWords(new Set());
       setPhase('play');
   };
@@ -97,47 +126,70 @@ const VerbalMemoryTest: React.FC = () => {
                <h2 className="text-3xl font-bold text-white mb-2">Verbal Memory Test</h2>
                <p className="text-zinc-400 mb-8 max-w-md mx-auto">
                    You will see a stream of words. 
-                   <br/>Click <strong>NEW</strong> if you haven't seen the word yet.
                    <br/>Click <strong>SEEN</strong> if the word has appeared before.
-                   <br/>You have 3 lives.
+                   <br/>Click <strong>NEW</strong> if it's the first time appearing.
                </p>
+               
+               <div className="flex justify-center gap-4 text-xs font-mono text-zinc-500 mb-8">
+                   <div className="flex items-center gap-1"><span className="border border-zinc-700 px-2 py-1 rounded bg-zinc-900">←</span> SEEN</div>
+                   <div className="flex items-center gap-1"><span className="border border-zinc-700 px-2 py-1 rounded bg-zinc-900">→</span> NEW</div>
+               </div>
+
                <button onClick={() => setPhase('play')} className="btn-primary">Start Test</button>
            </div>
        )}
 
        {phase === 'play' && (
-           <div className="py-12 animate-in slide-in-from-right duration-300">
-               <div className="flex justify-between items-center mb-12 px-8">
+           <div className="py-12">
+               <div className="flex justify-between items-end mb-12 px-4 border-b border-zinc-800 pb-4">
                    <div className="text-left">
-                       <div className="text-xs text-zinc-500 font-mono uppercase">Lives</div>
+                       <div className="text-[10px] text-zinc-500 font-mono uppercase">Lives</div>
                        <div className="flex gap-1">
                            {[...Array(3)].map((_, i) => (
-                               <div key={i} className={`w-3 h-3 rounded-full ${i < lives ? 'bg-primary-500' : 'bg-zinc-800'}`}></div>
+                               <div key={i} className="text-red-500 transition-all">
+                                   {i < lives ? <Heart size={20} fill="currentColor" /> : <HeartCrack size={20} className="opacity-20" />}
+                               </div>
                            ))}
                        </div>
                    </div>
+                   
+                   <div className="flex flex-col items-center">
+                       {combo > 5 && (
+                           <div className="text-amber-500 text-xs font-bold animate-bounce flex items-center gap-1">
+                               <Zap size={12} fill="currentColor" /> {combo} COMBO
+                           </div>
+                       )}
+                   </div>
+
                    <div className="text-right">
-                       <div className="text-xs text-zinc-500 font-mono uppercase">Score</div>
+                       <div className="text-[10px] text-zinc-500 font-mono uppercase">Score</div>
                        <div className="text-2xl font-bold text-white font-mono">{score}</div>
                    </div>
                </div>
 
-               <div className="text-5xl md:text-6xl font-bold text-white mb-16 h-20 flex items-center justify-center">
-                   {currentWord}
+               <div className="relative mb-16 min-h-[140px] flex items-center justify-center">
+                   <div className={`
+                        text-4xl md:text-6xl font-bold py-12 px-8 rounded-xl border-2 bg-black border-zinc-800 shadow-2xl
+                        ${animClass}
+                   `}>
+                       {currentWord}
+                   </div>
                </div>
 
-               <div className="flex gap-4 justify-center">
+               <div className="grid grid-cols-2 gap-4">
                    <button 
                       onClick={() => handleGuess('seen')} 
-                      className="px-8 py-4 bg-yellow-600 hover:bg-yellow-500 text-black font-bold text-xl rounded-lg w-40 transition-transform active:scale-95"
+                      className="group h-20 bg-zinc-900 hover:bg-yellow-600/20 border border-zinc-800 hover:border-yellow-500 text-zinc-300 hover:text-yellow-400 font-bold text-xl rounded-lg transition-all active:scale-95 flex flex-col items-center justify-center relative"
                    >
                        SEEN
+                       <div className="absolute bottom-2 text-[10px] opacity-30 font-mono group-hover:opacity-100 transition-opacity flex items-center gap-1"><ArrowLeft size={10}/> KEY</div>
                    </button>
                    <button 
                       onClick={() => handleGuess('new')} 
-                      className="px-8 py-4 bg-primary-600 hover:bg-primary-500 text-black font-bold text-xl rounded-lg w-40 transition-transform active:scale-95"
+                      className="group h-20 bg-zinc-900 hover:bg-primary-600/20 border border-zinc-800 hover:border-primary-500 text-zinc-300 hover:text-primary-400 font-bold text-xl rounded-lg transition-all active:scale-95 flex flex-col items-center justify-center relative"
                    >
                        NEW
+                       <div className="absolute bottom-2 text-[10px] opacity-30 font-mono group-hover:opacity-100 transition-opacity flex items-center gap-1">KEY <ArrowRight size={10}/></div>
                    </button>
                </div>
            </div>

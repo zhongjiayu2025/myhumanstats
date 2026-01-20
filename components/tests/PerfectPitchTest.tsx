@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Music, Volume2, Trophy, Settings, RefreshCcw, CheckCircle2, XCircle } from 'lucide-react';
+import { Music, Volume2, Trophy, Settings, RefreshCcw, CheckCircle2, XCircle, Ear } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 interface NoteDef {
@@ -83,6 +83,7 @@ const PianoKey: React.FC<PianoKeyProps> = ({
 const PerfectPitchTest: React.FC = () => {
   const [phase, setPhase] = useState<'intro' | 'play' | 'result'>('intro');
   const [difficulty, setDifficulty] = useState<Difficulty>('easy');
+  const [useReference, setUseReference] = useState(false); // Relative pitch mode
   
   // Game State
   const [currentNote, setCurrentNote] = useState<NoteDef | null>(null);
@@ -108,16 +109,19 @@ const PerfectPitchTest: React.FC = () => {
     return audioCtxRef.current;
   };
 
-  const playTone = (freq: number) => {
+  const playTone = (freq: number, duration: number = 1.5) => new Promise<void>((resolve) => {
      const ctx = initAudio();
      const now = ctx.currentTime;
 
      // Master Gain
      const masterGain = ctx.createGain();
      masterGain.connect(ctx.destination);
+     
+     // ADSR Envelope for Piano-like sound
      masterGain.gain.setValueAtTime(0, now);
-     masterGain.gain.linearRampToValueAtTime(0.4, now + 0.02);
-     masterGain.gain.exponentialRampToValueAtTime(0.001, now + 1.5);
+     masterGain.gain.linearRampToValueAtTime(0.5, now + 0.02); // Attack
+     masterGain.gain.exponentialRampToValueAtTime(0.3, now + 0.1); // Decay
+     masterGain.gain.exponentialRampToValueAtTime(0.001, now + duration); // Release
 
      // Oscillator 1: Fundamental (Triangle for body)
      const osc1 = ctx.createOscillator();
@@ -125,12 +129,12 @@ const PerfectPitchTest: React.FC = () => {
      osc1.frequency.value = freq;
      osc1.connect(masterGain);
 
-     // Oscillator 2: Harmonic (Sine for glassiness/bell tone)
+     // Oscillator 2: Harmonic (Sine for clarity)
      const osc2 = ctx.createOscillator();
      osc2.type = 'sine';
      osc2.frequency.value = freq * 2; // Octave up
      const gain2 = ctx.createGain();
-     gain2.gain.value = 0.3;
+     gain2.gain.value = 0.2;
      osc2.connect(gain2);
      gain2.connect(masterGain);
 
@@ -139,12 +143,14 @@ const PerfectPitchTest: React.FC = () => {
      osc2.start(now);
      
      // Stop
-     osc1.stop(now + 1.5);
-     osc2.stop(now + 1.5);
-  };
+     osc1.stop(now + duration);
+     osc2.stop(now + duration);
+     
+     setTimeout(resolve, duration * 1000);
+  });
 
   // --- Game Logic ---
-  const startRound = () => {
+  const startRound = async () => {
      if (rounds >= TOTAL_ROUNDS) {
          finish();
          return;
@@ -156,12 +162,16 @@ const PerfectPitchTest: React.FC = () => {
 
      // Filter notes based on difficulty
      const pool = difficulty === 'easy' ? OCTAVE.filter(n => n.type === 'white') : OCTAVE;
-     
-     // Ensure we don't pick the exact same note twice in a row to keep it interesting? 
-     // Actually, randomness is better for testing.
      const randomNote = pool[Math.floor(Math.random() * pool.length)];
-     
      setCurrentNote(randomNote);
+
+     if (useReference) {
+         // Play Middle C (261.63Hz) first
+         await playTone(261.63, 0.8);
+         // Small silence
+         await new Promise(r => setTimeout(r, 400));
+     }
+     
      playTone(randomNote.freq);
   };
 
@@ -172,7 +182,6 @@ const PerfectPitchTest: React.FC = () => {
      setStreak(0);
      setMaxStreak(0);
      setPhase('play');
-     // Small delay to let UI settle
      setTimeout(() => startRound(), 100);
   };
 
@@ -191,7 +200,7 @@ const PerfectPitchTest: React.FC = () => {
               setMaxStreak(m => Math.max(m, newS));
               return newS;
           });
-          playTone(currentNote.freq * 2); // High ping for correct? Or just visual?
+          playTone(currentNote.freq * 2, 0.3); // High ping for correct
       } else {
           setIsCorrect(false);
           setStreak(0);
@@ -209,9 +218,6 @@ const PerfectPitchTest: React.FC = () => {
 
   const finish = () => {
       setPhase('result');
-      // Normalize score based on difficulty? 
-      // Hard mode is worth more conceptually, but for 0-100 stats, just raw percentage is standard.
-      // Maybe boost hard mode score slightly if perfect?
       const baseScore = Math.round((score / TOTAL_ROUNDS) * 100);
       saveStat('perfect-pitch', baseScore);
   };
@@ -224,11 +230,21 @@ const PerfectPitchTest: React.FC = () => {
              <div className="w-20 h-20 bg-zinc-900 rounded-full flex items-center justify-center mx-auto mb-6 border border-zinc-800 shadow-inner">
                  <Music size={32} className="text-primary-500" />
              </div>
-             <h2 className="text-3xl font-bold text-white mb-2">Perfect Pitch Trainer</h2>
+             <h2 className="text-3xl font-bold text-white mb-2">Pitch Recognition</h2>
              <p className="text-zinc-400 mb-8 max-w-md mx-auto leading-relaxed">
-                Test your ability to identify musical notes without a reference tone (Absolute Pitch).
+                Identify musical notes by ear. Use <strong>Reference Mode</strong> to train relative pitch, or go without for absolute pitch.
              </p>
              
+             {/* Mode Toggles */}
+             <div className="flex justify-center gap-4 mb-8">
+                 <button 
+                    onClick={() => setUseReference(!useReference)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold uppercase transition-all ${useReference ? 'bg-primary-900/30 border-primary-500 text-primary-400' : 'bg-zinc-900 border-zinc-800 text-zinc-500'}`}
+                 >
+                    <Ear size={14} /> {useReference ? 'Reference Tone: ON' : 'Reference Tone: OFF'}
+                 </button>
+             </div>
+
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-md mx-auto">
                  <button 
                     onClick={() => startGame('easy')}
@@ -278,20 +294,25 @@ const PerfectPitchTest: React.FC = () => {
              </div>
 
              {/* Replay Button */}
-             <div className="mb-12">
+             <div className="mb-12 flex justify-center gap-4">
+                 {useReference && (
+                     <button 
+                        onClick={() => playTone(261.63)}
+                        className="w-16 h-16 rounded-full bg-zinc-900 border border-zinc-800 hover:border-emerald-500 flex items-center justify-center transition-all group"
+                     >
+                        <span className="text-xs font-bold text-zinc-500 group-hover:text-emerald-500">REF C</span>
+                     </button>
+                 )}
                  <button 
                     onClick={() => currentNote && playTone(currentNote.freq)}
-                    className="w-20 h-20 rounded-full bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center transition-all shadow-[0_0_30px_rgba(0,0,0,0.3)] active:scale-95 group mx-auto border border-zinc-700"
+                    className="w-20 h-20 rounded-full bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center transition-all shadow-[0_0_30px_rgba(0,0,0,0.3)] active:scale-95 group border border-zinc-700"
                  >
                     <Volume2 size={32} className="text-zinc-400 group-hover:text-white transition-colors" />
                  </button>
-                 <div className="text-[10px] text-zinc-600 font-mono mt-3 uppercase tracking-widest">Replay Tone</div>
              </div>
 
              {/* Piano UI */}
              <div className="relative flex justify-center items-start pt-4 pb-8 select-none overflow-x-auto">
-                 {/* Render logic: White keys flow normally. Black keys are interleaved absolutely or via negative margins. */}
-                 {/* Flex approach with negative margins for black keys is robust */}
                  <div className="flex relative bg-zinc-800 p-1 rounded-b-lg shadow-2xl">
                      {OCTAVE.map((note) => (
                          <PianoKey 
@@ -324,14 +345,14 @@ const PerfectPitchTest: React.FC = () => {
                  </div>
                  <div className="bg-zinc-900 border border-zinc-800 p-4 rounded text-center">
                      <div className="text-xs text-zinc-500 uppercase">Mode</div>
-                     <div className="text-xl text-white font-mono capitalize">{difficulty}</div>
+                     <div className="text-xl text-white font-mono capitalize">{useReference ? 'Relative' : 'Absolute'}</div>
                  </div>
              </div>
 
              <div className="bg-zinc-900/50 p-4 border border-zinc-800 text-sm text-zinc-400 mb-8 max-w-md mx-auto rounded">
-                {score === 10 ? "Flawless. You show signs of Absolute Pitch." : 
-                 score >= 7 ? "Excellent relative pitch. Keep training." : 
-                 "Normal. Absolute pitch is rare (1 in 10,000), but relative pitch can be trained."}
+                {score === 10 ? "Flawless Pitch Recognition." : 
+                 score >= 7 ? "Excellent ear. Keep training." : 
+                 "Practice makes perfect. Try using the Reference Tone mode to improve your intervals."}
              </div>
              
              <div className="flex gap-4 justify-center">
