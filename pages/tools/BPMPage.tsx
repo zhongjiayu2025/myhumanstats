@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Activity, RotateCcw, Clock, Music } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { RotateCcw, Clock, Music } from 'lucide-react';
 import SEO from '../../components/SEO';
 import Breadcrumbs from '../../components/Breadcrumbs';
 

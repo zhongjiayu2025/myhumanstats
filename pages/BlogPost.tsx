@@ -27,7 +27,7 @@ const BlogPost: React.FC = () => {
     if (post) {
        const regex = /<h2.*?>(.*?)<\/h2>/g;
        const matches = [...post.content.matchAll(regex)];
-       const generatedToc = matches.map((match, index) => {
+       const generatedToc = matches.map((match) => {
           const text = match[1].replace(/<[^>]*>/g, ''); // strip inner html if any
           const id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-');
           return { id, text };
@@ -70,7 +70,7 @@ const BlogPost: React.FC = () => {
   // This is a lightweight way to add anchors without full parsing
   const processedContent = post?.content.replace(
      /<h2(.*?)>(.*?)<\/h2>/g, 
-     (match, attrs, text) => {
+     (_, attrs, text) => {
         const id = text.replace(/<[^>]*>/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
         return `<h2 id="${id}"${attrs}>${text}</h2>`;
      }

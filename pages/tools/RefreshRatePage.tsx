@@ -5,7 +5,7 @@ import Breadcrumbs from '../../components/Breadcrumbs';
 
 const RefreshRatePage: React.FC = () => {
   const [fps, setFps] = useState(0);
-  const [frames, setFrames] = useState(0);
+  const [, setFrames] = useState(0);
   const [startTime, setStartTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [motionBlur, setMotionBlur] = useState(false);

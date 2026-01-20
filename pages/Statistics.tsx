@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { BarChart2, Table, Database, ArrowUpRight } from 'lucide-react';
+import { BarChart2, Database, ArrowUpRight } from 'lucide-react';
 import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { TESTS } from '../lib/core';

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Square, Activity, Volume2, Settings2, Info } from 'lucide-react';
+import { Play, Square, Settings2, Activity } from 'lucide-react';
 import SEO from '../../components/SEO';
 import Breadcrumbs from '../../components/Breadcrumbs';
 
@@ -129,6 +129,21 @@ const ToneGenPage: React.FC = () => {
                          type="range" min="20" max="20000" step="1" 
                          value={freq} 
                          onChange={(e) => setFreq(Number(e.target.value))}
+                         className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-primary-500"
+                      />
+                   </div>
+
+                   {/* Volume Slider */}
+                   <div>
+                      <div className="flex justify-between text-xs text-zinc-500 font-mono mb-2">
+                         <span>0%</span>
+                         <span>Volume</span>
+                         <span>100%</span>
+                      </div>
+                      <input 
+                         type="range" min="0" max="1" step="0.01" 
+                         value={volume} 
+                         onChange={(e) => setVolume(Number(e.target.value))}
                          className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-primary-500"
                       />
                    </div>

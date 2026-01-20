@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Settings, Music, Activity, ArrowRight, Wrench, Monitor, Headphones, Mic, Zap } from 'lucide-react';
+import { Music, Activity, ArrowRight, Wrench, Monitor, Headphones, Mic, Zap } from 'lucide-react';
 import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
 
