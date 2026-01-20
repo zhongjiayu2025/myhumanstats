@@ -21,7 +21,7 @@ const TypingTitle = ({ text }: { text: string }) => {
     return () => clearInterval(interval);
   }, [text]);
 
-  return <span>{display}<span className="animate-pulse">_</span></span>;
+  return <span aria-hidden="true">{display}<span className="animate-pulse">_</span></span>;
 };
 
 const Dashboard: React.FC = () => {
@@ -75,6 +75,20 @@ const Dashboard: React.FC = () => {
     }))
   };
 
+  // Collection Page Schema to indicate this is a list of tools
+  const collectionSchema = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "name": "MyHumanStats Human Performance Tests",
+    "description": "A comprehensive suite of auditory, visual, cognitive, and personality tests.",
+    "hasPart": TESTS.map(t => ({
+      "@type": "SoftwareApplication",
+      "name": t.title,
+      "description": t.description,
+      "url": `https://myhumanstats.org/test/${t.id}`
+    }))
+  };
+
   return (
     <div className="space-y-12">
       <SEO 
@@ -83,6 +97,7 @@ const Dashboard: React.FC = () => {
       />
       <Helmet>
         <script type="application/ld+json">{JSON.stringify(faqSchema)}</script>
+        <script type="application/ld+json">{JSON.stringify(collectionSchema)}</script>
       </Helmet>
       
       {/* Top Section: Identity & Radar */}
@@ -102,6 +117,8 @@ const Dashboard: React.FC = () => {
                 <div>
                    <h2 className="text-[10px] text-primary-500 font-mono uppercase tracking-[0.3em] mb-2">Subject Identity</h2>
                    <h1 className="text-3xl md:text-4xl font-bold text-white font-sans tracking-tight leading-none">
+                      {/* SEO Optimized H1: Text visible to crawlers immediately, typing effect is visual only */}
+                      <span className="sr-only">HUMAN DATA DASHBOARD</span>
                       <TypingTitle text="HUMAN_DATA" />
                    </h1>
                 </div>

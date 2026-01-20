@@ -36,8 +36,8 @@ const BlogIndex: React.FC = () => {
                  src={post.coverImage} 
                  alt={post.title}
                  loading="lazy"
-                 width="600"
-                 height="338"
+                 width="640"
+                 height="360"
                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-80 group-hover:opacity-100"
                />
                <div className="absolute top-4 left-4 bg-black/80 backdrop-blur px-3 py-1 border border-zinc-700">
@@ -73,7 +73,7 @@ const BlogIndex: React.FC = () => {
                      ))}
                   </div>
                   <span className="text-primary-500 text-xs font-mono flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                     READ_FILE <ChevronRight size={12} />
+                     READ_ENTRY <ChevronRight size={12} />
                   </span>
                </div>
             </div>

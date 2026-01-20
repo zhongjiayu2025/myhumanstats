@@ -162,7 +162,21 @@ export const TESTS: TestDefinition[] = [
       { term: "Amusia", definition: "A musical disorder that appears mainly as a defect in processing pitch, but also encompasses musical memory and recognition. Often called 'Tone Deafness'." },
       { term: "JND (Just Noticeable Difference)", definition: "The minimum difference in stimulation that a person can detect 50% of the time. In this test, it is the smallest Hz difference between two tones." },
       { term: "Cent", definition: "A logarithmic unit of measure for musical intervals. There are 100 cents in a semitone." }
-    ]
+    ],
+    seoContent: `
+      <h2>Understanding Tone Deafness (Amusia)</h2>
+      <p>Tone deafness, or <strong>congenital amusia</strong>, is a biological condition that affects approximately 4% of the population. It is characterized by an inability to distinguish between musical pitches.</p>
+      
+      <h3>How the Tone Deaf Test Works</h3>
+      <p>This test measures your <strong>Just Noticeable Difference (JND)</strong> in frequency. We play two tones back-to-back. One is a reference tone (e.g., 440Hz), and the other is slightly detuned. Your task is to determine if the second tone is higher or lower.</p>
+      
+      <h3>Scoring Guide</h3>
+      <ul class="list-disc pl-5 space-y-2 text-zinc-400">
+        <li><strong>Professional Musicians:</strong> Often detect differences as small as 2-5 Hz (< 20 Cents).</li>
+        <li><strong>Average Listeners:</strong> Can detect differences of 10-15 Hz.</li>
+        <li><strong>Potential Amusia:</strong> Struggle to detect differences greater than 25-50 Hz (Quarter tone).</li>
+      </ul>
+    `
   },
   {
     id: 'rhythm-test',
@@ -171,7 +185,22 @@ export const TESTS: TestDefinition[] = [
     description: 'Test your internal clock. Listen to a beat, then continue tapping to measure your millisecond drift.',
     iconName: 'Activity',
     estimatedTime: '2 min',
-    isImplemented: true
+    isImplemented: true,
+    seoContent: `
+      <h2>Synchronization-Continuation Task</h2>
+      <p>This <strong>Rhythm Test</strong> is based on the Synchronization-Continuation paradigm used in neuroscience. It measures sensorimotor synchronization—essentially, how well your brain can maintain a temporal grid without external cues.</p>
+      
+      <h3>Why Rhythm Matters</h3>
+      <p>Rhythm is not just for musicians. Good rhythmic ability correlates with:</p>
+      <ul class="list-disc pl-5 space-y-1 text-zinc-400">
+        <li>Reading readiness in children</li>
+        <li>Attention span stability</li>
+        <li>Motor coordination in sports</li>
+      </ul>
+      
+      <h3>Interpreting Your Score</h3>
+      <p>We measure your <strong>Standard Deviation (Stability)</strong> and your <strong>Mean Deviation (Drift)</strong>. A standard deviation under 20ms is considered excellent, comparable to professional drummers.</p>
+    `
   },
   {
     id: 'misophonia-test',
@@ -295,7 +324,17 @@ export const TESTS: TestDefinition[] = [
     description: 'Photographic memory challenge. Recall the pattern of lighting grids in the correct order.',
     iconName: 'Grid',
     estimatedTime: '3 min',
-    isImplemented: true
+    isImplemented: true,
+    seoContent: `
+      <h2>The Limits of Spatial Working Memory</h2>
+      <p>This <strong>Visual Memory Test</strong>, sometimes called a Spatial Span Test or the Corsi Block-Tapping Task, measures the capacity of your visuo-spatial sketchpad.</p>
+      
+      <h3>The Magic Number 7?</h3>
+      <p>While the "Magic Number 7" (plus or minus two) is often cited for verbal memory (digits), visual memory capacity is often lower, typically around <strong>5 to 6 items</strong> for complex spatial patterns.</p>
+      
+      <h3>Strategies for Improvement</h3>
+      <p>High scorers on this test often use "chunking." Instead of memorizing 7 individual tiles, they memorize a shape (e.g., "a triangle pointing left" or "the letter T"). This compresses the information, allowing the brain to store more data in the same working memory slots.</p>
+    `
   },
   {
     id: 'aim-trainer-test',
@@ -523,7 +562,15 @@ export const TESTS: TestDefinition[] = [
     isImplemented: true,
     citations: [
         "Miller, G. A. (1956). The magical number seven, plus or minus two: Some limits on our capacity for processing information. Psychological Review."
-    ]
+    ],
+    seoContent: `
+      <h2>The Magic Number 7</h2>
+      <p>This test is known in psychology as the <strong>Digit Span Test</strong>. In 1956, cognitive psychologist George Miller published a famous paper arguing that the capacity of human short-term memory is approximately 7 items, plus or minus 2.</p>
+      
+      <h3>Improving Your Score with Chunking</h3>
+      <p>If you find it hard to remember more than 7 digits, try <strong>chunking</strong>. This is the process of breaking a long string of numbers into smaller groups.</p>
+      <p>For example, instead of remembering "5 5 5 1 2 3 4" as seven separate items, you can remember "555" and "1234", reducing the cognitive load to just two "chunks". This is why phone numbers are often formatted with hyphens.</p>
+    `
   },
   {
     id: 'attention-span-test',
@@ -535,7 +582,18 @@ export const TESTS: TestDefinition[] = [
     isImplemented: true,
     citations: [
         "Mackworth, N. H. (1948). The breakdown of vigilance during prolonged visual search. Quarterly Journal of Experimental Psychology."
-    ]
+    ],
+    seoContent: `
+      <h2>Vigilance and Sustained Attention</h2>
+      <p>This <strong>Attention Span Test</strong> is a simplified version of a Psychomotor Vigilance Task (PVT). It measures your ability to remain alert to a visual stimulus over a period of time.</p>
+      
+      <h3>Signs of Attention Deficits</h3>
+      <p>Poor performance on this test typically manifests in two ways:</p>
+      <ul class="list-disc pl-5 space-y-2 text-zinc-400">
+        <li><strong>Lapses (Omission Errors):</strong> Failing to click when the dot appears. This indicates "zoning out" or micro-sleeps.</li>
+        <li><strong>False Alarms (Commission Errors):</strong> Clicking when no dot has appeared. This indicates impulsivity and a lack of inhibitory control.</li>
+      </ul>
+    `
   },
   {
     id: 'cps-test',
@@ -544,7 +602,19 @@ export const TESTS: TestDefinition[] = [
     description: 'Clicks Per Second. Test your finger speed and mouse clicking stamina.',
     iconName: 'MousePointer',
     estimatedTime: '10 sec',
-    isImplemented: true
+    isImplemented: true,
+    seoContent: `
+      <h2>What is the CPS Test?</h2>
+      <p>The <strong>CPS Test</strong> (Clicks Per Second) measures the speed at which you can click your mouse button in a given timeframe, usually 10 seconds. It is a popular benchmark in the gaming community, particularly for Minecraft PvP.</p>
+      
+      <h3>Clicking Techniques</h3>
+      <p>To achieve high scores (10+ CPS), players often use specialized techniques:</p>
+      <ul class="list-disc pl-5 space-y-1 text-zinc-400">
+        <li><strong>Jitter Clicking:</strong> Vibrating the muscles in the arm and wrist to click rapidly.</li>
+        <li><strong>Butterfly Clicking:</strong> Using two fingers (index and middle) to alternate clicks on the same button.</li>
+        <li><strong>Drag Clicking:</strong> Dragging a finger across the mouse button to create friction-based bounces (requires specific mouse texture).</li>
+      </ul>
+    `
   },
   {
     id: 'spacebar-speed-test',
@@ -553,7 +623,14 @@ export const TESTS: TestDefinition[] = [
     description: 'Spacebar Counter. Measure thumb velocity and keyboard latency.',
     iconName: 'Minus',
     estimatedTime: '10 sec',
-    isImplemented: true
+    isImplemented: true,
+    seoContent: `
+      <h2>The Spacebar Counter Challenge</h2>
+      <p>Also known as the <strong>Spacebar Clicker</strong>, this test isolates the speed of your thumb. While index fingers are used for mouse clicking, the thumb is heavier and often slower, yet crucial for movement (jumping) in gaming.</p>
+      
+      <h3>Average Spacebar CPS</h3>
+      <p>Most people can hit the spacebar between <strong>6 to 8 times per second</strong>. Scores above 10 are considered elite. Keyboard switches also play a role; mechanical switches with lighter actuation force (like Cherry MX Reds or Silvers) allow for faster rebounding than membrane keyboards.</p>
+    `
   },
   {
     id: 'stroop-effect-test',
@@ -565,7 +642,19 @@ export const TESTS: TestDefinition[] = [
     isImplemented: true,
     citations: [
         "Stroop, J. R. (1935). Studies of interference in serial verbal reactions. Journal of Experimental Psychology."
-    ]
+    ],
+    seoContent: `
+      <h2>What is the Stroop Effect?</h2>
+      <p>The <strong>Stroop Effect</strong> demonstrates the delay in reaction time between congruent and incongruent stimuli. It is one of the most famous experiments in cognitive psychology.</p>
+      
+      <h3>Interference and Inhibition</h3>
+      <p>When you see the word <span style="color:red">BLUE</span> written in red ink, your brain has two conflicting signals:
+      <ol class="list-decimal pl-6 space-y-2 text-zinc-400">
+         <li><strong>Semantic:</strong> Reading the word "Blue" (Faster, automatic process).</li>
+         <li><strong>Chromatic:</strong> Identifying the color Red (Slower, requires conscious effort).</li>
+      </ol>
+      <p>To perform the task correctly, your anterior cingulate cortex (ACC) must suppress the automatic urge to read the word. This mental effort causes a delay, known as the Stroop Interference.</p>
+    `
   },
 
   // --- PERSONALITY STATS ---
@@ -579,7 +668,21 @@ export const TESTS: TestDefinition[] = [
     isImplemented: true,
     citations: [
         "Kessler, R. C., et al. (2005). The World Health Organization Adult ADHD Self-Report Scale (ASRS): a short screening scale for use in the general population. Psychological Medicine."
-    ]
+    ],
+    seoContent: `
+      <h2>Adult ADHD Self-Report Scale (ASRS-v1.1)</h2>
+      <p>This <strong>ADHD Test</strong> utilizes the 6-question screening checklist developed by the World Health Organization. It focuses on the frequency of symptoms related to inattention, impulsivity, and hyperactivity in adults.</p>
+      
+      <h3>Interpreting the Results</h3>
+      <p>This tool is a <strong>screener</strong>, not a diagnostic instrument. A high score indicates that your symptoms are consistent with adults who have ADHD, but many other conditions (anxiety, sleep deprivation, thyroid issues) can mimic these symptoms.</p>
+      
+      <h3>The 3 Subtypes of ADHD</h3>
+      <ul class="list-disc pl-5 space-y-2 text-zinc-400">
+        <li><strong>Predominantly Inattentive:</strong> Difficulty organizing tasks, easily distracted, forgetful (formerly called ADD).</li>
+        <li><strong>Predominantly Hyperactive-Impulsive:</strong> Fidgeting, inability to sit still, interrupting others.</li>
+        <li><strong>Combined Presentation:</strong> A mix of both inattentive and hyperactive symptoms.</li>
+      </ul>
+    `
   },
   {
     id: 'eq-test',
@@ -588,7 +691,19 @@ export const TESTS: TestDefinition[] = [
     description: 'Emotional Intelligence assessment. Evaluate your empathy and social awareness.',
     iconName: 'Heart',
     estimatedTime: '3 min',
-    isImplemented: true
+    isImplemented: true,
+    seoContent: `
+      <h2>Emotional Intelligence Quotient (EQ)</h2>
+      <p>Unlike IQ, which measures cognitive intelligence, EQ measures your ability to identify, evaluate, control, and express emotions. High EQ is strongly correlated with leadership ability and relationship satisfaction.</p>
+      
+      <h3>The Four Pillars of EQ</h3>
+      <ul class="list-disc pl-5 space-y-2 text-zinc-400">
+        <li><strong>Self-Awareness:</strong> Recognizing your own emotions as they happen.</li>
+        <li><strong>Self-Management:</strong> Controlling impulsive feelings and behaviors.</li>
+        <li><strong>Social Awareness:</strong> Empathy and understanding the needs of others.</li>
+        <li><strong>Relationship Management:</strong> Building bonds and conflict resolution.</li>
+      </ul>
+    `
   },
   {
     id: 'anxiety-test',

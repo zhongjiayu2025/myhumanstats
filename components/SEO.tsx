@@ -21,8 +21,12 @@ const SEO: React.FC<SEOProps> = ({
   const siteTitle = 'MyHumanStats';
   const fullTitle = title === siteTitle ? siteTitle : `${title} | ${siteTitle}`;
   
-  // Construct clean canonical URL (strip query params)
-  const currentUrl = window.location.href.split('?')[0]; 
+  // SEO Best Practice: Enforce production domain and strip query parameters
+  // This prevents ?fbclid=... or ?ref=... from creating duplicate content issues
+  const baseUrl = 'https://myhumanstats.org';
+  const currentPath = window.location.pathname;
+  // If a specific canonical is passed, use it. Otherwise, construct it from base + path (no query params)
+  const canonicalUrl = canonical || `${baseUrl}${currentPath === '/' ? '' : currentPath}`;
 
   return (
     <Helmet>
@@ -35,14 +39,15 @@ const SEO: React.FC<SEOProps> = ({
         <meta name="robots" content="index, follow" />
       )}
       
-      {!noIndex && <link rel="canonical" href={canonical || currentUrl} />}
+      {!noIndex && <link rel="canonical" href={canonicalUrl} />}
 
       {/* Open Graph / Facebook */}
       <meta property="og:type" content={type} />
-      <meta property="og:url" content={canonical || currentUrl} />
+      <meta property="og:url" content={canonicalUrl} />
       <meta property="og:title" content={fullTitle} />
       <meta property="og:description" content={description} />
       <meta property="og:image" content={image} />
+      <meta property="og:site_name" content="MyHumanStats" />
 
       {/* Twitter */}
       <meta name="twitter:card" content="summary_large_image" />
@@ -58,9 +63,14 @@ const SEO: React.FC<SEOProps> = ({
             "@type": type === 'article' ? 'BlogPosting' : 'WebApplication',
             "name": fullTitle,
             "description": description,
-            "url": currentUrl,
+            "url": canonicalUrl,
             "applicationCategory": "HealthApplication",
-            "operatingSystem": "Browser"
+            "operatingSystem": "Browser",
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "USD"
+            }
           })}
         </script>
       )}
