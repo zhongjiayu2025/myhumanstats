@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Activity, RotateCcw, Play } from 'lucide-react';
 import { saveStat } from '../../lib/core';

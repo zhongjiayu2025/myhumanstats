@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Activity, Play, MousePointer2, RefreshCcw, Music2, TrendingUp, BarChart3, Wrench } from 'lucide-react';
 import { saveStat } from '../../lib/core';

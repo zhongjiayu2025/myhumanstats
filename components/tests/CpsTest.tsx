@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { MousePointer, Timer, RotateCcw, Zap } from 'lucide-react';
 import { saveStat } from '../../lib/core';

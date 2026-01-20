@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { Brain, Trophy, RotateCcw, Banana } from 'lucide-react';
+
+import React, { useState, useRef } from 'react';
+import { Brain, Trophy, RotateCcw, Banana, Volume2, VolumeX } from 'lucide-react';
 import { saveStat } from '../../lib/core';
+import { playUiSound } from '../../lib/sounds';
 
 interface Node {
   id: number;
@@ -13,9 +15,15 @@ const ChimpTest: React.FC = () => {
   const [phase, setPhase] = useState<'intro' | 'play' | 'result'>('intro');
   const [level, setLevel] = useState(4);
   const [nodes, setNodes] = useState<Node[]>([]);
+  // Keep a full copy for reveal phase
+  const [allNodes, setAllNodes] = useState<Node[]>([]);
+  
   const [nextNum, setNextNum] = useState(1);
   const [isMasked, setIsMasked] = useState(false);
   const [lives, setLives] = useState(3);
+  
+  // Audio state
+  const [soundEnabled, setSoundEnabled] = useState(true);
   
   // New state for reveal logic
   const [isRevealing, setIsRevealing] = useState(false);
@@ -52,6 +60,7 @@ const ChimpTest: React.FC = () => {
           newNodes.push({ id: i, val: i, row: r, col: c });
       }
       setNodes(newNodes);
+      setAllNodes(newNodes);
   };
 
   const handleNodeClick = (clickedNode: Node) => {
@@ -59,17 +68,20 @@ const ChimpTest: React.FC = () => {
 
       // Correct Click
       if (clickedNode.val === nextNum) {
+          if (soundEnabled) playUiSound('click');
+          
           // Trigger Masking on first click
           if (clickedNode.val === 1) {
               setIsMasked(true);
           }
 
           setNextNum(n => n + 1);
-          // Just visually hide/remove the node
+          // Just visually hide/remove the node from playable set
           setNodes(prev => prev.filter(n => n.val !== clickedNode.val));
 
           // Level Complete
           if (nodes.length === 1) {
+              if (soundEnabled) playUiSound('success');
               const nextLevel = level + 1;
               setLevel(nextLevel);
               setTimeout(() => startLevel(nextLevel), 500);
@@ -77,6 +89,7 @@ const ChimpTest: React.FC = () => {
       } 
       // Incorrect Click
       else {
+          if (soundEnabled) playUiSound('fail');
           setLives(l => l - 1);
           setWrongClickId(clickedNode.val);
           setIsRevealing(true); // Trigger reveal mode
@@ -88,7 +101,7 @@ const ChimpTest: React.FC = () => {
                   // Retry same level
                   startLevel(level);
               }
-          }, 2500); // 2.5s to review mistakes
+          }, 3000); // 3s to review mistakes
       }
   };
 
@@ -97,6 +110,20 @@ const ChimpTest: React.FC = () => {
       const raw = Math.max(0, level - 4);
       const score = Math.min(100, Math.round((raw / 16) * 100));
       saveStat('chimp-test', score);
+  };
+
+  // Helper to generate SVG path points for the reveal line
+  const getPathPoints = () => {
+      if (!isRevealing) return '';
+      // Sort nodes by val 1..N
+      const sorted = [...allNodes].sort((a,b) => a.val - b.val);
+      
+      return sorted.map(n => {
+          // Center X: col * 100 + 50 (if grid is 100 wide units)
+          const x = (n.col / GRID_COLS) * 100 + (1/GRID_COLS)*50; 
+          const y = (n.row / GRID_ROWS) * 100 + (1/GRID_ROWS)*50;
+          return `${x},${y}`;
+      }).join(' ');
   };
 
   return (
@@ -125,14 +152,19 @@ const ChimpTest: React.FC = () => {
                        <div className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest">Numbers</div>
                        <div className="text-3xl font-bold text-white font-mono">{level}</div>
                    </div>
-                   <div className="flex gap-2">
-                       {[...Array(3)].map((_, i) => (
-                           <Banana 
-                              key={i} 
-                              size={24} 
-                              className={`transition-all ${i < lives ? 'text-yellow-500 fill-yellow-500' : 'text-zinc-800 fill-zinc-800'}`} 
-                           />
-                       ))}
+                   <div className="flex items-center gap-4">
+                       <button onClick={() => setSoundEnabled(!soundEnabled)} className="text-zinc-500 hover:text-white transition-colors">
+                           {soundEnabled ? <Volume2 size={20}/> : <VolumeX size={20}/>}
+                       </button>
+                       <div className="flex gap-2">
+                           {[...Array(3)].map((_, i) => (
+                               <Banana 
+                                  key={i} 
+                                  size={24} 
+                                  className={`transition-all ${i < lives ? 'text-yellow-500 fill-yellow-500' : 'text-zinc-800 fill-zinc-800'}`} 
+                               />
+                           ))}
+                       </div>
                    </div>
                </div>
 
@@ -140,13 +172,27 @@ const ChimpTest: React.FC = () => {
                <div className="relative w-full aspect-[8/5] bg-[#0c0c0e] border border-zinc-800 rounded-xl shadow-2xl mx-auto max-w-[800px] overflow-hidden">
                    <div className="absolute inset-0 bg-grid opacity-5 pointer-events-none"></div>
 
+                   {/* Reveal Path Overlay */}
+                   {isRevealing && (
+                       <svg className="absolute inset-0 w-full h-full pointer-events-none z-10" preserveAspectRatio="none" viewBox="0 0 100 100">
+                           <polyline 
+                               points={getPathPoints()}
+                               fill="none"
+                               stroke="#ef4444"
+                               strokeWidth="0.5"
+                               strokeOpacity="0.5"
+                               strokeDasharray="2 1"
+                           />
+                       </svg>
+                   )}
+
                    {/* Normal Play Nodes */}
                    {!isRevealing && nodes.map((node) => (
                        <div
                           key={node.val}
                           onMouseDown={(e) => { e.preventDefault(); handleNodeClick(node); }}
                           className={`
-                              absolute flex items-center justify-center rounded-lg cursor-pointer transition-all duration-100 active:scale-90
+                              absolute flex items-center justify-center rounded-lg cursor-pointer transition-all duration-100 active:scale-90 z-20
                               ${isMasked 
                                   ? 'bg-white/10 backdrop-blur-sm border border-white/40 shadow-[0_0_15px_rgba(255,255,255,0.1)] hover:bg-white/20' 
                                   : 'bg-white border-2 border-white text-black shadow-[0_4px_0_#ccc] active:shadow-none active:translate-y-[4px]'}
@@ -169,14 +215,16 @@ const ChimpTest: React.FC = () => {
                    {/* Reveal Mode Nodes (Re-render everything to show correct order) */}
                    {isRevealing && (
                        <>
-                           {/* Just show remaining nodes revealed for now */}
-                           {nodes.map((node) => (
+                           {/* Show full sequence */}
+                           {allNodes.map((node) => (
                                <div
                                   key={node.val}
                                   className={`
-                                      absolute flex items-center justify-center rounded-lg border-2
-                                      ${node.val === nextNum ? 'bg-emerald-500/20 border-emerald-500 text-emerald-500' : ''}
-                                      ${node.val === wrongClickId ? 'bg-red-500/20 border-red-500 text-red-500 animate-pulse' : 'bg-zinc-800/50 border-zinc-600 text-zinc-500'}
+                                      absolute flex items-center justify-center rounded-lg border-2 z-20
+                                      ${node.val < nextNum ? 'bg-emerald-900/50 border-emerald-700 text-emerald-500 opacity-50' : ''}
+                                      ${node.val === nextNum ? 'bg-emerald-500 text-black border-emerald-500' : ''}
+                                      ${node.val === wrongClickId ? 'bg-red-500 text-white border-red-500 animate-shake' : ''}
+                                      ${node.val > nextNum ? 'bg-zinc-800/50 border-zinc-600 text-zinc-500' : ''}
                                   `}
                                   style={{
                                       left: `${(node.col / GRID_COLS) * 100}%`,
@@ -190,7 +238,7 @@ const ChimpTest: React.FC = () => {
                                    <span className="text-3xl md:text-4xl font-bold">{node.val}</span>
                                </div>
                            ))}
-                           <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+                           <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
                                <div className="bg-black/80 px-6 py-3 rounded-xl border border-red-500/50 text-red-500 font-bold text-xl uppercase tracking-widest animate-in zoom-in">
                                    Strike!
                                </div>

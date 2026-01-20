@@ -1,9 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Zap, AlertTriangle, RotateCcw, Clock, BarChart3, Medal, Volume2, Eye, ScatterChart as ScatterIcon } from 'lucide-react';
-import { saveStat } from '../../lib/core';
-import { ScatterChart, Scatter, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, ZAxis } from 'recharts';
 
-enum GameState { IDLE, WAITING, READY, RESULT, EARLY }
+import React, { useState, useRef, useEffect } from 'react';
+import { Zap, AlertTriangle, RotateCcw, Clock, BarChart3, Medal, Volume2, Eye, ScatterChart as ScatterIcon, History } from 'lucide-react';
+import { saveStat, getHistory } from '../../lib/core';
+import { playUiSound } from '../../lib/sounds';
+import { ScatterChart, Scatter, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, ZAxis, LineChart, Line, CartesianGrid } from 'recharts';
+
+enum GameState { IDLE, WAITING, READY, RESULT, EARLY, CHEAT }
 
 const ReactionTimeTest: React.FC = () => {
   const [mode, setMode] = useState<'visual' | 'audio'>('visual');
@@ -13,11 +15,28 @@ const ReactionTimeTest: React.FC = () => {
   const [lastTime, setLastTime] = useState(0);
   const [shake, setShake] = useState(false);
   
+  // Historical Data for Trend Chart
+  const [longTermHistory, setLongTermHistory] = useState<{timestamp: number, score: number}[]>([]);
+  
   const timeoutRef = useRef<number | null>(null);
   const startTimeRef = useRef(0);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
-  useEffect(() => { return () => clearExistingTimeout(); }, []);
+  useEffect(() => { 
+      return () => clearExistingTimeout(); 
+  }, []);
+
+  // Global "R" or Space to retry
+  useEffect(() => {
+      const handleGlobalKey = (e: KeyboardEvent) => {
+          if (gameState === GameState.RESULT && (e.key.toLowerCase() === 'r' || e.code === 'Space')) {
+              e.preventDefault();
+              resetTest();
+          }
+      };
+      window.addEventListener('keydown', handleGlobalKey);
+      return () => window.removeEventListener('keydown', handleGlobalKey);
+  }, [gameState]);
 
   const clearExistingTimeout = () => {
       if (timeoutRef.current) {
@@ -62,6 +81,8 @@ const ReactionTimeTest: React.FC = () => {
   const prepareRound = () => {
     setGameState(GameState.WAITING);
     setShake(false);
+    playUiSound('hover'); // Subtle start sound
+    
     // Random delay between 2s and 5s
     const delay = Math.floor(Math.random() * 3000) + 2000;
     
@@ -76,16 +97,16 @@ const ReactionTimeTest: React.FC = () => {
   const handleAction = (e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault(); 
     
-    if (gameState === GameState.IDLE || gameState === GameState.RESULT) {
-        setHistory([]);
-        setAverage(0);
-        prepareRound();
+    if (gameState === GameState.IDLE || gameState === GameState.RESULT || gameState === GameState.CHEAT) {
+        resetTest();
         return;
     }
 
     if (gameState === GameState.WAITING) {
         setGameState(GameState.EARLY);
-        setShake(true); // Trigger shake animation
+        setShake(true); 
+        playUiSound('fail');
+        if (navigator.vibrate) navigator.vibrate(200);
         clearExistingTimeout();
         return;
     }
@@ -93,6 +114,15 @@ const ReactionTimeTest: React.FC = () => {
     if (gameState === GameState.READY) {
         const endTime = Date.now();
         const diff = endTime - startTimeRef.current;
+        
+        // CHEAT DETECTION (< 80ms is physiologically impossible for visual RT)
+        if (diff < 80) {
+            setGameState(GameState.CHEAT);
+            playUiSound('fail');
+            return;
+        }
+
+        playUiSound('click');
         setLastTime(diff);
         
         const newHistory = [...history, diff];
@@ -103,8 +133,17 @@ const ReactionTimeTest: React.FC = () => {
             const avg = Math.round(newHistory.reduce((a, b) => a + b, 0) / newHistory.length);
             setAverage(avg);
             setGameState(GameState.RESULT);
+            playUiSound('success');
+            
+            // Save & Load History
             const score = Math.max(0, Math.min(100, Math.round(100 - (avg - 150) / 3.5)));
             saveStat('reaction-time', score);
+            // Load long term history for chart
+            const rawHist = getHistory('reaction-time');
+            // We want to chart the raw MS values, but saveStat saves the normalized score.
+            // For now, let's map the score back to approx ms for the visual, or just plot the score trend.
+            // Let's plot SCORE trend.
+            setLongTermHistory(rawHist);
         } else {
             setGameState(GameState.IDLE); 
         }
@@ -113,6 +152,12 @@ const ReactionTimeTest: React.FC = () => {
     if (gameState === GameState.EARLY) {
         prepareRound();
     }
+  };
+
+  const resetTest = () => {
+      setHistory([]);
+      setAverage(0);
+      prepareRound();
   };
 
   // UI Config Logic
@@ -160,6 +205,14 @@ const ReactionTimeTest: React.FC = () => {
             sub: 'Click to try again.', 
             color: 'text-yellow-500' 
         };
+      case GameState.CHEAT:
+        return {
+            bg: 'bg-zinc-900',
+            icon: AlertTriangle,
+            title: 'Prediction?',
+            sub: 'Human limit is ~150ms. Too fast.',
+            color: 'text-red-500'
+        }
       case GameState.RESULT: 
         return { 
             bg: 'bg-zinc-900', 
@@ -179,6 +232,12 @@ const ReactionTimeTest: React.FC = () => {
   const minTime = Math.min(...history, 9999);
   const maxTime = Math.max(...history, 0);
 
+  // Prepare Trend Data (Last 20 entries)
+  const trendData = longTermHistory.slice(-20).map((h, i) => ({
+      i,
+      score: h.score
+  }));
+
   return (
     <div className="max-w-xl mx-auto select-none">
       
@@ -186,13 +245,13 @@ const ReactionTimeTest: React.FC = () => {
       {gameState === GameState.IDLE && history.length === 0 && (
           <div className="flex justify-center mb-6 gap-4">
               <button 
-                 onClick={() => setMode('visual')}
+                 onClick={() => { setMode('visual'); playUiSound('click'); }}
                  className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold uppercase transition-all ${mode === 'visual' ? 'bg-primary-500 text-black border-primary-500' : 'bg-zinc-900 text-zinc-500 border-zinc-800'}`}
               >
                   <Eye size={14} /> Visual
               </button>
               <button 
-                 onClick={() => setMode('audio')}
+                 onClick={() => { setMode('audio'); playUiSound('click'); }}
                  className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold uppercase transition-all ${mode === 'audio' ? 'bg-primary-500 text-black border-primary-500' : 'bg-zinc-900 text-zinc-500 border-zinc-800'}`}
               >
                   <Volume2 size={14} /> Audio
@@ -239,42 +298,43 @@ const ReactionTimeTest: React.FC = () => {
                   {mode === 'audio' ? 'Auditory' : 'Visual'} Reaction Time
               </p>
 
-              {/* Consistency Scatter Plot */}
-              <div className="h-48 w-full mb-8 relative bg-zinc-900/30 rounded border border-zinc-800/50 p-2">
-                  <div className="absolute top-2 left-2 text-[10px] text-zinc-500 font-mono flex items-center gap-1">
-                      <ScatterIcon size={10} /> CONSISTENCY_DISTRIBUTION
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                  {/* Consistency Scatter Plot */}
+                  <div className="h-40 w-full relative bg-zinc-900/30 rounded border border-zinc-800/50 p-2">
+                      <div className="absolute top-2 left-2 text-[10px] text-zinc-500 font-mono flex items-center gap-1">
+                          <ScatterIcon size={10} /> CONSISTENCY
+                      </div>
+                      <ResponsiveContainer width="100%" height="100%">
+                          <ScatterChart margin={{ top: 20, right: 20, bottom: 0, left: 0 }}>
+                              <XAxis type="number" dataKey="x" name="Attempt" tick={false} axisLine={false} domain={[0, 6]} />
+                              <YAxis type="number" dataKey="y" name="Time" unit="ms" stroke="#555" fontSize={10} domain={[minTime - 20, maxTime + 20]} hide />
+                              <ZAxis type="number" dataKey="z" range={[60, 60]} />
+                              <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ backgroundColor: '#000', borderColor: '#333', fontSize: '10px' }} />
+                              <ReferenceLine y={average} stroke="#10b981" strokeDasharray="3 3" />
+                              <Scatter name="Reaction" data={scatterData} fill="#06b6d4" />
+                          </ScatterChart>
+                      </ResponsiveContainer>
                   </div>
-                  <ResponsiveContainer width="100%" height="100%">
-                      <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
-                          <XAxis type="number" dataKey="x" name="Attempt" tick={false} axisLine={false} domain={[0, 6]} />
-                          <YAxis type="number" dataKey="y" name="Time" unit="ms" stroke="#555" fontSize={10} domain={[minTime - 20, maxTime + 20]} />
-                          <ZAxis type="number" dataKey="z" range={[100, 100]} />
-                          <Tooltip 
-                              cursor={{ strokeDasharray: '3 3' }} 
-                              contentStyle={{ backgroundColor: '#000', borderColor: '#333', fontSize: '12px' }} 
-                          />
-                          <ReferenceLine y={average} stroke="#10b981" strokeDasharray="3 3" />
-                          <Scatter name="Reaction" data={scatterData} fill="#06b6d4" />
-                      </ScatterChart>
-                  </ResponsiveContainer>
-              </div>
 
-              <div className="grid grid-cols-2 gap-4 mb-8">
-                  <div className="bg-zinc-900 border border-zinc-800 p-4 rounded">
-                      <div className="text-xs text-zinc-500 uppercase mb-1">Fastest</div>
-                      <div className="text-2xl font-bold text-emerald-500">{minTime}ms</div>
-                  </div>
-                  <div className="bg-zinc-900 border border-zinc-800 p-4 rounded">
-                      <div className="text-xs text-zinc-500 uppercase mb-1">Slowest</div>
-                      <div className="text-2xl font-bold text-red-500">{maxTime}ms</div>
+                  {/* History Trend Line */}
+                  <div className="h-40 w-full relative bg-zinc-900/30 rounded border border-zinc-800/50 p-2">
+                      <div className="absolute top-2 left-2 text-[10px] text-zinc-500 font-mono flex items-center gap-1">
+                          <History size={10} /> PROGRESS_TREND
+                      </div>
+                      <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={trendData} margin={{ top: 20, right: 10, bottom: 0, left: 0 }}>
+                              <Line type="monotone" dataKey="score" stroke="#8b5cf6" strokeWidth={2} dot={false} />
+                              <YAxis domain={[0, 100]} hide />
+                          </LineChart>
+                      </ResponsiveContainer>
                   </div>
               </div>
 
               <button 
-                onClick={(e) => { e.stopPropagation(); setGameState(GameState.IDLE); setHistory([]); }}
+                onClick={(e) => { e.stopPropagation(); resetTest(); playUiSound('click'); }}
                 className="btn-primary w-full flex items-center justify-center gap-2"
               >
-                  <RotateCcw size={16} /> Restart Test
+                  <RotateCcw size={16} /> Press [R] to Restart
               </button>
           </div>
       )}

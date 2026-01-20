@@ -1,3 +1,4 @@
+
 import { TestCategory, TestDefinition, UserStats, CategoryScore } from '../types';
 
 export const TESTS: TestDefinition[] = [
@@ -650,6 +651,7 @@ export const TESTS: TestDefinition[] = [
 ];
 
 const STORAGE_KEY = 'mhs_user_stats';
+const HISTORY_KEY = 'mhs_history';
 
 export const getStats = (): UserStats => {
   try {
@@ -661,11 +663,39 @@ export const getStats = (): UserStats => {
   }
 };
 
+export interface HistoryEntry {
+  timestamp: number;
+  score: number;
+}
+
+export const getHistory = (testId: string): HistoryEntry[] => {
+  try {
+    const data = localStorage.getItem(HISTORY_KEY);
+    const allHistory = data ? JSON.parse(data) : {};
+    return allHistory[testId] || [];
+  } catch (e) {
+    console.error("Failed to load history", e);
+    return [];
+  }
+};
+
 export const saveStat = (testId: string, score: number) => {
   try {
+    // 1. Update Current Score
     const current = getStats();
     const updated = { ...current, [testId]: score };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+
+    // 2. Push to History
+    const historyData = localStorage.getItem(HISTORY_KEY);
+    const allHistory = historyData ? JSON.parse(historyData) : {};
+    const testHistory = allHistory[testId] || [];
+    
+    // Limit history to last 50 entries to avoid bloat
+    const newHistory = [...testHistory, { timestamp: Date.now(), score }].slice(-50);
+    
+    localStorage.setItem(HISTORY_KEY, JSON.stringify({ ...allHistory, [testId]: newHistory }));
+
     window.dispatchEvent(new Event('storage-update'));
   } catch (e) {
     console.error("Failed to save stat", e);

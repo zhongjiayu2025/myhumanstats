@@ -1,6 +1,9 @@
+
 import React, { useState, useEffect, useRef } from 'react';
-import { Crosshair, Trophy, MousePointer2, Target, Activity } from 'lucide-react';
-import { saveStat } from '../../lib/core';
+import { Crosshair, Trophy, MousePointer2, Target, Activity, RefreshCcw } from 'lucide-react';
+import { saveStat, getHistory } from '../../lib/core';
+import { playUiSound } from '../../lib/sounds';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface TargetObj {
   id: number;
@@ -40,48 +43,14 @@ const AimTrainerTest: React.FC = () => {
   // Shared
   const [timeLeft, setTimeLeft] = useState(30);
   const [hitmarkers, setHitmarkers] = useState<HitMarker[]>([]);
+  const [historyData, setHistoryData] = useState<{i: number, score: number}[]>([]);
   
   const containerRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<number | null>(null);
   const rafRef = useRef<number | null>(null);
-  const audioCtxRef = useRef<AudioContext | null>(null);
 
   const SPAWN_LIMIT = 30; // 30 seconds game
   const TARGET_COUNT = 3; 
-
-  // --- Audio ---
-  const initAudio = () => {
-      if (!audioCtxRef.current) audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      if (audioCtxRef.current.state === 'suspended') audioCtxRef.current.resume();
-      return audioCtxRef.current;
-  };
-
-  const playSound = (type: 'shoot' | 'hit') => {
-      const ctx = initAudio();
-      const t = ctx.currentTime;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      
-      if (type === 'shoot') {
-          // White noise burst logic is complex in vanilla web audio without buffer, simpler to use short decay low sine
-          osc.frequency.setValueAtTime(150, t);
-          osc.frequency.exponentialRampToValueAtTime(40, t + 0.1);
-          osc.type = 'square';
-          gain.gain.setValueAtTime(0.1, t);
-          gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
-      } else {
-          // Hit - High Ping
-          osc.frequency.setValueAtTime(800, t);
-          osc.type = 'sine';
-          gain.gain.setValueAtTime(0.1, t);
-          gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
-      }
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(t + 0.1);
-  };
 
   // Cleanup
   useEffect(() => {
@@ -134,7 +103,9 @@ const AimTrainerTest: React.FC = () => {
       e.stopPropagation();
       if (phase !== 'play' || mode !== 'gridshot') return;
       
-      playSound('hit');
+      playUiSound('success');
+      if (navigator.vibrate) navigator.vibrate(20);
+
       const now = performance.now();
       const reaction = Math.round(now - bornTime);
       
@@ -152,7 +123,8 @@ const AimTrainerTest: React.FC = () => {
 
   const handleBackgroundClick = () => {
       if (phase === 'play') {
-          playSound('shoot');
+          playUiSound('snap');
+          if (navigator.vibrate) navigator.vibrate(5);
           if (mode === 'gridshot') setTotalClicks(c => c + 1);
       }
   };
@@ -239,6 +211,10 @@ const AimTrainerTest: React.FC = () => {
           finalScore = Math.min(100, Math.round((trackingScore / 30000) * 100));
       }
       saveStat('aim-trainer', finalScore);
+      
+      // Load History
+      const hist = getHistory('aim-trainer');
+      setHistoryData(hist.slice(-20).map((h, i) => ({ i, score: h.score })));
   };
 
   const gridAccuracy = totalClicks > 0 ? Math.round((score / totalClicks) * 100) : 0;
@@ -383,8 +359,19 @@ const AimTrainerTest: React.FC = () => {
                    </div>
                </div>
 
-               <button onClick={startGame} className="btn-secondary w-full">
-                   Restart Round
+               {/* History Trend */}
+               <div className="h-32 w-full bg-zinc-900/30 border border-zinc-800 rounded p-2 mb-8">
+                   <div className="text-[10px] text-zinc-500 font-mono text-left mb-1">RECENT_PERFORMANCE</div>
+                   <ResponsiveContainer width="100%" height="100%">
+                       <LineChart data={historyData}>
+                           <Line type="monotone" dataKey="score" stroke="#06b6d4" strokeWidth={2} dot={false} />
+                           <YAxis hide domain={[0, 100]} />
+                       </LineChart>
+                   </ResponsiveContainer>
+               </div>
+
+               <button onClick={startGame} className="btn-secondary w-full flex items-center justify-center gap-2">
+                   <RefreshCcw size={16} /> Restart Round
                </button>
            </div>
        )}

@@ -1,32 +1,34 @@
+
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, RefreshCcw, Check, Volume2, ArrowRight, Minus, Plus, AlertTriangle, Info, Activity } from 'lucide-react';
+import { Play, RefreshCcw, Check, Volume2, ArrowRight, Minus, Plus, AlertTriangle, Info, Activity, Mic } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 import ShareCard from '../ShareCard';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceDot, ReferenceLine } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceDot, ReferenceLine, Line } from 'recharts';
 
 type EarSide = 'left' | 'right';
 
-// ISO 7029 Approximation Data for Chart
+// ISO 7029 Approximation Data
 const AGE_DATA = [
-  { age: 10, freq: 20000, label: '20k' },
-  { age: 20, freq: 17000, label: '17k' },
-  { age: 30, freq: 15000, label: '15k' },
-  { age: 40, freq: 12000, label: '12k' },
-  { age: 50, freq: 10500, label: '10.5k' },
-  { age: 60, freq: 8000, label: '8k' },
-  { age: 70, freq: 6000, label: '6k' },
-  { age: 80, freq: 4000, label: '4k' },
+  { age: 10, freq: 20000 },
+  { age: 20, freq: 17000 },
+  { age: 30, freq: 15000 },
+  { age: 40, freq: 12000 },
+  { age: 50, freq: 10500 },
+  { age: 60, freq: 8000 },
+  { age: 70, freq: 6000 },
+  { age: 80, freq: 4000 },
 ];
 
 const HearingAgeTest: React.FC = () => {
   // System State
-  const [phase, setPhase] = useState<'calibration' | 'testing' | 'report'>('calibration');
+  const [phase, setPhase] = useState<'env-check' | 'calibration' | 'testing' | 'report'>('env-check');
   const [activeSide, setActiveSide] = useState<EarSide>('left');
   const [mode, setMode] = useState<'auto' | 'manual'>('auto');
   
   // Audio State
   const [isPlaying, setIsPlaying] = useState(false);
   const [frequency, setFrequency] = useState(20000);
+  const [noiseLevel, setNoiseLevel] = useState(0); // For environment check
   
   // Data State
   const [results, setResults] = useState<{left: number | null, right: number | null}>({ left: null, right: null });
@@ -43,6 +45,10 @@ const HearingAgeTest: React.FC = () => {
   const pannerRef = useRef<StereoPannerNode | null>(null);
   const analyzerRef = useRef<AnalyserNode | null>(null);
   
+  // Environment Check Refs
+  const micStreamRef = useRef<MediaStream | null>(null);
+  const micRafRef = useRef<number | null>(null);
+  
   // Loop Refs
   const visualizerRafRef = useRef<number | null>(null);
   const sweepRafRef = useRef<number | null>(null);
@@ -55,7 +61,6 @@ const HearingAgeTest: React.FC = () => {
 
   // --- Initialization & Cleanup ---
   useEffect(() => {
-    // Check hardware sample rate
     const tempCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
     setSampleRate(tempCtx.sampleRate);
     tempCtx.close();
@@ -72,10 +77,44 @@ const HearingAgeTest: React.FC = () => {
 
     return () => {
       stopAudio();
+      stopEnvCheck();
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [phase, isPlaying, activeSide]);
 
+  // --- Phase 0: Environment Check ---
+  const startEnvCheck = async () => {
+      try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          micStreamRef.current = stream;
+          const ctx = new AudioContext();
+          const src = ctx.createMediaStreamSource(stream);
+          const analyser = ctx.createAnalyser();
+          analyser.fftSize = 256;
+          src.connect(analyser);
+          
+          const buffer = new Uint8Array(analyser.frequencyBinCount);
+          
+          const loop = () => {
+              analyser.getByteFrequencyData(buffer);
+              const avg = buffer.reduce((a,b)=>a+b) / buffer.length;
+              // Normalize roughly 0-100% where >30 is "noisy"
+              setNoiseLevel(avg);
+              micRafRef.current = requestAnimationFrame(loop);
+          };
+          loop();
+      } catch (e) {
+          // If mic denied, skip check
+          setPhase('calibration');
+      }
+  };
+
+  const stopEnvCheck = () => {
+      if (micRafRef.current) cancelAnimationFrame(micRafRef.current);
+      if (micStreamRef.current) micStreamRef.current.getTracks().forEach(t => t.stop());
+  };
+
+  // --- Core Audio Engine ---
   const initAudio = () => {
     if (!audioContextRef.current) {
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -85,16 +124,10 @@ const HearingAgeTest: React.FC = () => {
     return ctx;
   };
 
-  // --- Core Audio Engine ---
   const startTone = (freq: number, type: OscillatorType = 'sine', side: EarSide | 'both' = 'both', vol: number = 0.1) => {
       const ctx = initAudio();
-      
-      if (oscillatorRef.current) {
-          try { oscillatorRef.current.stop(); oscillatorRef.current.disconnect(); } catch(e){}
-      }
-      if (gainRef.current) {
-          gainRef.current.disconnect();
-      }
+      if (oscillatorRef.current) try { oscillatorRef.current.stop(); oscillatorRef.current.disconnect(); } catch(e){}
+      if (gainRef.current) gainRef.current.disconnect();
 
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -103,23 +136,17 @@ const HearingAgeTest: React.FC = () => {
 
       osc.type = type;
       osc.frequency.value = freq;
-      
       panner.pan.value = side === 'left' ? -1 : side === 'right' ? 1 : 0;
-      
-      // Soft envelope
       gain.gain.setValueAtTime(0, ctx.currentTime);
       gain.gain.linearRampToValueAtTime(vol, ctx.currentTime + 0.05);
 
       analyzer.fftSize = 256;
-      analyzer.smoothingTimeConstant = 0.5;
-
       osc.connect(gain);
       gain.connect(panner);
       panner.connect(analyzer);
       panner.connect(ctx.destination);
 
       osc.start();
-      
       oscillatorRef.current = osc;
       gainRef.current = gain;
       pannerRef.current = panner;
@@ -130,43 +157,26 @@ const HearingAgeTest: React.FC = () => {
   };
 
   const stopAudio = () => {
-    if (sweepRafRef.current) {
-        cancelAnimationFrame(sweepRafRef.current);
-        sweepRafRef.current = null;
-    }
-    if (visualizerRafRef.current) {
-        cancelAnimationFrame(visualizerRafRef.current);
-        visualizerRafRef.current = null;
-    }
+    if (sweepRafRef.current) { cancelAnimationFrame(sweepRafRef.current); sweepRafRef.current = null; }
+    if (visualizerRafRef.current) { cancelAnimationFrame(visualizerRafRef.current); visualizerRafRef.current = null; }
 
     if (oscillatorRef.current && audioContextRef.current && gainRef.current) {
         const ctx = audioContextRef.current;
         try {
             gainRef.current.gain.cancelScheduledValues(ctx.currentTime);
-            gainRef.current.gain.setValueAtTime(gainRef.current.gain.value, ctx.currentTime);
             gainRef.current.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.05);
             oscillatorRef.current.stop(ctx.currentTime + 0.06);
         } catch (e) {}
-        
-        setTimeout(() => {
-            oscillatorRef.current?.disconnect();
-            gainRef.current?.disconnect();
-            oscillatorRef.current = null;
-            gainRef.current = null;
-        }, 100);
     }
-    
     setIsPlaying(false);
     setVizData(new Array(32).fill(0));
   };
 
   const drawVisualizer = () => {
       if (!analyzerRef.current || !oscillatorRef.current) return;
-      
       const bufferLength = analyzerRef.current.frequencyBinCount;
       const dataArray = new Uint8Array(bufferLength);
       analyzerRef.current.getByteFrequencyData(dataArray);
-
       const bars = 32;
       const step = Math.floor(bufferLength / bars);
       const lowRes = [];
@@ -176,7 +186,6 @@ const HearingAgeTest: React.FC = () => {
           lowRes.push(sum/step);
       }
       setVizData(lowRes);
-
       visualizerRafRef.current = requestAnimationFrame(drawVisualizer);
   };
 
@@ -184,7 +193,6 @@ const HearingAgeTest: React.FC = () => {
       setFrequency(START_FREQ);
       startTone(START_FREQ, 'sine', activeSide, 0.1);
       setA11yAnnouncement(`Starting sweep for ${activeSide} ear.`);
-      
       if (mode === 'auto') {
           startTimeRef.current = Date.now();
           const animateSweep = () => {
@@ -192,15 +200,10 @@ const HearingAgeTest: React.FC = () => {
               const elapsed = Date.now() - startTimeRef.current;
               const progress = Math.min(elapsed / SWEEP_DURATION, 1);
               const currentFreq = START_FREQ - (progress * (START_FREQ - END_FREQ));
-              
               setFrequency(Math.round(currentFreq));
               oscillatorRef.current.frequency.setValueAtTime(currentFreq, audioContextRef.current.currentTime);
-              
-              if (progress < 1) {
-                  sweepRafRef.current = requestAnimationFrame(animateSweep);
-              } else {
-                  stopAudio();
-              }
+              if (progress < 1) sweepRafRef.current = requestAnimationFrame(animateSweep);
+              else stopAudio();
           };
           if (sweepRafRef.current) cancelAnimationFrame(sweepRafRef.current);
           sweepRafRef.current = requestAnimationFrame(animateSweep);
@@ -211,10 +214,8 @@ const HearingAgeTest: React.FC = () => {
       stopAudio();
       if (mode === 'auto') {
           setMode('manual');
-          setA11yAnnouncement(`Sweep paused at ${frequency} Hz. Use manual controls to fine tune.`);
       } else {
           setResults(prev => ({ ...prev, [activeSide]: frequency }));
-          setA11yAnnouncement(`Recorded ${frequency} Hz for ${activeSide} ear.`);
       }
   };
 
@@ -236,290 +237,166 @@ const HearingAgeTest: React.FC = () => {
       return "60+";
   };
 
-  const calculateFinalScore = () => {
-      const l = results.left || 0;
-      const r = results.right || 0;
-      const best = Math.max(l, r);
-      const range = START_FREQ - END_FREQ;
-      return Math.max(0, Math.min(100, Math.round(((best - END_FREQ) / range) * 100)));
-  };
-
   // --- RENDERERS ---
+
+  if (phase === 'env-check') {
+      return (
+          <div className="max-w-xl mx-auto py-8 px-4 animate-in fade-in">
+              <div className="tech-border bg-black p-8 clip-corner-lg border-zinc-800 text-center">
+                  <div className="w-16 h-16 bg-zinc-900 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <Mic size={32} className={noiseLevel > 30 ? "text-red-500" : "text-emerald-500"} />
+                  </div>
+                  <h2 className="text-xl font-bold text-white mb-2">Environment Calibration</h2>
+                  <p className="text-zinc-400 text-sm mb-8">
+                      Hearing tests require silence. We are measuring your background noise floor.
+                  </p>
+                  
+                  <div className="bg-zinc-900/50 p-6 rounded border border-zinc-800 mb-8">
+                      <div className="flex justify-between text-xs text-zinc-500 uppercase font-mono mb-2">
+                          <span>Quiet</span>
+                          <span>Noisy</span>
+                      </div>
+                      <div className="h-4 bg-zinc-800 rounded-full overflow-hidden">
+                          <div 
+                             className={`h-full transition-all duration-200 ${noiseLevel > 40 ? 'bg-red-500' : noiseLevel > 20 ? 'bg-yellow-500' : 'bg-emerald-500'}`} 
+                             style={{ width: `${Math.min(100, noiseLevel * 2)}%` }}
+                          ></div>
+                      </div>
+                      <div className="mt-4 text-xs font-bold text-white">
+                          Current Status: {noiseLevel > 30 ? <span className="text-red-400">TOO LOUD</span> : <span className="text-emerald-400">OPTIMAL</span>}
+                      </div>
+                  </div>
+
+                  <div className="flex gap-4">
+                      <button onClick={startEnvCheck} className="btn-secondary flex-1">Activate Mic</button>
+                      <button onClick={() => { stopEnvCheck(); setPhase('calibration'); }} className="btn-primary flex-1">Continue Anyway</button>
+                  </div>
+              </div>
+          </div>
+      );
+  }
 
   if (phase === 'calibration') {
       return (
           <div className="max-w-xl mx-auto py-8 px-4 animate-in fade-in">
               <div className="tech-border bg-black p-8 clip-corner-lg border-primary-500/30 text-center">
-                  <div className="w-16 h-16 bg-zinc-900 rounded-full flex items-center justify-center mx-auto mb-6 border border-zinc-800">
-                      <Volume2 size={32} className="text-primary-500" />
+                  <Volume2 size={48} className="mx-auto text-primary-500 mb-4" />
+                  <h2 className="text-2xl font-bold text-white mb-4">Volume Safety</h2>
+                  <div className="bg-red-900/10 border border-red-500/30 p-4 rounded text-left mb-6 text-sm text-red-200">
+                      <AlertTriangle size={16} className="inline mr-2" />
+                      Set your device volume to 50%. Do not exceed this level.
                   </div>
-                  <h2 className="text-2xl font-bold text-white mb-4 uppercase tracking-wider">Calibration Protocol</h2>
-                  
-                  <div className="bg-red-900/10 border border-red-500/30 p-4 rounded text-left mb-6">
-                      <div className="flex items-center gap-2 text-red-400 font-bold text-sm mb-2">
-                          <AlertTriangle size={16} /> Hardware Warning
-                      </div>
-                      <p className="text-xs text-red-200 leading-relaxed">
-                          Bluetooth headphones and cheap speakers often cannot play sounds above 16,000 Hz. 
-                          For accurate results, use <strong>Wired Headphones</strong> or high-quality monitors.
-                          {sampleRate < 44100 && (
-                              <span className="block mt-2 font-mono text-red-400 uppercase">
-                                  Error: Device Sample Rate {sampleRate}Hz is too low. Results will be inaccurate.
-                              </span>
-                          )}
-                      </p>
-                  </div>
-
-                  <div className="bg-zinc-900/50 p-6 rounded-lg border border-zinc-800 mb-8">
-                      <div className="text-xs font-mono text-zinc-500 uppercase mb-4">1.0 kHz Reference Tone</div>
+                  <div className="bg-zinc-900/50 p-6 rounded mb-8">
                       <button 
                           onClick={() => isPlaying ? stopAudio() : startTone(1000, 'sine', 'both', 0.1)}
-                          className={`w-full py-4 rounded font-bold uppercase tracking-widest flex items-center justify-center gap-3 transition-all ${isPlaying ? 'bg-red-500 text-white' : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300'}`}
+                          className={`w-full py-4 rounded font-bold uppercase tracking-widest ${isPlaying ? 'bg-red-500 text-white' : 'bg-zinc-800 hover:bg-zinc-700 text-white'}`}
                       >
-                          {isPlaying ? <><div className="w-2 h-2 bg-white rounded-full animate-pulse"/> Stop Tone</> : <Play size={16} />}
+                          {isPlaying ? "Stop Tone" : "Play 1kHz Reference"}
                       </button>
-                      <p className="text-[10px] text-zinc-600 mt-4 leading-relaxed">
-                          Adjust your volume until this tone is audible but <strong>comfortable</strong>. Do not change volume during the test.
-                      </p>
                   </div>
-
-                  <button 
-                      onClick={() => { stopAudio(); setPhase('testing'); }}
-                      className="btn-primary w-full"
-                  >
-                      Volume Calibrated - Start Test
-                  </button>
+                  <button onClick={() => { stopAudio(); setPhase('testing'); }} className="btn-primary w-full">Start Test</button>
               </div>
           </div>
       );
   }
 
   if (phase === 'report') {
-      const score = calculateFinalScore();
-      saveStat('hearing-age', score);
       const bestFreq = Math.max(results.left || 0, results.right || 0);
-      
-      // Calculate approximate age for plotting
-      let estimatedAge = 80;
-      if (bestFreq > 19000) estimatedAge = 15;
-      else if (bestFreq > 4000) {
-          // Linear interp approximation for graph plotting
-          estimatedAge = 10 + (20000 - bestFreq) / 228; 
-      }
+      saveStat('hearing-age', Math.max(0, Math.min(100, Math.round(((bestFreq - END_FREQ) / (START_FREQ - END_FREQ)) * 100))));
 
       return (
           <div className="max-w-3xl mx-auto animate-in zoom-in duration-500">
-              <div className="tech-border bg-black p-8 md:p-12 clip-corner-lg relative overflow-hidden">
-                  <div className="absolute inset-0 bg-grid opacity-20"></div>
-                  
-                  <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-8 items-center mb-8">
+              <div className="tech-border bg-black p-8 clip-corner-lg relative overflow-hidden">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                       <div>
                           <h2 className="text-sm font-mono text-zinc-500 uppercase tracking-widest mb-1">Audiometry Report</h2>
                           <div className="text-3xl font-bold text-white mb-6">Binaural Analysis</div>
-                          
                           <div className="mb-6">
                               <div className="text-sm font-mono text-zinc-500 uppercase tracking-widest mb-1">Biological Age</div>
-                              <div className="text-5xl font-bold text-primary-400 text-glow">
-                                  {getAgeFromFreq(bestFreq)} <span className="text-lg text-zinc-600">YRS</span>
-                              </div>
+                              <div className="text-5xl font-bold text-primary-400 text-glow">{getAgeFromFreq(bestFreq)} <span className="text-lg text-zinc-600">YRS</span></div>
                           </div>
-
-                          <div className="flex gap-4 mb-4">
-                              <div className="flex-1 bg-zinc-900/50 border border-zinc-800 p-3 rounded">
-                                  <div className="text-[10px] text-zinc-500 uppercase">Left Ear</div>
-                                  <div className="text-lg font-mono text-white">{results.left?.toLocaleString()} Hz</div>
+                          <div className="flex gap-4">
+                              <div className="bg-zinc-900 p-3 rounded w-1/2 border-l-4 border-emerald-500">
+                                  <div className="text-[10px] text-zinc-500">LEFT EAR</div>
+                                  <div className="font-mono text-white">{results.left} Hz</div>
                               </div>
-                              <div className="flex-1 bg-zinc-900/50 border border-zinc-800 p-3 rounded">
-                                  <div className="text-[10px] text-zinc-500 uppercase">Right Ear</div>
-                                  <div className="text-lg font-mono text-white">{results.right?.toLocaleString()} Hz</div>
+                              <div className="bg-zinc-900 p-3 rounded w-1/2 border-l-4 border-red-500">
+                                  <div className="text-[10px] text-zinc-500">RIGHT EAR</div>
+                                  <div className="font-mono text-white">{results.right} Hz</div>
                               </div>
                           </div>
                       </div>
-
-                      {/* Professional Chart */}
-                      <div className="h-64 w-full bg-zinc-900/30 border border-zinc-800 rounded p-2 relative">
-                          <div className="absolute top-2 right-2 flex items-center gap-1 text-[9px] text-zinc-500 font-mono">
-                              <Activity size={10} /> ISO_7029_CURVE
-                          </div>
+                      <div className="h-64 w-full bg-zinc-900/30 border border-zinc-800 rounded p-2">
                           <ResponsiveContainer width="100%" height="100%">
-                              <AreaChart data={AGE_DATA} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
-                                  <defs>
-                                      <linearGradient id="colorFreq" x1="0" y1="0" x2="0" y2="1">
-                                          <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3}/>
-                                          <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
-                                      </linearGradient>
-                                  </defs>
+                              <AreaChart data={AGE_DATA}>
                                   <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                                  <XAxis dataKey="age" stroke="#555" fontSize={10} tickLine={false} axisLine={false} unit="yr" />
-                                  <YAxis dataKey="freq" stroke="#555" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => `${val/1000}k`} />
-                                  <Tooltip 
-                                      contentStyle={{ backgroundColor: '#000', borderColor: '#333', fontSize: '12px' }}
-                                      itemStyle={{ color: '#06b6d4' }}
-                                      labelStyle={{ color: '#888' }}
-                                  />
-                                  <Area type="monotone" dataKey="freq" stroke="#52525b" fill="url(#colorFreq)" strokeWidth={2} strokeDasharray="5 5" name="Avg Limit" />
-                                  
-                                  {/* User Point */}
-                                  <ReferenceDot x={estimatedAge} y={bestFreq} r={6} fill="#06b6d4" stroke="#fff" />
-                                  <ReferenceLine x={estimatedAge} stroke="#06b6d4" strokeDasharray="3 3" />
+                                  <XAxis dataKey="age" stroke="#555" fontSize={10} unit="yr" />
+                                  <YAxis stroke="#555" fontSize={10} tickFormatter={(val) => `${val/1000}k`} />
+                                  <Tooltip contentStyle={{ backgroundColor: '#000' }} itemStyle={{ color: '#fff' }} />
+                                  <Area type="monotone" dataKey="freq" stroke="#52525b" fill="#52525b" fillOpacity={0.1} />
+                                  {results.left && <ReferenceLine y={results.left} stroke="#10b981" strokeDasharray="3 3" label="L" />}
+                                  {results.right && <ReferenceLine y={results.right} stroke="#ef4444" strokeDasharray="3 3" label="R" />}
                               </AreaChart>
                           </ResponsiveContainer>
                       </div>
                   </div>
-
-                  <div className="flex flex-col items-center gap-6 border-t border-zinc-800 pt-8">
-                      <ShareCard 
-                          testName="Hearing Age"
-                          scoreDisplay={`${bestFreq.toLocaleString()} Hz`}
-                          resultLabel={`Ear Age: ${getAgeFromFreq(bestFreq)}`}
-                      />
-                      <button onClick={() => { setPhase('testing'); setResults({left:null, right:null}); }} className="btn-secondary flex items-center gap-2">
-                          <RefreshCcw size={16} /> New Test
-                      </button>
-                  </div>
+                  <ShareCard testName="Hearing Age" scoreDisplay={`${bestFreq} Hz`} resultLabel={`Ear Age: ${getAgeFromFreq(bestFreq)}`} />
+                  <button onClick={() => { setPhase('testing'); setResults({left:null, right:null}); }} className="btn-secondary w-full mt-8 flex items-center justify-center gap-2"><RefreshCcw size={16}/> New Test</button>
               </div>
           </div>
       );
   }
 
-  // Phase: Testing
+  // Testing Phase
   return (
     <div className="max-w-3xl mx-auto select-none">
-       <div aria-live="polite" className="sr-only">{a11yAnnouncement}</div>
-
        <div className="tech-border bg-black relative clip-corner-lg overflow-hidden border-zinc-800">
            <div className="flex border-b border-zinc-800">
-               <button 
-                  onClick={() => { stopAudio(); setActiveSide('left'); setMode('auto'); }}
-                  disabled={!!results.left}
-                  className={`flex-1 py-4 flex items-center justify-center gap-2 transition-all 
-                    ${activeSide === 'left' ? 'bg-zinc-900 text-white shadow-[inset_0_-2px_0_#06b6d4]' : 'text-zinc-600 hover:text-zinc-400'}
-                    ${results.left ? 'opacity-50 cursor-not-allowed' : ''}
-                  `}
-               >
-                  <span className="font-bold">L</span>
-                  <span className="text-xs font-mono uppercase">Left Ear</span>
-                  {results.left && <Check size={12} className="text-emerald-500" />}
+               <button onClick={() => { stopAudio(); setActiveSide('left'); setMode('auto'); }} disabled={!!results.left} className={`flex-1 py-4 flex items-center justify-center gap-2 transition-all ${activeSide === 'left' ? 'bg-zinc-900 text-white border-b-2 border-emerald-500' : 'text-zinc-600'} ${results.left ? 'opacity-50' : ''}`}>
+                  <span className="font-bold">L</span> Left Ear {results.left && <Check size={12} className="text-emerald-500" />}
                </button>
                <div className="w-px bg-zinc-800"></div>
-               <button 
-                  onClick={() => { stopAudio(); setActiveSide('right'); setMode('auto'); }}
-                  disabled={!!results.right}
-                  className={`flex-1 py-4 flex items-center justify-center gap-2 transition-all 
-                    ${activeSide === 'right' ? 'bg-zinc-900 text-white shadow-[inset_0_-2px_0_#06b6d4]' : 'text-zinc-600 hover:text-zinc-400'}
-                    ${results.right ? 'opacity-50 cursor-not-allowed' : ''}
-                  `}
-               >
-                  <span className="font-bold">R</span>
-                  <span className="text-xs font-mono uppercase">Right Ear</span>
-                  {results.right && <Check size={12} className="text-emerald-500" />}
+               <button onClick={() => { stopAudio(); setActiveSide('right'); setMode('auto'); }} disabled={!!results.right} className={`flex-1 py-4 flex items-center justify-center gap-2 transition-all ${activeSide === 'right' ? 'bg-zinc-900 text-white border-b-2 border-red-500' : 'text-zinc-600'} ${results.right ? 'opacity-50' : ''}`}>
+                  <span className="font-bold">R</span> Right Ear {results.right && <Check size={12} className="text-emerald-500" />}
                </button>
            </div>
 
-           <div className="p-8 md:p-12 text-center relative min-h-[400px] flex flex-col justify-center">
-               <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-zinc-900/50 via-black to-black pointer-events-none"></div>
-               
-               <div className="relative z-10">
-                   <div className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest mb-2">Signal Frequency</div>
-                   <div className="text-7xl md:text-8xl font-mono font-bold text-white tracking-tighter mb-2 text-glow tabular-nums">
-                       {frequency.toLocaleString()}
-                   </div>
-                   <div className="text-sm font-mono text-primary-500 mb-12">HERTZ</div>
+           <div className="p-12 text-center min-h-[400px] flex flex-col justify-center">
+               <div className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest mb-2">Signal Frequency</div>
+               <div className="text-7xl font-mono font-bold text-white tracking-tighter mb-2 text-glow tabular-nums">{frequency.toLocaleString()}</div>
+               <div className="text-sm font-mono text-primary-500 mb-12">HERTZ</div>
 
-                   {/* Visualizer Bar */}
-                   <div className="h-16 flex items-end justify-center gap-[2px] mb-8 px-12 opacity-80">
-                        {vizData.map((val, i) => (
-                            <div 
-                                key={i} 
-                                className="flex-1 bg-primary-500 transition-all duration-75 ease-out rounded-t-sm"
-                                style={{ 
-                                    height: `${Math.max(2, val / 2)}%`,
-                                    opacity: Math.max(0.1, val / 200)
-                                }}
-                            ></div>
-                        ))}
-                   </div>
+               <div className="h-16 flex items-end justify-center gap-[2px] mb-8 px-12 opacity-80">
+                    {vizData.map((val, i) => (
+                        <div key={i} className="flex-1 bg-primary-500 transition-all duration-75 ease-out rounded-t-sm" style={{ height: `${Math.max(2, val / 2)}%`, opacity: Math.max(0.1, val / 200) }}></div>
+                    ))}
+               </div>
 
-                   <div className="max-w-md mx-auto">
-                       {mode === 'auto' ? (
-                           <button 
-                              onClick={isPlaying ? stopAndRecord : startSweep}
-                              className={`
-                                w-full py-6 rounded text-xl font-bold uppercase tracking-widest transition-all shadow-lg
-                                ${isPlaying 
-                                    ? 'bg-emerald-500 hover:bg-emerald-400 text-black animate-pulse shadow-[0_0_30px_rgba(16,185,129,0.3)]' 
-                                    : 'bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700 hover:border-primary-500'
-                                }
-                              `}
-                           >
-                              {isPlaying ? "I Hear It (Stop)" : `Start ${activeSide === 'left' ? 'Left' : 'Right'} Sweep`}
-                           </button>
-                       ) : (
-                           <div className="space-y-4 animate-in slide-in-from-bottom-4">
-                               <div className="flex items-center justify-center gap-2 mb-2">
-                                   <Info size={14} className="text-primary-500" />
-                                   <span className="text-xs text-primary-400 font-bold uppercase">Fine Tune Mode Active</span>
-                               </div>
-                               
-                               <div className="flex gap-4 items-center">
-                                   <button onMouseDown={() => manualAdjust(-100)} className="w-12 h-12 bg-zinc-800 rounded flex items-center justify-center hover:bg-zinc-700 active:bg-primary-600 transition-colors"><Minus size={20} className="text-zinc-300" /></button>
-                                   <input 
-                                      type="range" 
-                                      min={END_FREQ} 
-                                      max={START_FREQ}
-                                      step={50}
-                                      value={frequency}
-                                      onChange={(e) => manualAdjust(parseInt(e.target.value) - frequency)} 
-                                      className="flex-1 h-12 bg-zinc-900 rounded appearance-none cursor-pointer accent-primary-500 px-2"
-                                   />
-                                   <button onMouseDown={() => manualAdjust(100)} className="w-12 h-12 bg-zinc-800 rounded flex items-center justify-center hover:bg-zinc-700 active:bg-primary-600 transition-colors"><Plus size={20} className="text-zinc-300" /></button>
-                               </div>
-                               
-                               <div className="flex gap-4">
-                                   <button 
-                                      onMouseDown={() => startTone(frequency, 'sine', activeSide)}
-                                      onMouseUp={stopAudio}
-                                      onMouseLeave={stopAudio}
-                                      className="flex-1 py-4 bg-zinc-800 hover:bg-primary-600 hover:text-black text-white font-bold rounded uppercase tracking-wider transition-colors border border-zinc-700"
-                                   >
-                                      Hold to Check
-                                   </button>
-                                   <button 
-                                      onClick={() => {
-                                          stopAudio();
-                                          setResults(prev => ({ ...prev, [activeSide]: frequency }));
-                                          if (activeSide === 'left' && !results.right) {
-                                              setActiveSide('right');
-                                              setMode('auto');
-                                              setFrequency(START_FREQ);
-                                          }
-                                      }}
-                                      className="flex-1 py-4 bg-emerald-600 hover:bg-emerald-500 text-black font-bold rounded uppercase tracking-wider transition-colors shadow-[0_0_15px_rgba(16,185,129,0.3)]"
-                                   >
-                                      Confirm {frequency}Hz
-                                   </button>
-                               </div>
+               <div className="max-w-md mx-auto">
+                   {mode === 'auto' ? (
+                       <button onClick={isPlaying ? stopAndRecord : startSweep} className={`w-full py-6 rounded text-xl font-bold uppercase tracking-widest transition-all shadow-lg ${isPlaying ? 'bg-emerald-500 text-black animate-pulse' : 'bg-zinc-800 hover:bg-zinc-700 text-white'}`}>
+                          {isPlaying ? "I Hear It (Stop)" : `Start ${activeSide} Sweep`}
+                       </button>
+                   ) : (
+                       <div className="space-y-4 animate-in slide-in-from-bottom-4">
+                           <div className="flex items-center justify-center gap-2 mb-2"><Info size={14} className="text-primary-500" /><span className="text-xs text-primary-400 font-bold uppercase">Fine Tune Mode</span></div>
+                           <div className="flex gap-4 items-center">
+                               <button onMouseDown={() => manualAdjust(-100)} className="w-12 h-12 bg-zinc-800 rounded flex items-center justify-center"><Minus size={20}/></button>
+                               <input type="range" min={END_FREQ} max={START_FREQ} step={50} value={frequency} onChange={(e) => manualAdjust(parseInt(e.target.value) - frequency)} className="flex-1 h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-primary-500"/>
+                               <button onMouseDown={() => manualAdjust(100)} className="w-12 h-12 bg-zinc-800 rounded flex items-center justify-center"><Plus size={20}/></button>
                            </div>
-                       )}
-                       
-                       <div className="mt-6 text-[10px] text-zinc-600 font-mono">
-                           {mode === 'auto' && !isPlaying && "PRESS SPACEBAR TO START"}
-                           {mode === 'auto' && isPlaying && "PRESS SPACEBAR WHEN SOUND IS AUDIBLE"}
+                           <div className="flex gap-4">
+                               <button onMouseDown={() => startTone(frequency, 'sine', activeSide)} onMouseUp={stopAudio} onMouseLeave={stopAudio} className="flex-1 py-4 bg-zinc-800 hover:bg-primary-600 hover:text-black text-white font-bold rounded uppercase">Hold to Check</button>
+                               <button onClick={() => { stopAudio(); setResults(prev => ({ ...prev, [activeSide]: frequency })); if (activeSide === 'left' && !results.right) { setActiveSide('right'); setMode('auto'); setFrequency(START_FREQ); } }} className="flex-1 py-4 bg-emerald-600 hover:bg-emerald-500 text-black font-bold rounded uppercase">Confirm {frequency}Hz</button>
+                           </div>
                        </div>
-                   </div>
+                   )}
                </div>
            </div>
-
+           
            <div className="bg-zinc-900 border-t border-zinc-800 px-6 py-3 flex justify-between items-center text-xs text-zinc-500 font-mono">
-               <div className="flex gap-4">
-                   <span className={activeSide === 'left' ? 'text-primary-400' : ''}>L: {results.left ? `${results.left} Hz` : '--'}</span>
-                   <span className={activeSide === 'right' ? 'text-primary-400' : ''}>R: {results.right ? `${results.right} Hz` : '--'}</span>
-               </div>
-               {results.left && results.right && (
-                   <button onClick={() => setPhase('report')} className="flex items-center gap-1 text-emerald-500 hover:text-emerald-400 hover:underline">
-                       VIEW REPORT <ArrowRight size={12} />
-                   </button>
-               )}
+               <div className="flex gap-4"><span className={activeSide === 'left' ? 'text-primary-400' : ''}>L: {results.left ? `${results.left} Hz` : '--'}</span><span className={activeSide === 'right' ? 'text-primary-400' : ''}>R: {results.right ? `${results.right} Hz` : '--'}</span></div>
+               {results.left && results.right && <button onClick={() => setPhase('report')} className="flex items-center gap-1 text-emerald-500 hover:underline">VIEW REPORT <ArrowRight size={12} /></button>}
            </div>
        </div>
     </div>

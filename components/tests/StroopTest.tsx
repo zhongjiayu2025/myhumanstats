@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { saveStat } from '../../lib/core';
 import { Brain, Keyboard, RotateCcw, Zap } from 'lucide-react';
