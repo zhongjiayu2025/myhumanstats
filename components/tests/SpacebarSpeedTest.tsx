@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Minus, Timer, Keyboard, Rocket } from 'lucide-react';
+import { Keyboard, Rocket } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 const SpacebarSpeedTest: React.FC = () => {

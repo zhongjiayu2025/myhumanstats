@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { saveStat } from '../../lib/core';
-import { Brain, Keyboard, RotateCcw, Zap, AlertTriangle } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
+import { Brain, Keyboard, RotateCcw, Zap } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 const COLORS = [
   { name: 'Red', hex: '#ef4444', key: '1' },

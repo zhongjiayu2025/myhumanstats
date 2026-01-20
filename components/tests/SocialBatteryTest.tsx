@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Battery, BatteryCharging, BatteryWarning, Users, BookOpen, Music, Mic2, RefreshCcw } from 'lucide-react';
+import { BatteryCharging, BatteryWarning, Users, BookOpen, Music, Mic2, RefreshCcw } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 interface Scenario {
@@ -21,12 +21,10 @@ const SocialBatteryTest: React.FC = () => {
   const [phase, setPhase] = useState<'intro' | 'sim' | 'result'>('intro');
   const [batteryLevel, setBatteryLevel] = useState(50); // Start at 50%
   const [currentScenario, setCurrentScenario] = useState(0);
-  const [history, setHistory] = useState<number[]>([50]);
 
   const handleChoice = (change: number) => {
       const newLevel = Math.max(0, Math.min(100, batteryLevel + change));
       setBatteryLevel(newLevel);
-      setHistory(prev => [...prev, newLevel]);
       
       if (currentScenario < SCENARIOS.length - 1) {
           setCurrentScenario(c => c + 1);

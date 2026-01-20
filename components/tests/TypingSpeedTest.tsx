@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Keyboard, RotateCcw, Terminal, Activity, Quote, FileType, Flame } from 'lucide-react';
+import { Keyboard, RotateCcw, Activity, Quote, FileType, Flame } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
