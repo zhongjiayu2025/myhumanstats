@@ -17,8 +17,55 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "MyHumanStats | Quantify Yourself",
+  metadataBase: new URL('https://myhumanstats.org'),
+  title: {
+    default: "MyHumanStats | Quantify Yourself",
+    template: "%s | MyHumanStats"
+  },
   description: "A personal digital ability dashboard to measure your auditory, visual, cognitive, and personality traits through scientific testing.",
+  keywords: ["human benchmark", "reaction time test", "hearing test", "iq test", "cognitive test", "quantified self", "online test"],
+  authors: [{ name: "MyHumanStats Team" }],
+  creator: "MyHumanStats",
+  publisher: "MyHumanStats",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  alternates: {
+    // Setting canonical to './' automatically generates the full canonical URL for every page
+    // based on the metadataBase (https://myhumanstats.org) + the current path.
+    canonical: './',
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: 'https://myhumanstats.org',
+    title: 'MyHumanStats | Quantify Yourself',
+    description: 'Measure your auditory, visual, and cognitive performance with professional-grade online tools.',
+    siteName: 'MyHumanStats',
+    images: [
+      {
+        url: '/api/og', // Uses your dynamic OG image generator
+        width: 1200,
+        height: 630,
+        alt: 'MyHumanStats Dashboard',
+      }
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'MyHumanStats | Quantify Yourself',
+    description: 'Measure your auditory, visual, and cognitive performance.',
+    images: ['/api/og'],
+    creator: '@myhumanstats',
+  },
   manifest: "/manifest.json",
   icons: {
     icon: [
