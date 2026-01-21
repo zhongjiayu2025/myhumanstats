@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 import { Activity, Shield, Terminal, Zap, BookOpen, Search, Command, Settings, Monitor, ZapOff, Download, Upload, Home, Wrench } from 'lucide-react';
 import CommandPalette from './CommandPalette';
 import LiveTicker from './LiveTicker';
+import SocialChallengeToast from './SocialChallengeToast';
 import { useSettings } from '../lib/settings';
 import { exportUserData, importUserData } from '../lib/core';
 
@@ -69,6 +70,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     <div className={`min-h-screen flex flex-col font-sans relative overflow-hidden bg-background ${highContrast ? 'contrast-125' : ''}`}>
       
       <CommandPalette isOpen={isPaletteOpen} onClose={() => setIsPaletteOpen(false)} />
+      
+      {/* Social Features */}
+      <SocialChallengeToast />
 
       {/* Accessibility Skip Link */}
       <a 

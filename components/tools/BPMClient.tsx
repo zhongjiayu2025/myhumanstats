@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { RotateCcw, Clock } from 'lucide-react';
+import { RotateCcw, Clock, Music, HeartPulse } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
 
 export default function BPMClient() {
@@ -59,12 +59,12 @@ export default function BPMClient() {
     <div className="max-w-4xl mx-auto py-12 px-4 animate-in fade-in">
        <Breadcrumbs items={[{ label: 'Tools', path: '/tools' }, { label: 'BPM Counter' }]} />
 
-       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 mb-16">
           
-          <div className="lg:col-span-7">
+          <div className="lg:col-span-8">
              <div 
                 onMouseDown={handleTap}
-                className="bg-black border border-zinc-800 rounded-2xl aspect-square md:aspect-[4/3] flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500/50 hover:bg-zinc-900 transition-all active:scale-[0.99] select-none shadow-2xl relative overflow-hidden group"
+                className="bg-black border border-zinc-800 rounded-2xl aspect-square md:aspect-video flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500/50 hover:bg-zinc-900 transition-all active:scale-[0.99] select-none shadow-2xl relative overflow-hidden group"
              >
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-active:opacity-20 transition-opacity">
                    <div className="w-64 h-64 bg-emerald-500 rounded-full filter blur-3xl"></div>
@@ -89,25 +89,69 @@ export default function BPMClient() {
              </div>
           </div>
 
-          <div className="lg:col-span-5 space-y-8">
-             <div className="bg-zinc-900/30 border border-zinc-800 p-6 rounded-xl">
-                <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                   <Clock size={20} className="text-emerald-500" /> What is BPM?
-                </h2>
-                <p className="text-sm text-zinc-400 leading-relaxed mb-4">
-                   <strong>Beats Per Minute (BPM)</strong> measures the tempo of a piece of music. It is the heartbeat of a song.
-                </p>
-                <h3 className="text-sm font-bold text-white mb-2">Common Tempos:</h3>
-                <ul className="text-xs text-zinc-500 font-mono space-y-2">
-                   <li className="flex justify-between border-b border-zinc-800 pb-1"><span>Hip Hop / R&B</span> <span>60 - 100 BPM</span></li>
-                   <li className="flex justify-between border-b border-zinc-800 pb-1"><span>Pop / House</span> <span>110 - 128 BPM</span></li>
-                   <li className="flex justify-between border-b border-zinc-800 pb-1"><span>Techno / Trance</span> <span>130 - 150 BPM</span></li>
-                   <li className="flex justify-between border-b border-zinc-800 pb-1"><span>Drum & Bass</span> <span>160 - 180 BPM</span></li>
+          <div className="lg:col-span-4 space-y-4">
+             <div className="bg-zinc-900/30 border border-zinc-800 p-6 rounded-xl h-full flex flex-col justify-center">
+                <h3 className="text-white font-bold mb-4 flex items-center gap-2">
+                   <Music size={18} className="text-emerald-500" /> Common Tempos
+                </h3>
+                <ul className="text-xs text-zinc-400 font-mono space-y-3">
+                   <li className="flex justify-between border-b border-zinc-800 pb-2">
+                       <span>Dubstep / Trap</span> 
+                       <span className="text-white">140 BPM</span>
+                   </li>
+                   <li className="flex justify-between border-b border-zinc-800 pb-2">
+                       <span>House / Techno</span> 
+                       <span className="text-white">120 - 130 BPM</span>
+                   </li>
+                   <li className="flex justify-between border-b border-zinc-800 pb-2">
+                       <span>Hip Hop</span> 
+                       <span className="text-white">80 - 100 BPM</span>
+                   </li>
+                   <li className="flex justify-between border-b border-zinc-800 pb-2">
+                       <span>Resting Heart Rate</span> 
+                       <span className="text-white">60 - 100 BPM</span>
+                   </li>
                 </ul>
              </div>
           </div>
-
        </div>
+
+       {/* SEO Rich Content */}
+       <article className="prose prose-invert max-w-none border-t border-zinc-800 pt-12">
+           <h2 className="flex items-center gap-3 text-2xl font-bold text-white">
+               <Clock className="text-emerald-500" />
+               What is Beats Per Minute (BPM)?
+           </h2>
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+               <div>
+                   <p className="text-zinc-400 text-sm leading-relaxed">
+                       <strong>Beats Per Minute (BPM)</strong> is a unit of measure used to express the tempo of music or the rate of a heartbeat. It simply counts how many beats occur in a sixty-second interval.
+                   </p>
+                   <h3 className="text-lg font-bold text-white mt-6 mb-2">How to Use This Tool</h3>
+                   <ul className="list-disc pl-5 space-y-2 text-zinc-400 text-sm">
+                       <li>Listen to the music or feel your pulse.</li>
+                       <li>Tap the <strong>SPACEBAR</strong> or click the box in time with the beat.</li>
+                       <li>Keep tapping for at least 5-10 seconds to get a stable average.</li>
+                       <li>Use the <strong>RESET</strong> button to start over for a new song.</li>
+                   </ul>
+               </div>
+               <div>
+                   <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                       <HeartPulse className="text-red-500" size={20} />
+                       Medical & Fitness Use
+                   </h3>
+                   <p className="text-zinc-400 text-sm leading-relaxed mb-4">
+                       While primarily a musical tool, a BPM counter can serve as a quick manual heart rate monitor. By tapping in sync with your pulse, you can estimate your heart rate without a smartwatch.
+                   </p>
+                   <div className="bg-zinc-900 p-4 rounded border border-zinc-800 text-xs text-zinc-500 font-mono">
+                       <strong>Target Zones:</strong><br/>
+                       Resting: 60-100 BPM<br/>
+                       Fat Burn: 120-140 BPM<br/>
+                       Cardio: 150-180 BPM
+                   </div>
+               </div>
+           </div>
+       </article>
     </div>
   );
 }

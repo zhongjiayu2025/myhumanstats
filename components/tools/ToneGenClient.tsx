@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Square, Headphones, Sliders, Waves } from 'lucide-react';
+import { Play, Square, Headphones, Sliders, Waves, Radio } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
 
 const PRESETS = [
@@ -188,8 +188,9 @@ export default function ToneGenClient() {
     <div className="max-w-4xl mx-auto py-12 px-4 animate-in fade-in">
        <Breadcrumbs items={[{ label: 'Tools', path: '/tools' }, { label: 'Tone Generator' }]} />
 
-       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
           
+          {/* Controls Panel (Keeping existing UI logic) */}
           <div className="bg-black border border-zinc-800 rounded-xl p-8 shadow-2xl relative overflow-hidden">
              
              <div className="relative z-10 space-y-8">
@@ -345,6 +346,7 @@ export default function ToneGenClient() {
              </div>
           </div>
 
+          {/* Sidebar / Info */}
           <div className="space-y-8">
              {!sweepMode && (
                  <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
@@ -374,20 +376,37 @@ export default function ToneGenClient() {
                      </p>
                  </div>
              )}
-
-             <article className="prose prose-invert prose-sm text-zinc-400">
-                <h2 className="text-white">Binaural Beats Guide</h2>
-                <p>
-                   When two slightly different frequencies are played in each ear (using headphones), the brain perceives a third "phantom" sound called a <strong>Binaural Beat</strong>.
-                </p>
-                <div className="flex items-center gap-2 text-primary-400 text-xs font-bold bg-primary-900/10 p-3 rounded border border-primary-900/30">
-                    <Headphones size={16} />
-                    HEADPHONES REQUIRED FOR BINAURAL MODE
-                </div>
-             </article>
           </div>
-
        </div>
+
+       {/* SEO Rich Content */}
+       <article className="prose prose-invert max-w-none border-t border-zinc-800 pt-12">
+           <h2 className="flex items-center gap-3 text-2xl font-bold text-white">
+               <Radio className="text-primary-500" />
+               The Science of Frequency
+           </h2>
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+               <div>
+                   <h3 className="text-lg font-bold text-white mt-6 mb-2">Binaural Beats Explained</h3>
+                   <p className="text-zinc-400 text-sm leading-relaxed mb-4">
+                       When two tones with slightly different frequencies are played in each ear (e.g., 440Hz and 444Hz), the brain perceives a third "phantom" pulsing sound. This is called a <strong>Binaural Beat</strong>. The frequency of the beat is the difference between the two tones (4Hz).
+                   </p>
+                   <div className="flex items-center gap-2 text-primary-400 text-xs font-bold bg-primary-900/10 p-3 rounded border border-primary-900/30">
+                        <Headphones size={16} />
+                        HEADPHONES REQUIRED FOR BINAURAL MODE
+                   </div>
+               </div>
+               <div>
+                   <h3 className="text-lg font-bold text-white mt-6 mb-2">Brainwave Entrainment</h3>
+                   <ul className="list-disc pl-5 space-y-2 text-zinc-400 text-sm">
+                       <li><strong>Delta (1-4Hz):</strong> Deep sleep, healing.</li>
+                       <li><strong>Theta (4-8Hz):</strong> Meditation, creativity, REM sleep.</li>
+                       <li><strong>Alpha (8-14Hz):</strong> Relaxation, light focus.</li>
+                       <li><strong>Beta (14-30Hz):</strong> Active concentration, alertness.</li>
+                   </ul>
+               </div>
+           </div>
+       </article>
     </div>
   );
 }

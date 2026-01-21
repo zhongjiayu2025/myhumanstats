@@ -1,10 +1,11 @@
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export', // Required for standard Cloudflare Pages hosting
+  output: 'export',
   reactStrictMode: true,
   images: {
-    unoptimized: true, // Required for static export (Next.js Image Optimization needs a server)
+    loader: 'custom',
+    loaderFile: './lib/imageLoader.ts',
     remotePatterns: [
       {
         protocol: 'https',
