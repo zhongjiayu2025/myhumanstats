@@ -93,9 +93,10 @@ const HearingAgeTest: React.FC = () => {
           
           const loop = () => {
               analyser.getByteFrequencyData(buffer);
-              const avg = buffer.reduce((a,b)=>a+b) / buffer.length;
-              // Normalize roughly 0-100% where >30 is "noisy"
-              setNoiseLevel(avg);
+              if (buffer.length > 0) {
+                  const avg = buffer.reduce((a,b)=>a+b) / buffer.length;
+                  setNoiseLevel(avg);
+              }
               micRafRef.current = requestAnimationFrame(loop);
           };
           loop();
@@ -123,7 +124,7 @@ const HearingAgeTest: React.FC = () => {
   const startTone = (freq: number, type: OscillatorType = 'sine', side: EarSide | 'both' = 'both', vol: number = 0.1) => {
       const ctx = initAudio();
       if (oscillatorRef.current) try { oscillatorRef.current.stop(); oscillatorRef.current.disconnect(); } catch(e){}
-      if (gainRef.current) gainRef.current.disconnect();
+      if (gainRef.current) try { gainRef.current.disconnect(); } catch(e){}
 
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
