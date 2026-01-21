@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { Contrast, RotateCcw, Activity, Monitor } from 'lucide-react';
+import { Contrast, RotateCcw, Monitor, Sun } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 const ContrastTest: React.FC = () => {
@@ -124,19 +124,29 @@ const ContrastTest: React.FC = () => {
        {phase === 'calibrate' && (
            <div className="py-12 animate-in slide-in-from-right">
                <Monitor size={48} className="mx-auto text-primary-500 mb-4" />
-               <h2 className="text-xl font-bold text-white mb-6">Display Calibration</h2>
+               <h2 className="text-xl font-bold text-white mb-6">Gamma Calibration</h2>
                <p className="text-zinc-400 text-sm mb-8 max-w-sm mx-auto">
-                   Adjust your screen brightness until you can distinguish the 3 blocks below from the black background.
+                   This test relies on screen brightness. Adjust your display settings until you can <strong>barely distinguish</strong> the inner square from the outer square below.
                </p>
                
-               <div className="flex justify-center gap-4 mb-8 bg-black p-8 rounded-xl border border-zinc-800">
-                   <div className="w-16 h-16 bg-[#000000] border border-zinc-900 flex items-center justify-center text-[9px] text-zinc-700">0%</div>
-                   <div className="w-16 h-16 bg-[#050505] flex items-center justify-center text-[9px] text-zinc-700">2%</div>
-                   <div className="w-16 h-16 bg-[#0a0a0a] flex items-center justify-center text-[9px] text-zinc-700">4%</div>
+               {/* Gamma Box - Using standard sRGB gamma target approx */}
+               <div className="relative w-64 h-64 mx-auto bg-black border border-zinc-700 mb-8 flex items-center justify-center">
+                   {/* Level 1: 3% Grey on Black */}
+                   <div className="w-48 h-48 bg-[#080808] flex items-center justify-center">
+                        {/* Level 2: 6% Grey */}
+                        <div className="w-32 h-32 bg-[#101010] flex items-center justify-center">
+                             {/* Level 3: 10% Grey */}
+                             <div className="w-16 h-16 bg-[#1a1a1a]"></div>
+                        </div>
+                   </div>
                </div>
+               
+               <p className="text-xs text-zinc-500 mb-8">
+                   If the box looks completely black, increase brightness/gamma.
+               </p>
 
-               <button onClick={startTest} className="btn-primary">
-                   Visible - Continue
+               <button onClick={startTest} className="btn-primary flex items-center gap-2 mx-auto">
+                   <Sun size={18} /> I Can See The Squares
                </button>
            </div>
        )}
@@ -182,7 +192,7 @@ const ContrastTest: React.FC = () => {
 
        {phase === 'result' && (
            <div className="py-12 animate-in zoom-in">
-               <Activity size={64} className="mx-auto text-primary-500 mb-6" />
+               <Contrast size={64} className="mx-auto text-primary-500 mb-6" />
                
                <div className="text-6xl font-bold text-white mb-2">{score}<span className="text-3xl text-zinc-600">%</span></div>
                <h2 className="text-sm font-mono text-zinc-500 uppercase tracking-widest mb-8">Visual Sensitivity Score</h2>

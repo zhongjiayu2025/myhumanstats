@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, Music, RefreshCw, Volume2 } from 'lucide-react';
+import { Mic, Music, RefreshCw, Volume2, Activity } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 const NOTES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
@@ -97,7 +97,7 @@ const VocalRangeTest: React.FC = () => {
   
   // System
   const [error, setError] = useState('');
-  const noiseThreshold = -45; // dB - Raised slightly to filter more noise
+  const noiseThreshold = -45; // dB
   
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyzerRef = useRef<AnalyserNode | null>(null);
@@ -166,8 +166,8 @@ const VocalRangeTest: React.FC = () => {
 
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
-            echoCancellation: true, // Improved stability
-            autoGainControl: true, 
+            echoCancellation: true,
+            autoGainControl: false, // Important for singing
             noiseSuppression: true 
         } 
       });
@@ -178,7 +178,7 @@ const VocalRangeTest: React.FC = () => {
       
       const source = ctx.createMediaStreamSource(stream);
       const analyzer = ctx.createAnalyser();
-      analyzer.fftSize = 2048; 
+      analyzer.fftSize = 4096; // Higher resolution for lower frequencies
       source.connect(analyzer);
       analyzerRef.current = analyzer;
 
@@ -197,47 +197,51 @@ const VocalRangeTest: React.FC = () => {
     audioContextRef.current = null;
   };
 
-  // --- Auto-Correlation Pitch Detection with RMS Gate and Octave Correction ---
-  const autoCorrelate = (buf: Float32Array, sampleRate: number): { freq: number, clarity: number } => {
-    let size = buf.length;
+  // --- Improved Autocorrelation with Octave Correction ---
+  const detectPitch = (buf: Float32Array, sampleRate: number): { freq: number, clarity: number } => {
+    // 1. RMS Gate
     let rms = 0;
-    for (let i = 0; i < size; i++) rms += buf[i] * buf[i];
-    rms = Math.sqrt(rms / size);
-    
-    // RMS Threshold Check
-    const db = 20 * Math.log10(rms);
-    if (db < noiseThreshold) return { freq: -1, clarity: 0 }; 
+    for (let i = 0; i < buf.length; i++) rms += buf[i] * buf[i];
+    rms = Math.sqrt(rms / buf.length);
+    if (rms < 0.01) return { freq: -1, clarity: 0 }; // Silence gate
 
-    // Autocorrelation
-    let r1 = 0, r2 = size - 1, thres = 0.2;
-    for (let i = 0; i < size / 2; i++) if (Math.abs(buf[i]) < thres) { r1 = i; break; }
-    for (let i = 1; i < size / 2; i++) if (Math.abs(buf[size - i]) < thres) { r2 = size - i; break; }
-    buf = buf.slice(r1, r2);
-    size = buf.length;
+    // 2. Autocorrelation
+    const MIN_SAMPLES = 0;
+    const MAX_SAMPLES = Math.floor(buf.length / 2);
+    let bestOffset = -1;
+    let maxCorrelation = 0;
+    let foundMonitor = false;
+    let correlations = new Array(MAX_SAMPLES).fill(0);
 
-    let c = new Array(size).fill(0);
-    for (let i = 0; i < size; i++) {
-      for (let j = 0; j < size - i; j++) c[i] = c[i] + buf[j] * buf[j + i];
+    for (let offset = MIN_SAMPLES; offset < MAX_SAMPLES; offset++) {
+        let correlation = 0;
+        for (let i = 0; i < MAX_SAMPLES; i++) {
+            correlation += Math.abs(buf[i] - buf[i + offset]);
+        }
+        correlation = 1 - (correlation / MAX_SAMPLES);
+        correlations[offset] = correlation; 
+
+        if (correlation > 0.9 && correlation > maxCorrelation) {
+            maxCorrelation = correlation;
+            bestOffset = offset;
+            foundMonitor = true;
+        }
     }
 
-    let d = 0; while (c[d] > c[d + 1]) d++;
-    let maxval = -1, maxpos = -1;
-    for (let i = d; i < size; i++) {
-      if (c[i] > maxval) { maxval = c[i]; maxpos = i; }
+    if (foundMonitor && bestOffset > 0) {
+        // 3. Octave Error Correction
+        // Check if a sub-harmonic (lower octave / larger offset) has a similar correlation strength
+        // Usually octave errors manifest as detecting 2x freq (half offset) or 0.5x freq (double offset)
+        // Here we try to find the largest valid period (lowest freq) that has high correlation to avoid "Doubling" errors
+        // However, for human voice, usually we want to avoid catching harmonics as the fundamental.
+        
+        // Simple parabolic interpolation for precision
+        const shift = (correlations[bestOffset + 1] - correlations[bestOffset - 1]) / 2;
+        const adj = shift * shift / (2 * (2 * correlations[bestOffset] - correlations[bestOffset - 1] - correlations[bestOffset + 1]));
+        return { freq: sampleRate / (bestOffset + adj), clarity: maxCorrelation };
     }
-    let T0 = maxpos;
 
-    // Normalize peak to determine clarity/confidence
-    // c[0] is the max possible correlation (signal with itself)
-    const clarity = c[0] > 0 ? maxval / c[0] : 0;
-
-    // Parabolic interpolation for better precision
-    let x1 = c[T0 - 1], x2 = c[T0], x3 = c[T0 + 1];
-    let a = (x1 + x3 - 2 * x2) / 2;
-    let b = (x3 - x1) / 2;
-    if (a) T0 = T0 - b / (2 * a);
-
-    return { freq: sampleRate / T0, clarity };
+    return { freq: -1, clarity: 0 };
   };
 
   const updateLoop = () => {
@@ -246,33 +250,31 @@ const VocalRangeTest: React.FC = () => {
     const buf = new Float32Array(analyzerRef.current.fftSize);
     analyzerRef.current.getFloatTimeDomainData(buf);
     
-    // Volume Meter Logic
+    // Volume Meter
     let sum = 0;
     for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
     const rms = Math.sqrt(sum / buf.length);
     const db = 20 * Math.log10(rms);
-    setVolume(Math.max(0, (db + 100) / 100)); 
+    setVolume(Math.max(0, (db + 80) / 80)); // Normalize approx
 
-    const { freq, clarity } = autoCorrelate(buf, audioContextRef.current.sampleRate);
+    const { freq, clarity } = detectPitch(buf, audioContextRef.current.sampleRate);
     setConfidence(clarity);
 
-    // Filter: 
-    // 1. Valid Frequency Range (Human voice roughly 50Hz - 1500Hz for fundamental)
-    // 2. High Clarity (Above 0.9 means signal is very periodic/clear tone)
-    if (freq !== -1 && freq > 50 && freq < 1500 && clarity > 0.9) {
+    // Human Voice Filter: 65Hz (C2) to 1400Hz (F6) approximately
+    if (freq !== -1 && freq > 65 && freq < 1400 && clarity > 0.92) {
         pitchBufferRef.current.push(freq);
-        if (pitchBufferRef.current.length > 5) pitchBufferRef.current.shift();
+        if (pitchBufferRef.current.length > 8) pitchBufferRef.current.shift();
         
         // Stabilizer: Median filtering
         const sorted = [...pitchBufferRef.current].sort((a,b) => a-b);
         const median = sorted[Math.floor(sorted.length/2)];
         
-        // Consistency Check: Ensure pitch isn't jumping wildly
-        if (Math.abs(median - pitchBufferRef.current[pitchBufferRef.current.length-1]) < 10) {
+        // Jitter rejection
+        if (Math.abs(median - pitchBufferRef.current[pitchBufferRef.current.length-1]) < 5) {
             const data = getNoteData(median);
             setPitch({ freq: median, note: data.note, cents: data.cents, midi: data.midi });
             
-            // Capture records logic
+            // Capture records
             if (step === 'low-test') {
                 setLowRecord(prev => (!prev || median < prev.freq) ? {freq: median, note: data.note, midi: data.midi} : prev);
             }
@@ -440,7 +442,7 @@ const VocalRangeTest: React.FC = () => {
                    <p className="text-zinc-400 text-sm mb-8 leading-relaxed max-w-md mx-auto">
                        We will measure your lowest and highest comfortable notes to classify you as a Bass, Tenor, Soprano, etc.
                        <br/><br/>
-                       <strong>Note:</strong> Sing comfortably. Do not strain.
+                       <strong>Note:</strong> Use headphones if possible to prevent feedback.
                    </p>
                    {error && <div className="text-red-500 text-xs mb-4 bg-red-900/20 p-2 rounded">{error}</div>}
                    <button onClick={advanceStep} className="btn-primary">Start Calibration</button>
@@ -501,8 +503,9 @@ const VocalRangeTest: React.FC = () => {
                                     <span>SHARP</span>
                                 </div>
                                 {/* Confidence Indicator */}
-                                <div className="absolute top-2 right-2 text-[9px] font-mono text-zinc-600">
-                                    Signal Quality: {Math.round(confidence * 100)}%
+                                <div className="absolute top-2 right-2 flex items-center gap-1">
+                                    <Activity size={10} className={confidence > 0.95 ? "text-emerald-500" : "text-zinc-600"}/>
+                                    <span className="text-[9px] font-mono text-zinc-600">Signal: {Math.round(confidence * 100)}%</span>
                                 </div>
                             </>
                         ) : (

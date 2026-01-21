@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Keyboard, RotateCcw, Quote, FileType, Flame, Volume2, VolumeX, Terminal } from 'lucide-react';
-import { saveStat } from '../../lib/core';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { Keyboard, RotateCcw, Quote, FileType, Flame, Volume2, VolumeX, Terminal, LineChart as ChartIcon } from 'lucide-react';
+import { saveStat, getHistory } from '../../lib/core';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts';
 import { playUiSound } from '../../lib/sounds';
 
 const WORDS = [
@@ -40,12 +40,19 @@ const TypingSpeedTest: React.FC = () => {
   const [soundEnabled, setSoundEnabled] = useState(true);
   
   const [wpmHistory, setWpmHistory] = useState<{time: number, wpm: number}[]>([]);
+  const [longTermHistory, setLongTermHistory] = useState<{date: string, score: number}[]>([]);
   const [streak, setStreak] = useState(0);
   
   const inputRef = useRef<HTMLInputElement>(null);
   const lastSampleTime = useRef<number>(0);
 
   useEffect(() => { reset(); }, [mode]);
+
+  useEffect(() => {
+      // Load long term history
+      const h = getHistory('typing-speed-test');
+      setLongTermHistory(h.map(entry => ({ date: new Date(entry.timestamp).toLocaleDateString(), score: entry.score })).slice(-10));
+  }, [phase]);
 
   const initText = () => {
       if (mode === 'words') {
@@ -119,7 +126,8 @@ const TypingSpeedTest: React.FC = () => {
       setWpm(netWpm);
       setPhase('result');
       playUiSound('success');
-      saveStat('typing-speed-test', Math.min(100, netWpm));
+      // Save raw WPM as the score
+      saveStat('typing-speed-test', netWpm);
   };
 
   const reset = () => {
@@ -202,18 +210,45 @@ const TypingSpeedTest: React.FC = () => {
                    <div className="bg-zinc-900/50 border border-zinc-800 p-4 rounded text-center"><div className="text-[10px] text-zinc-500 uppercase font-mono">Accuracy</div><div className={`text-xl font-bold ${accuracy > 95 ? 'text-emerald-500' : 'text-yellow-500'}`}>{accuracy}%</div></div>
                    <div className="bg-zinc-900/50 border border-zinc-800 p-4 rounded text-center"><div className="text-[10px] text-zinc-500 uppercase font-mono">Streak</div><div className="text-xl font-bold text-white">{streak}</div></div>
                </div>
-               <div className="h-64 w-full bg-zinc-900/30 border border-zinc-800 rounded-lg p-4 mb-8 relative">
-                   <ResponsiveContainer width="100%" height="100%">
-                       <AreaChart data={wpmHistory}>
-                           <defs><linearGradient id="colorWpm" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3}/><stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/></linearGradient></defs>
-                           <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                           <XAxis dataKey="time" stroke="#555" fontSize={10} tickLine={false} axisLine={false} />
-                           <YAxis stroke="#555" fontSize={10} tickLine={false} axisLine={false} domain={[0, 'auto']} />
-                           <Tooltip contentStyle={{ backgroundColor: '#000', borderColor: '#333', fontSize: '12px' }} itemStyle={{ color: '#06b6d4' }} />
-                           <Area type="monotone" dataKey="wpm" stroke="#06b6d4" fillOpacity={1} fill="url(#colorWpm)" strokeWidth={2} />
-                       </AreaChart>
-                   </ResponsiveContainer>
+               
+               {/* Speed Chart */}
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                   <div className="h-48 w-full bg-zinc-900/30 border border-zinc-800 rounded-lg p-4 relative">
+                       <div className="absolute top-2 left-2 text-[10px] text-zinc-500 font-mono">LIVE WPM</div>
+                       <ResponsiveContainer width="100%" height="100%">
+                           <AreaChart data={wpmHistory}>
+                               <defs><linearGradient id="colorWpm" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3}/><stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/></linearGradient></defs>
+                               <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                               <XAxis dataKey="time" stroke="#555" fontSize={10} tickLine={false} axisLine={false} />
+                               <YAxis stroke="#555" fontSize={10} tickLine={false} axisLine={false} domain={[0, 'auto']} />
+                               <Tooltip contentStyle={{ backgroundColor: '#000', borderColor: '#333', fontSize: '12px' }} itemStyle={{ color: '#06b6d4' }} />
+                               <Area type="monotone" dataKey="wpm" stroke="#06b6d4" fillOpacity={1} fill="url(#colorWpm)" strokeWidth={2} />
+                           </AreaChart>
+                       </ResponsiveContainer>
+                   </div>
+
+                   {/* History Chart */}
+                   <div className="h-48 w-full bg-zinc-900/30 border border-zinc-800 rounded-lg p-4 relative">
+                        <div className="absolute top-2 left-2 text-[10px] text-zinc-500 font-mono flex items-center gap-2">
+                            <ChartIcon size={12} /> PROGRESS HISTORY
+                        </div>
+                        {longTermHistory.length > 1 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={longTermHistory}>
+                                    <defs><linearGradient id="histGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/><stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/></linearGradient></defs>
+                                    <XAxis dataKey="date" stroke="#555" fontSize={9} tickLine={false} axisLine={false} />
+                                    <YAxis stroke="#555" fontSize={9} tickLine={false} axisLine={false} domain={['dataMin - 10', 'dataMax + 10']} />
+                                    <Tooltip contentStyle={{ backgroundColor: '#000', borderColor: '#333', fontSize: '12px' }} itemStyle={{ color: '#8b5cf6' }} />
+                                    <Area type="monotone" dataKey="score" stroke="#8b5cf6" strokeWidth={2} fill="url(#histGrad)" />
+                                    <ReferenceLine y={60} stroke="#333" strokeDasharray="3 3" label={{ value: 'Avg', fill: '#555', fontSize: 10 }} />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="flex items-center justify-center h-full text-zinc-600 text-xs">Complete more tests to see trends</div>
+                        )}
+                   </div>
                </div>
+
                <button onClick={reset} className="btn-secondary flex items-center justify-center gap-2 w-full"><RotateCcw size={16} /> Restart Protocol</button>
            </div>
        )}

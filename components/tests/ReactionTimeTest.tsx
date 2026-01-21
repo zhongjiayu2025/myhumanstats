@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Zap, AlertTriangle, RotateCcw, Clock, BarChart3, Medal, Volume2, Eye, ScatterChart as ScatterIcon, History } from 'lucide-react';
+import { Zap, AlertTriangle, RotateCcw, Clock, BarChart3, Medal, Volume2, Eye, ScatterChart as ScatterIcon, History, Settings2 } from 'lucide-react';
 import { saveStat, getHistory } from '../../lib/core';
 import { playUiSound } from '../../lib/sounds';
 import { ScatterChart, Scatter, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, ZAxis, LineChart, Line } from 'recharts';
@@ -14,6 +14,10 @@ const ReactionTimeTest: React.FC = () => {
   const [average, setAverage] = useState(0);
   const [lastTime, setLastTime] = useState(0);
   const [shake, setShake] = useState(false);
+  
+  // Settings
+  const [inputLag, setInputLag] = useState(0);
+  const [showSettings, setShowSettings] = useState(false);
   
   // Historical Data for Trend Chart
   const [longTermHistory, setLongTermHistory] = useState<{timestamp: number, score: number, raw?: number}[]>([]);
@@ -101,7 +105,7 @@ const ReactionTimeTest: React.FC = () => {
     e.preventDefault(); 
     
     if (gameState === GameState.IDLE || gameState === GameState.RESULT || gameState === GameState.CHEAT) {
-        resetTest();
+        if (!showSettings) resetTest();
         return;
     }
 
@@ -116,10 +120,12 @@ const ReactionTimeTest: React.FC = () => {
 
     if (gameState === GameState.READY) {
         const endTime = Date.now();
-        const diff = endTime - startTimeRef.current;
+        const rawDiff = endTime - startTimeRef.current;
+        // Apply manual hardware lag compensation
+        const diff = Math.max(0, rawDiff - inputLag);
         
         // CHEAT DETECTION (< 80ms is physiologically impossible for visual RT)
-        if (diff < 80) {
+        if (rawDiff < 80) {
             setGameState(GameState.CHEAT);
             playUiSound('fail');
             return;
@@ -240,22 +246,54 @@ const ReactionTimeTest: React.FC = () => {
   }));
 
   return (
-    <div className="max-w-xl mx-auto select-none">
+    <div className="max-w-xl mx-auto select-none relative">
       
+      {/* Settings Modal */}
+      {showSettings && (
+          <div className="absolute inset-0 z-50 bg-black/90 backdrop-blur flex items-center justify-center p-4 animate-in fade-in rounded-2xl">
+              <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl w-full max-w-sm">
+                  <h3 className="text-white font-bold mb-4 flex items-center gap-2"><Settings2 size={18}/> Calibration</h3>
+                  <div className="mb-6">
+                      <label className="text-xs text-zinc-400 uppercase font-bold mb-2 block">Hardware Input Lag Compensation</label>
+                      <input 
+                          type="range" min="0" max="100" step="5" 
+                          value={inputLag} 
+                          onChange={(e) => setInputLag(Number(e.target.value))}
+                          className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-primary-500 mb-2"
+                      />
+                      <div className="flex justify-between text-xs text-zinc-500 font-mono">
+                          <span>0ms (Default)</span>
+                          <span className="text-primary-400 font-bold">-{inputLag}ms</span>
+                          <span>100ms</span>
+                      </div>
+                      <p className="text-[10px] text-zinc-600 mt-2 leading-relaxed">
+                          Subtracts a fixed value from your result to account for wireless mouse/screen delay. Pro Tip: Use 0ms for raw data.
+                      </p>
+                  </div>
+                  <button onClick={() => setShowSettings(false)} className="btn-primary w-full py-2 text-sm">Save & Close</button>
+              </div>
+          </div>
+      )}
+
       {/* Mode Switcher */}
       {gameState === GameState.IDLE && history.length === 0 && (
-          <div className="flex justify-center mb-6 gap-4">
-              <button 
-                 onClick={() => { setMode('visual'); playUiSound('click'); }}
-                 className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold uppercase transition-all ${mode === 'visual' ? 'bg-primary-500 text-black border-primary-500' : 'bg-zinc-900 text-zinc-500 border-zinc-800'}`}
-              >
-                  <Eye size={14} /> Visual
-              </button>
-              <button 
-                 onClick={() => { setMode('audio'); playUiSound('click'); }}
-                 className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold uppercase transition-all ${mode === 'audio' ? 'bg-primary-500 text-black border-primary-500' : 'bg-zinc-900 text-zinc-500 border-zinc-800'}`}
-              >
-                  <Volume2 size={14} /> Audio
+          <div className="flex justify-between items-center mb-6 px-2">
+              <div className="flex gap-4">
+                  <button 
+                     onClick={() => { setMode('visual'); playUiSound('click'); }}
+                     className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold uppercase transition-all ${mode === 'visual' ? 'bg-primary-500 text-black border-primary-500' : 'bg-zinc-900 text-zinc-500 border-zinc-800'}`}
+                  >
+                      <Eye size={14} /> Visual
+                  </button>
+                  <button 
+                     onClick={() => { setMode('audio'); playUiSound('click'); }}
+                     className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold uppercase transition-all ${mode === 'audio' ? 'bg-primary-500 text-black border-primary-500' : 'bg-zinc-900 text-zinc-500 border-zinc-800'}`}
+                  >
+                      <Volume2 size={14} /> Audio
+                  </button>
+              </div>
+              <button onClick={() => setShowSettings(true)} className="text-zinc-600 hover:text-white transition-colors">
+                  <Settings2 size={18} />
               </button>
           </div>
       )}
@@ -288,6 +326,7 @@ const ReactionTimeTest: React.FC = () => {
                  <Icon size={64} className={`mb-6 ${ui.color} ${gameState === GameState.WAITING ? 'animate-pulse' : ''}`} />
                  <h1 className={`text-5xl font-black tracking-tight mb-2 ${ui.color}`}>{ui.title}</h1>
                  <p className={`font-mono text-sm uppercase tracking-widest ${ui.color} opacity-80`}>{ui.sub}</p>
+                 {inputLag > 0 && <div className="mt-2 text-[10px] text-zinc-500 font-mono bg-black/20 px-2 py-1 rounded">LAG COMP: -{inputLag}ms</div>}
              </div>
           </div>
       ) : (
@@ -297,6 +336,7 @@ const ReactionTimeTest: React.FC = () => {
               <div className="text-6xl font-bold text-white mb-2">{average} <span className="text-2xl text-zinc-600">ms</span></div>
               <p className="text-zinc-400 mb-8 font-mono uppercase tracking-widest text-xs">
                   {mode === 'audio' ? 'Auditory' : 'Visual'} Reaction Time
+                  {inputLag > 0 && <span className="block text-[10px] text-zinc-600 mt-1">(Adjusted -{inputLag}ms)</span>}
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
