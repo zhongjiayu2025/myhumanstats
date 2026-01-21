@@ -1,8 +1,11 @@
+
+"use client";
+
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { Search, ChevronRight, Activity, FileText, Command } from 'lucide-react';
-import { TESTS } from '../lib/core';
-import { BLOG_POSTS } from '../lib/blogData';
+import { TESTS } from '@/lib/core';
+import { BLOG_POSTS } from '@/lib/blogData';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -13,7 +16,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const navigate = useNavigate();
+  const router = useRouter();
 
   // Combine Data Sources
   const allTests = TESTS.map(t => ({
@@ -73,7 +76,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
       } else if (e.key === 'Enter') {
         e.preventDefault();
         if (filteredItems[selectedIndex]) {
-          navigate(filteredItems[selectedIndex].path);
+          router.push(filteredItems[selectedIndex].path);
           onClose();
         }
       } else if (e.key === 'Escape') {
@@ -83,7 +86,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, filteredItems, selectedIndex, navigate, onClose]);
+  }, [isOpen, filteredItems, selectedIndex, router, onClose]);
 
   if (!isOpen) return null;
 
@@ -128,7 +131,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
                 return (
                   <li 
                     key={`${item.type}-${item.id}`}
-                    onClick={() => { navigate(item.path); onClose(); }}
+                    onClick={() => { router.push(item.path); onClose(); }}
                     onMouseEnter={() => setSelectedIndex(index)}
                     className={`
                       flex items-center justify-between px-4 py-3 rounded-lg cursor-pointer transition-colors group

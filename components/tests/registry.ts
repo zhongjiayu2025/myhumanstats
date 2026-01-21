@@ -1,62 +1,54 @@
+
+import dynamic from 'next/dynamic';
 import React from 'react';
 
-// Using React.lazy for Code Splitting.
-// This ensures that the user only downloads the code for the test they are actually taking,
-// drastically reducing the initial bundle size and improving SEO 'Performance' score.
+// Using next/dynamic for Code Splitting.
+const HearingAgeTest = dynamic(() => import('./HearingAgeTest'), { ssr: false });
+const VocalRangeTest = dynamic(() => import('./VocalRangeTest'), { ssr: false });
+const ToneDeafTest = dynamic(() => import('./ToneDeafTest'), { ssr: false });
+const RhythmTest = dynamic(() => import('./RhythmTest'), { ssr: false });
+const MisophoniaTest = dynamic(() => import('./MisophoniaTest'), { ssr: false });
+const PerfectPitchTest = dynamic(() => import('./PerfectPitchTest'), { ssr: false });
 
-// Auditory
-const HearingAgeTest = React.lazy(() => import('./HearingAgeTest'));
-const VocalRangeTest = React.lazy(() => import('./VocalRangeTest'));
-const ToneDeafTest = React.lazy(() => import('./ToneDeafTest'));
-const RhythmTest = React.lazy(() => import('./RhythmTest'));
-const MisophoniaTest = React.lazy(() => import('./MisophoniaTest'));
-const PerfectPitchTest = React.lazy(() => import('./PerfectPitchTest'));
+const ColorHueTest = dynamic(() => import('./ColorHueTest'), { ssr: false });
+const ColorBlindTest = dynamic(() => import('./ColorBlindTest'), { ssr: false });
+const AfterimageTest = dynamic(() => import('./AfterimageTest'), { ssr: false });
+const VisualMemoryTest = dynamic(() => import('./VisualMemoryTest'), { ssr: false });
+const AimTrainerTest = dynamic(() => import('./AimTrainerTest'), { ssr: false });
+const AstigmatismTest = dynamic(() => import('./AstigmatismTest'), { ssr: false });
+const FaceBlindnessTest = dynamic(() => import('./FaceBlindnessTest'), { ssr: false });
+const PeripheralVisionTest = dynamic(() => import('./PeripheralVisionTest'), { ssr: false });
+const ContrastTest = dynamic(() => import('./ContrastTest'), { ssr: false });
 
-// Visual
-const ColorHueTest = React.lazy(() => import('./ColorHueTest'));
-const ColorBlindTest = React.lazy(() => import('./ColorBlindTest'));
-const AfterimageTest = React.lazy(() => import('./AfterimageTest'));
-const VisualMemoryTest = React.lazy(() => import('./VisualMemoryTest'));
-const AimTrainerTest = React.lazy(() => import('./AimTrainerTest'));
-const AstigmatismTest = React.lazy(() => import('./AstigmatismTest'));
-const FaceBlindnessTest = React.lazy(() => import('./FaceBlindnessTest'));
-const PeripheralVisionTest = React.lazy(() => import('./PeripheralVisionTest'));
-const ContrastTest = React.lazy(() => import('./ContrastTest'));
+const ReactionTimeTest = dynamic(() => import('./ReactionTimeTest'), { ssr: false });
+const CpsTest = dynamic(() => import('./CpsTest'), { ssr: false });
+const StroopTest = dynamic(() => import('./StroopTest'), { ssr: false });
+const ChimpTest = dynamic(() => import('./ChimpTest'), { ssr: false });
+const TypingSpeedTest = dynamic(() => import('./TypingSpeedTest'), { ssr: false });
+const NumberMemoryTest = dynamic(() => import('./NumberMemoryTest'), { ssr: false });
+const SpacebarSpeedTest = dynamic(() => import('./SpacebarSpeedTest'), { ssr: false });
+const AttentionSpanTest = dynamic(() => import('./AttentionSpanTest'), { ssr: false });
+const ReadingSpeedTest = dynamic(() => import('./ReadingSpeedTest'), { ssr: false });
+const VerbalMemoryTest = dynamic(() => import('./VerbalMemoryTest'), { ssr: false });
 
-// Cognitive
-const ReactionTimeTest = React.lazy(() => import('./ReactionTimeTest'));
-const CpsTest = React.lazy(() => import('./CpsTest'));
-const StroopTest = React.lazy(() => import('./StroopTest'));
-const ChimpTest = React.lazy(() => import('./ChimpTest'));
-const TypingSpeedTest = React.lazy(() => import('./TypingSpeedTest'));
-const NumberMemoryTest = React.lazy(() => import('./NumberMemoryTest'));
-const SpacebarSpeedTest = React.lazy(() => import('./SpacebarSpeedTest'));
-const AttentionSpanTest = React.lazy(() => import('./AttentionSpanTest'));
-const ReadingSpeedTest = React.lazy(() => import('./ReadingSpeedTest'));
-const VerbalMemoryTest = React.lazy(() => import('./VerbalMemoryTest'));
+const BigFiveTest = dynamic(() => import('./BigFiveTest'), { ssr: false });
+const ProcrastinationTest = dynamic(() => import('./ProcrastinationTest'), { ssr: false });
+const SocialBatteryTest = dynamic(() => import('./SocialBatteryTest'), { ssr: false });
+const LeftRightBrainTest = dynamic(() => import('./LeftRightBrainTest'), { ssr: false });
+const DifficultPersonTest = dynamic(() => import('./DifficultPersonTest'), { ssr: false });
+const ADHDTest = dynamic(() => import('./ADHDTest'), { ssr: false });
+const EQTest = dynamic(() => import('./EQTest'), { ssr: false });
+const AnxietyTest = dynamic(() => import('./AnxietyTest'), { ssr: false });
+const ChronotypeTest = dynamic(() => import('./ChronotypeTest'), { ssr: false });
+const EmpathyTest = dynamic(() => import('./EmpathyTest'), { ssr: false });
 
-// Personality
-const BigFiveTest = React.lazy(() => import('./BigFiveTest'));
-const ProcrastinationTest = React.lazy(() => import('./ProcrastinationTest'));
-const SocialBatteryTest = React.lazy(() => import('./SocialBatteryTest'));
-const LeftRightBrainTest = React.lazy(() => import('./LeftRightBrainTest'));
-const DifficultPersonTest = React.lazy(() => import('./DifficultPersonTest'));
-const ADHDTest = React.lazy(() => import('./ADHDTest'));
-const EQTest = React.lazy(() => import('./EQTest'));
-const AnxietyTest = React.lazy(() => import('./AnxietyTest'));
-const ChronotypeTest = React.lazy(() => import('./ChronotypeTest'));
-const EmpathyTest = React.lazy(() => import('./EmpathyTest'));
-
-export const TEST_REGISTRY: Record<string, React.LazyExoticComponent<React.FC>> = {
-  // Auditory
+export const TEST_REGISTRY: Record<string, React.ComponentType> = {
   'hearing-age-test': HearingAgeTest,
   'vocal-range-test': VocalRangeTest,
   'tone-deaf-test': ToneDeafTest,
   'rhythm-test': RhythmTest,
   'misophonia-test': MisophoniaTest,
   'perfect-pitch-test': PerfectPitchTest,
-
-  // Visual
   'color-hue-test': ColorHueTest,
   'color-blind-test': ColorBlindTest,
   'afterimage-test': AfterimageTest,
@@ -66,8 +58,6 @@ export const TEST_REGISTRY: Record<string, React.LazyExoticComponent<React.FC>> 
   'face-blindness-test': FaceBlindnessTest,
   'peripheral-vision-test': PeripheralVisionTest,
   'contrast-test': ContrastTest,
-
-  // Cognitive
   'reaction-time-test': ReactionTimeTest,
   'cps-test': CpsTest,
   'stroop-effect-test': StroopTest,
@@ -78,8 +68,6 @@ export const TEST_REGISTRY: Record<string, React.LazyExoticComponent<React.FC>> 
   'attention-span-test': AttentionSpanTest,
   'reading-speed-test': ReadingSpeedTest,
   'verbal-memory-test': VerbalMemoryTest,
-
-  // Personality
   'big-five-test': BigFiveTest,
   'procrastination-test': ProcrastinationTest,
   'difficult-person-test': DifficultPersonTest,

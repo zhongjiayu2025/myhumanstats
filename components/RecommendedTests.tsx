@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import * as Icons from 'lucide-react';
 import { TESTS } from '../lib/core';
 
@@ -40,7 +41,7 @@ const RecommendedTests: React.FC<RecommendedTestsProps> = ({ currentTestId, cate
           return (
             <Link 
               key={test.id} 
-              to={`/test/${test.id}`}
+              href={`/test/${test.id}`}
               className="group block bg-zinc-900/30 border border-zinc-800 p-4 hover:bg-zinc-900 hover:border-primary-500/30 transition-all clip-corner-sm"
             >
               <div className="flex items-center gap-3 mb-3">

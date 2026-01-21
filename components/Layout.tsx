@@ -1,8 +1,10 @@
 
+"use client";
+
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Activity, Shield, Terminal, Zap, BookOpen, Search, Command, Settings, Monitor, ZapOff, Download, Upload, Home, Wrench } from 'lucide-react';
-import { Helmet } from 'react-helmet-async';
 import CommandPalette from './CommandPalette';
 import LiveTicker from './LiveTicker';
 import { useSettings } from '../lib/settings';
@@ -13,13 +15,13 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const location = useLocation();
-  const isDashboard = location.pathname === '/';
+  const pathname = usePathname();
+  const isDashboard = pathname === '/';
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const { reducedMotion, setReducedMotion, showScanlines, setShowScanlines, highContrast } = useSettings();
+  const { reducedMotion, setReducedMotion, showScanlines, setShowScanlines, highContrast, mounted } = useSettings();
 
   // Global Key Listener for Cmd+K
   useEffect(() => {
@@ -43,7 +45,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       try {
         await importUserData(file);
         alert("Data restored successfully.");
-        // Optional: Trigger a reload or context update
         window.location.reload();
       } catch (err) {
         alert("Failed to import data. Invalid file format.");
@@ -51,40 +52,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
   };
 
-  // Organization Schema
-  const orgSchema = {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    "name": "MyHumanStats",
-    "url": "https://myhumanstats.org",
-    "logo": "https://myhumanstats.org/logo.png",
-    "sameAs": [
-      "https://twitter.com/myhumanstats",
-      "https://github.com/myhumanstats"
-    ],
-    "description": "A personal digital ability dashboard to measure your auditory, visual, cognitive, and personality traits through scientific testing."
-  };
-
-  // WebSite Schema (Search Box)
-  const websiteSchema = {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    "name": "MyHumanStats",
-    "url": "https://myhumanstats.org",
-    "potentialAction": {
-      "@type": "SearchAction",
-      "target": {
-        "@type": "EntryPoint",
-        "urlTemplate": "https://myhumanstats.org/search?q={search_term_string}"
-      },
-      "query-input": "required name=search_term_string"
-    }
-  };
-
-  // Nav Item Helper
   const NavItem = ({ to, icon: Icon, label, active }: any) => (
     <Link 
-      to={to} 
+      href={to} 
       className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${active ? 'text-primary-400' : 'text-zinc-400 hover:text-zinc-300'}`}
       aria-label={label}
       aria-current={active ? 'page' : undefined}
@@ -96,10 +66,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className={`min-h-screen flex flex-col font-sans relative overflow-hidden bg-background ${highContrast ? 'contrast-125' : ''}`}>
-      <Helmet>
-        <script type="application/ld+json">{JSON.stringify(orgSchema)}</script>
-        <script type="application/ld+json">{JSON.stringify(websiteSchema)}</script>
-      </Helmet>
       
       <CommandPalette isOpen={isPaletteOpen} onClose={() => setIsPaletteOpen(false)} />
 
@@ -111,25 +77,25 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         Skip to Main Content
       </a>
       
-      {/* Global VFX - Conditionally Rendered based on Settings */}
-      {showScanlines && <div className="scanlines print:hidden" aria-hidden="true"></div>}
+      {/* Global VFX - Render only when mounted to match client state */}
+      {mounted && showScanlines && <div className="scanlines print:hidden" aria-hidden="true"></div>}
       <div className="vignette print:hidden" aria-hidden="true"></div>
-      {!reducedMotion && <div className="fixed inset-0 bg-grid z-0 pointer-events-none print:hidden" aria-hidden="true" />}
       
-      {/* Ambient Light - Disable if Reduced Motion for performance/distraction */}
-      {!reducedMotion && (
-        <div className="fixed top-[-10%] left-[20%] w-[500px] h-[500px] bg-primary-500/5 rounded-full blur-[120px] pointer-events-none z-0 print:hidden" aria-hidden="true" />
+      {mounted && !reducedMotion && (
+        <>
+          <div className="fixed inset-0 bg-grid z-0 pointer-events-none print:hidden" aria-hidden="true" />
+          <div className="fixed top-[-10%] left-[20%] w-[500px] h-[500px] bg-primary-500/5 rounded-full blur-[120px] pointer-events-none z-0 print:hidden" aria-hidden="true" />
+        </>
       )}
 
       {/* Technical Header */}
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-background/90 backdrop-blur-md print:hidden" role="banner">
         <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3 group" aria-label="MyHumanStats Home">
+          <Link href="/" className="flex items-center gap-3 group" aria-label="MyHumanStats Home">
             {/* Logo Container */}
             <div className="relative flex items-center justify-center w-10 h-10 bg-surface border border-white/10 clip-corner-sm overflow-hidden group-hover:border-primary-500/50 transition-all" aria-hidden="true">
               <Activity className="text-primary-400 w-5 h-5 z-10" />
-              {/* Scanline effect inside logo - Hide if reduced motion */}
-              {!reducedMotion && (
+              {mounted && !reducedMotion && (
                 <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary-400/20 to-transparent translate-y-[-100%] group-hover:translate-y-[100%] transition-transform duration-1000 ease-in-out" />
               )}
             </div>
@@ -145,30 +111,29 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <div className="flex items-center gap-6">
             <nav className="hidden md:flex items-center gap-1 bg-surface/50 p-1 border border-white/5 rounded-none clip-corner-sm" role="navigation">
               <Link 
-                to="/" 
+                href="/" 
                 className={`px-4 py-1.5 text-xs font-mono transition-all clip-corner-sm ${isDashboard ? 'bg-primary-500/10 text-primary-400 border border-primary-500/20' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
                 aria-current={isDashboard ? 'page' : undefined}
               >
                 [DASHBOARD]
               </Link>
               <Link 
-                to="/tools" 
-                className={`px-4 py-1.5 text-xs font-mono transition-all clip-corner-sm ${location.pathname.startsWith('/tools') ? 'bg-primary-500/10 text-primary-400 border border-primary-500/20' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
-                aria-current={location.pathname.startsWith('/tools') ? 'page' : undefined}
+                href="/tools" 
+                className={`px-4 py-1.5 text-xs font-mono transition-all clip-corner-sm ${pathname.startsWith('/tools') ? 'bg-primary-500/10 text-primary-400 border border-primary-500/20' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
+                aria-current={pathname.startsWith('/tools') ? 'page' : undefined}
               >
                 [TOOLS]
               </Link>
               <Link 
-                to="/blog" 
-                className={`px-4 py-1.5 text-xs font-mono transition-all clip-corner-sm ${location.pathname.startsWith('/blog') ? 'bg-primary-500/10 text-primary-400 border border-primary-500/20' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
-                aria-current={location.pathname.startsWith('/blog') ? 'page' : undefined}
+                href="/blog" 
+                className={`px-4 py-1.5 text-xs font-mono transition-all clip-corner-sm ${pathname.startsWith('/blog') ? 'bg-primary-500/10 text-primary-400 border border-primary-500/20' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
+                aria-current={pathname.startsWith('/blog') ? 'page' : undefined}
               >
                 [BLOG]
               </Link>
             </nav>
             
             <div className="flex items-center gap-4">
-               {/* Omni-Search Trigger */}
                <button 
                   onClick={() => setIsPaletteOpen(true)}
                   className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded text-xs text-zinc-400 hover:text-white hover:border-zinc-600 transition-all group"
@@ -181,7 +146,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   </div>
                </button>
 
-                {/* Settings Trigger */}
                 <div className="relative">
                     <button 
                         onClick={() => setIsSettingsOpen(!isSettingsOpen)}
@@ -192,7 +156,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                         <Settings size={16} aria-hidden="true" />
                     </button>
                     
-                    {/* Settings Dropdown */}
                     {isSettingsOpen && (
                         <div className="absolute right-0 top-full mt-2 w-64 bg-black border border-zinc-700 shadow-2xl rounded-lg p-3 z-50 animate-in fade-in zoom-in-95" role="dialog" aria-label="Settings Menu">
                             <div className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-3 pb-2 border-b border-zinc-800">
@@ -267,9 +230,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       {/* Mobile Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 h-16 bg-black/95 backdrop-blur-lg border-t border-zinc-800 z-50 md:hidden flex justify-around items-center px-2" role="navigation" aria-label="Mobile Navigation">
-        <NavItem to="/" icon={Home} label="Home" active={location.pathname === '/'} />
-        <NavItem to="/tools" icon={Wrench} label="Tools" active={location.pathname.startsWith('/tools')} />
-        <NavItem to="/blog" icon={BookOpen} label="Blog" active={location.pathname.startsWith('/blog')} />
+        <NavItem to="/" icon={Home} label="Home" active={pathname === '/'} />
+        <NavItem to="/tools" icon={Wrench} label="Tools" active={pathname.startsWith('/tools')} />
+        <NavItem to="/blog" icon={BookOpen} label="Blog" active={pathname.startsWith('/blog')} />
         <button 
           onClick={() => setIsPaletteOpen(true)}
           className="flex flex-col items-center justify-center w-full h-full space-y-1 text-zinc-400 hover:text-zinc-300"
@@ -280,7 +243,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </button>
       </nav>
 
-      {/* Deep Footer Architecture */}
+      {/* Footer */}
       <footer className="hidden md:block border-t border-white/5 bg-black z-20 mt-auto pt-12 pb-12 print:hidden" role="contentinfo">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
@@ -310,10 +273,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
              <div>
                 <h4 className="text-xs font-bold text-white uppercase tracking-widest mb-4">Categories</h4>
                 <ul className="space-y-2 text-xs text-zinc-400">
-                   <li><Link to="/category/auditory" className="hover:text-primary-400 transition-colors">Auditory Tests</Link></li>
-                   <li><Link to="/category/visual" className="hover:text-primary-400 transition-colors">Visual Tests</Link></li>
-                   <li><Link to="/category/cognitive" className="hover:text-primary-400 transition-colors">Cognitive Tests</Link></li>
-                   <li><Link to="/category/personality" className="hover:text-primary-400 transition-colors">Personality Tests</Link></li>
+                   <li><Link href="/category/auditory" className="hover:text-primary-400 transition-colors">Auditory Tests</Link></li>
+                   <li><Link href="/category/visual" className="hover:text-primary-400 transition-colors">Visual Tests</Link></li>
+                   <li><Link href="/category/cognitive" className="hover:text-primary-400 transition-colors">Cognitive Tests</Link></li>
+                   <li><Link href="/category/personality" className="hover:text-primary-400 transition-colors">Personality Tests</Link></li>
                 </ul>
              </div>
 
@@ -321,10 +284,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
              <div>
                 <h4 className="text-xs font-bold text-white uppercase tracking-widest mb-4">Knowledge Base</h4>
                 <ul className="space-y-2 text-xs text-zinc-400">
-                   <li><Link to="/statistics" className="hover:text-primary-400 transition-colors">Global Benchmarks</Link></li>
-                   <li><Link to="/tools" className="hover:text-primary-400 transition-colors">Utilities & Tools</Link></li>
-                   <li><Link to="/blog" className="hover:text-primary-400 transition-colors">Research Log</Link></li>
-                   <li><Link to="/glossary" className="hover:text-primary-400 transition-colors">System Codex</Link></li>
+                   <li><Link href="/statistics" className="hover:text-primary-400 transition-colors">Global Benchmarks</Link></li>
+                   <li><Link href="/tools" className="hover:text-primary-400 transition-colors">Utilities & Tools</Link></li>
+                   <li><Link href="/blog" className="hover:text-primary-400 transition-colors">Research Log</Link></li>
+                   <li><Link href="/glossary" className="hover:text-primary-400 transition-colors">System Codex</Link></li>
                 </ul>
              </div>
 
@@ -332,9 +295,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
              <div>
                 <h4 className="text-xs font-bold text-white uppercase tracking-widest mb-4">Legal</h4>
                 <ul className="space-y-2 text-xs text-zinc-400">
-                   <li><Link to="/privacy" className="hover:text-primary-400 transition-colors">Privacy Policy</Link></li>
-                   <li><Link to="/terms" className="hover:text-primary-400 transition-colors">Terms of Service</Link></li>
-                   <li><Link to="/contact" className="hover:text-primary-400 transition-colors">Contact Support</Link></li>
+                   <li><Link href="/privacy" className="hover:text-primary-400 transition-colors">Privacy Policy</Link></li>
+                   <li><Link href="/terms" className="hover:text-primary-400 transition-colors">Terms of Service</Link></li>
+                   <li><Link href="/contact" className="hover:text-primary-400 transition-colors">Contact Support</Link></li>
                 </ul>
              </div>
           </div>
@@ -344,16 +307,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                © 2026 MyHumanStats. All systems nominal.
              </div>
              <div className="flex gap-4">
-                <Link to="/tools/tone-generator" className="text-zinc-600 hover:text-white transition-colors" aria-label="Tone Generator"><Zap size={14} /></Link>
-                <Link to="/tools/bpm-counter" className="text-zinc-600 hover:text-white transition-colors" aria-label="BPM Counter"><Activity size={14} /></Link>
-                <Link to="/glossary" className="text-zinc-600 hover:text-white transition-colors" aria-label="Glossary"><BookOpen size={14} /></Link>
+                <Link href="/tools/tone-generator" className="text-zinc-600 hover:text-white transition-colors" aria-label="Tone Generator"><Zap size={14} /></Link>
+                <Link href="/tools/bpm-counter" className="text-zinc-600 hover:text-white transition-colors" aria-label="BPM Counter"><Activity size={14} /></Link>
+                <Link href="/glossary" className="text-zinc-600 hover:text-white transition-colors" aria-label="Glossary"><BookOpen size={14} /></Link>
              </div>
           </div>
         </div>
       </footer>
       
-      {/* Real-time social proof ticker */}
-      {!reducedMotion && <LiveTicker />}
+      {mounted && !reducedMotion && <LiveTicker />}
     </div>
   );
 };

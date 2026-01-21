@@ -1,0 +1,160 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Core Body Styles */
+body {
+  background-color: #050505;
+  color: #e4e4e7;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  overscroll-behavior-y: none;
+}
+
+/* Utilities */
+.touch-none {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.no-tap-highlight {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Visual Effects */
+.scanlines {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(
+    to bottom,
+    rgba(255,255,255,0),
+    rgba(255,255,255,0) 50%,
+    rgba(0,0,0,0.1) 50%,
+    rgba(0,0,0,0.1)
+  );
+  background-size: 100% 4px;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.6;
+}
+
+.vignette {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: radial-gradient(circle, rgba(0,0,0,0) 60%, rgba(0,0,0,0.4) 100%);
+  pointer-events: none;
+  z-index: 9998;
+}
+
+/* UI Shapes */
+.clip-corner-sm {
+  clip-path: polygon(
+    10px 0, 100% 0, 
+    100% calc(100% - 10px), calc(100% - 10px) 100%, 
+    0 100%, 0 10px
+  );
+}
+
+.clip-corner-lg {
+  clip-path: polygon(
+    20px 0, 100% 0, 
+    100% calc(100% - 20px), calc(100% - 20px) 100%, 
+    0 100%, 0 20px
+  );
+}
+
+.bg-grid {
+  background-size: 50px 50px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  mask-image: radial-gradient(circle at 50% 50%, black 40%, transparent 100%);
+}
+
+/* Scrollbars */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #050505; }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 0; }
+::-webkit-scrollbar-thumb:hover { background: #22d3ee; }
+
+/* Glow Effects */
+.text-glow {
+  text-shadow: 0 0 10px rgba(34, 211, 238, 0.5);
+}
+.border-glow {
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.1);
+}
+
+/* Typography & Prose */
+.prose h2 { margin-top: 2.5em; margin-bottom: 1em; font-size: 1.75em; }
+.prose h3 { margin-top: 2em; margin-bottom: 0.75em; font-size: 1.3em; }
+.prose p { margin-bottom: 1.5em; }
+.prose li { margin-bottom: 0.5em; }
+.prose .lead { font-size: 1.25em; color: #a1a1aa; font-weight: 300; margin-bottom: 2em; }
+
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 2rem 0;
+  font-size: 0.875rem;
+  font-family: 'JetBrains Mono', monospace;
+}
+.prose th {
+  text-align: left;
+  padding: 0.75rem 1rem;
+  background-color: rgba(6, 182, 212, 0.1); /* primary-500/10 */
+  color: #22d3ee; /* primary-400 */
+  border: 1px solid #27272A;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+}
+.prose td {
+  padding: 0.75rem 1rem;
+  border: 1px solid #27272A;
+  color: #a1a1aa;
+}
+.prose tr:nth-child(even) {
+  background-color: #0F0F11;
+}
+.prose tr:hover td {
+  color: white;
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.scroll-mt-32 { scroll-margin-top: 8rem; }
+
+/* Component Layer */
+@layer components {
+  .btn-primary {
+    @apply relative overflow-hidden bg-white text-black font-semibold rounded-full px-8 py-3 transition-all duration-300 hover:bg-zinc-200 hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_20px_rgba(255,255,255,0.1)];
+  }
+  .btn-secondary {
+    @apply bg-transparent text-zinc-400 font-medium rounded-full px-8 py-3 border border-zinc-800 transition-colors hover:border-zinc-600 hover:text-white;
+  }
+  .text-gradient {
+    @apply text-transparent bg-clip-text bg-gradient-to-r from-white via-zinc-200 to-zinc-500;
+  }
+  .text-gradient-accent {
+    @apply text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-secondary-400;
+  }
+}
+
+/* Print Styles */
+@media print {
+  body { background-color: white !important; color: black !important; }
+  .scanlines, .vignette, .bg-grid, header, footer, button, .btn-primary, .btn-secondary, .fixed { display: none !important; }
+  .prose { color: black !important; max-width: 100% !important; }
+  .prose p, .prose li, .prose h1, .prose h2, .prose h3 { color: black !important; text-shadow: none !important; }
+  .bg-surface, .bg-black, .bg-zinc-900 { background: white !important; border: none !important; }
+  a { text-decoration: underline; color: black !important; }
+}

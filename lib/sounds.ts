@@ -4,6 +4,8 @@ export type SoundType = 'hover' | 'click' | 'success' | 'fail' | 'snap';
 let audioCtx: AudioContext | null = null;
 
 const getCtx = () => {
+  if (typeof window === 'undefined') return null; // SSR Check
+  
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
   }
@@ -17,6 +19,8 @@ const getCtx = () => {
 // Global unlock function to be called on first user interaction if needed
 export const unlockAudio = () => {
     const ctx = getCtx();
+    if (!ctx) return;
+    
     if (ctx.state === 'suspended') {
         ctx.resume();
     }
@@ -31,6 +35,8 @@ export const unlockAudio = () => {
 export const playUiSound = (type: SoundType) => {
   try {
     const ctx = getCtx();
+    if (!ctx) return;
+
     const t = ctx.currentTime;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
