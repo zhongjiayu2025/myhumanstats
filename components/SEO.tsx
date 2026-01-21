@@ -9,7 +9,7 @@ interface SEOProps {
   type?: 'website' | 'article';
   image?: string;
   noIndex?: boolean;
-  schema?: Record<string, any>; // Allow passing custom schema
+  schema?: Record<string, any>;
 }
 
 const SEO: React.FC<SEOProps> = ({ 
@@ -21,72 +21,24 @@ const SEO: React.FC<SEOProps> = ({
   noIndex = false,
   schema
 }) => {
-  const siteTitle = 'MyHumanStats';
-  const fullTitle = title === siteTitle ? siteTitle : `${title} | ${siteTitle}`;
+  // In Next.js App Router, metadata is handled by the page export.
+  // This component is kept for compatibility with legacy components.
+  // We render null to avoid duplicating tags managed by Next.js head.
+  // If you need client-side dynamic title updates, uncomment the Helmet block.
   
-  const baseUrl = 'https://myhumanstats.org';
-  const currentPath = window.location.pathname;
-  const canonicalUrl = canonical || `${baseUrl}${currentPath === '/' ? '' : currentPath}`;
-
-  // Default Schema if none provided
-  const defaultSchema = {
-    "@context": "https://schema.org",
-    "@type": type === 'article' ? 'BlogPosting' : 'WebApplication',
-    "name": fullTitle,
-    "description": description,
-    "url": canonicalUrl,
-    "applicationCategory": "HealthApplication",
-    "operatingSystem": "Browser",
-    "browserRequirements": "Requires JavaScript",
-    "author": {
-      "@type": "Organization",
-      "name": "MyHumanStats"
-    },
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "USD"
-    }
-  };
-
+  /* 
   return (
     <Helmet>
-      {/* Standard Metadata */}
-      <title>{fullTitle}</title>
+      <title>{title}</title>
       <meta name="description" content={description} />
-      <meta name="author" content="MyHumanStats" />
-      {noIndex ? (
-        <meta name="robots" content="noindex, nofollow" />
-      ) : (
-        <meta name="robots" content="index, follow" />
-      )}
-      
-      {!noIndex && <link rel="canonical" href={canonicalUrl} />}
-
-      {/* Open Graph / Facebook */}
-      <meta property="og:type" content={type} />
-      <meta property="og:url" content={canonicalUrl} />
-      <meta property="og:title" content={fullTitle} />
+      {noIndex && <meta name="robots" content="noindex, nofollow" />}
+      <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
-      <meta property="og:image" content={image} />
-      <meta property="og:site_name" content="MyHumanStats" />
-
-      {/* Twitter */}
-      <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:site" content="@myhumanstats" />
-      <meta name="twitter:creator" content="@myhumanstats" />
-      <meta name="twitter:title" content={fullTitle} />
-      <meta name="twitter:description" content={description} />
-      <meta name="twitter:image" content={image} />
-      
-      {/* Schema.org JSON-LD */}
-      {!noIndex && (
-        <script type="application/ld+json">
-          {JSON.stringify(schema || defaultSchema)}
-        </script>
-      )}
     </Helmet>
   );
+  */
+
+  return null;
 };
 
 export default SEO;

@@ -1,10 +1,10 @@
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export', // 关键：告诉 Next.js 生成静态 HTML 文件
+  output: 'export',
   reactStrictMode: true,
   images: {
-    unoptimized: true, // 关键：Cloudflare Pages 不支持 Next.js 的默认图片优化服务器，必须关闭
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',
@@ -12,6 +12,7 @@ const nextConfig = {
       },
     ],
   },
+  // Ensure legacy pages don't conflict during build if possible, though Next.js handles both.
 };
 
 export default nextConfig;
