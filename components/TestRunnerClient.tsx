@@ -23,11 +23,12 @@ const TEST_TO_TOOL_MAP: Record<string, { id: string, name: string, desc: string,
     'aim-trainer-test': [{ id: 'hz-test', name: 'Hz Checker', desc: 'Frame rate affects tracking accuracy.', icon: Wrench }],
 };
 
+// Optimized Skeleton Loader to match Test Container height (CLS Fix)
 const LoadingModule = () => (
-  <div className="flex flex-col items-center justify-center h-[400px] text-zinc-500 animate-pulse">
+  <div className="flex flex-col items-center justify-center w-full h-full min-h-[500px] text-zinc-500 bg-zinc-900/20">
      <Loader2 size={48} className="animate-spin text-primary-500 mb-4" />
      <div className="text-xs font-mono uppercase tracking-widest">Initializing Module...</div>
-     <div className="text-[10px] font-mono mt-2">LOADING_ASSETS</div>
+     <div className="text-[10px] font-mono mt-2 text-zinc-600">LOADING_ASSETS</div>
   </div>
 );
 
@@ -184,7 +185,7 @@ export default function TestRunnerClient({ id }: { id: string }) {
                 <span className="text-[10px] text-zinc-600 font-mono uppercase">{testDef.id}.EXE</span>
              </div>
 
-             <div className="flex-grow relative flex items-center justify-center p-8 overflow-hidden">
+             <div className="flex-grow relative flex items-center justify-center p-8 overflow-hidden min-h-[500px]">
                 <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none"></div>
                 
                 <div className="relative z-10 w-full">

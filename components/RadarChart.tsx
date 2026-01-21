@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { CategoryScore } from '../types';
 
@@ -9,7 +9,6 @@ interface StatsRadarProps {
 const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
-    // Handle potential missing value if hovering over the ghost radar
     const value = payload.find((p: any) => p.dataKey === 'score')?.value || 0;
     
     return (
@@ -28,24 +27,38 @@ const CustomTooltip = ({ active, payload }: any) => {
 };
 
 const StatsRadar: React.FC<StatsRadarProps> = ({ data }) => {
+  // Use state to detect client-side hydration to avoid mismatched HTML
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    // Return a skeleton that matches the chart size to prevent CLS
+    return (
+        <div className="w-full h-[350px] md:h-[450px] flex items-center justify-center relative">
+            <div className="w-[70%] h-[70%] border border-dashed border-zinc-800 rounded-full opacity-30 animate-pulse"></div>
+            <div className="absolute inset-0 flex items-center justify-center text-xs font-mono text-zinc-600">LOADING_MATRIX...</div>
+        </div>
+    );
+  }
+
   const hasData = data.some(d => d.score > 0);
   
-  // Augment data with a 'fullMark' property for the background chart
   const chartData = data.map(d => ({
     ...d,
     fullMark: 100
   }));
 
   return (
-    <div className="w-full h-[350px] md:h-[450px] relative select-none">
+    <div className="w-full h-[350px] md:h-[450px] relative select-none animate-in fade-in duration-500">
       {/* Decorative HUD Elements */}
       <div className="absolute inset-0 pointer-events-none">
-        {/* Crosshair */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1px] h-full bg-primary-500/20"></div>
           <div className="absolute top-1/2 left-0 -translate-y-1/2 h-[1px] w-full bg-primary-500/20"></div>
         </div>
-        {/* Outer Ring */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[70%] h-[70%] border border-dashed border-zinc-800 rounded-full opacity-50"></div>
       </div>
 
@@ -67,7 +80,6 @@ const StatsRadar: React.FC<StatsRadarProps> = ({ data }) => {
           />
           <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
           
-          {/* Max Range (Ghost) Radar */}
           <Radar
             name="Max"
             dataKey="fullMark"
@@ -76,7 +88,6 @@ const StatsRadar: React.FC<StatsRadarProps> = ({ data }) => {
             fill="transparent"
           />
 
-          {/* User Stats Radar */}
           <Radar
             name="My Stats"
             dataKey="score"

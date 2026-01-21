@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
@@ -14,12 +13,31 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const testDef = TESTS.find(t => t.id === params.id);
   if (!testDef) return { title: "Test Not Found" };
   
+  const ogUrl = new URL('https://myhumanstats.org/api/og');
+  ogUrl.searchParams.set('title', testDef.title);
+  ogUrl.searchParams.set('subtitle', testDef.description.substring(0, 60) + '...');
+  ogUrl.searchParams.set('type', 'TEST MODULE');
+
   return {
     title: `${testDef.title} | MyHumanStats`,
     description: testDef.description,
     openGraph: {
         title: `${testDef.title} | Online Benchmark`,
-        description: testDef.description
+        description: testDef.description,
+        images: [
+          {
+            url: ogUrl.toString(),
+            width: 1200,
+            height: 630,
+            alt: testDef.title
+          }
+        ]
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: testDef.title,
+      description: testDef.description,
+      images: [ogUrl.toString()],
     }
   };
 }
@@ -53,7 +71,7 @@ export default function TestPage({ params }: Props) {
       "priceCurrency": "USD"
     },
     "featureList": `Measure your ${testDef.category} capabilities online`,
-    "screenshot": "https://myhumanstats.org/og-image-default.png",
+    "screenshot": `https://myhumanstats.org/api/og?title=${encodeURIComponent(testDef.title)}&type=MODULE`,
     "datePublished": "2026-01-01",
     "dateModified": new Date().toISOString().split('T')[0], 
     "aggregateRating": {
