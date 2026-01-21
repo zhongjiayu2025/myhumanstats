@@ -15,7 +15,8 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const pathname = usePathname();
+  // Fix: Ensure pathname is never null to satisfy TypeScript
+  const pathname = usePathname() || '';
   const isDashboard = pathname === '/';
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
