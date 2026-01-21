@@ -102,7 +102,8 @@ const ReactionTimeTest: React.FC = () => {
   };
 
   const handleAction = (e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault(); 
+    // Prevent default to stop scrolling or zooming on rapid taps
+    if (e.cancelable && e.type !== 'mousedown') e.preventDefault(); 
     
     if (gameState === GameState.IDLE || gameState === GameState.RESULT || gameState === GameState.CHEAT) {
         if (!showSettings) resetTest();
@@ -246,7 +247,7 @@ const ReactionTimeTest: React.FC = () => {
   }));
 
   return (
-    <div className="max-w-xl mx-auto select-none relative">
+    <div className="max-w-xl mx-auto select-none relative touch-none">
       
       {/* Settings Modal */}
       {showSettings && (
@@ -304,7 +305,7 @@ const ReactionTimeTest: React.FC = () => {
             onMouseDown={handleAction}
             onTouchStart={handleAction}
             className={`
-                relative w-full h-[400px] rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-colors duration-150 shadow-2xl overflow-hidden group
+                relative w-full h-[50vh] min-h-[300px] md:h-[400px] rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-colors duration-150 shadow-2xl overflow-hidden group
                 ${ui.bg}
                 ${gameState === GameState.IDLE ? 'hover:bg-zinc-800 border border-zinc-700' : ''}
                 ${shake ? 'animate-[shake_0.5s_cubic-bezier(.36,.07,.19,.97)_both]' : ''}
@@ -322,7 +323,7 @@ const ReactionTimeTest: React.FC = () => {
              {/* Background pattern */}
              <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 pointer-events-none"></div>
              
-             <div className="relative z-10 flex flex-col items-center animate-in fade-in zoom-in duration-200">
+             <div className="relative z-10 flex flex-col items-center animate-in fade-in zoom-in duration-200 pointer-events-none">
                  <Icon size={64} className={`mb-6 ${ui.color} ${gameState === GameState.WAITING ? 'animate-pulse' : ''}`} />
                  <h1 className={`text-5xl font-black tracking-tight mb-2 ${ui.color}`}>{ui.title}</h1>
                  <p className={`font-mono text-sm uppercase tracking-widest ${ui.color} opacity-80`}>{ui.sub}</p>

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Activity, Shield, Terminal, Zap, BookOpen, Search, Command, Settings, Monitor, ZapOff, Download, Upload } from 'lucide-react';
+import { Activity, Shield, Terminal, Zap, BookOpen, Search, Command, Settings, Monitor, ZapOff, Download, Upload, Home, Wrench, Menu } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import CommandPalette from './CommandPalette';
 import LiveTicker from './LiveTicker';
@@ -80,6 +80,17 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       "query-input": "required name=search_term_string"
     }
   };
+
+  // Nav Item Helper
+  const NavItem = ({ to, icon: Icon, label, active }: any) => (
+    <Link 
+      to={to} 
+      className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${active ? 'text-primary-400' : 'text-zinc-500 hover:text-zinc-300'}`}
+    >
+      <Icon size={20} />
+      <span className="text-[10px] font-mono uppercase tracking-wide">{label}</span>
+    </Link>
+  );
 
   return (
     <div className={`min-h-screen flex flex-col font-sans relative overflow-hidden bg-background ${highContrast ? 'contrast-125' : ''}`}>
@@ -239,12 +250,26 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       </header>
 
       {/* Main Content */}
-      <main id="main-content" className="flex-grow w-full max-w-7xl mx-auto px-4 md:px-6 pt-28 pb-16 z-20 relative outline-none" tabIndex={-1}>
+      <main id="main-content" className="flex-grow w-full max-w-7xl mx-auto px-4 md:px-6 pt-24 pb-24 md:pb-16 z-20 relative outline-none" tabIndex={-1}>
         {children}
       </main>
 
-      {/* Deep Footer Architecture */}
-      <footer className="border-t border-white/5 bg-black z-20 mt-auto pt-12 pb-12 print:hidden">
+      {/* Mobile Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 h-16 bg-black/95 backdrop-blur-lg border-t border-zinc-800 z-50 md:hidden flex justify-around items-center px-2">
+        <NavItem to="/" icon={Home} label="Home" active={location.pathname === '/'} />
+        <NavItem to="/tools" icon={Wrench} label="Tools" active={location.pathname.startsWith('/tools')} />
+        <NavItem to="/blog" icon={BookOpen} label="Blog" active={location.pathname.startsWith('/blog')} />
+        <button 
+          onClick={() => setIsPaletteOpen(true)}
+          className="flex flex-col items-center justify-center w-full h-full space-y-1 text-zinc-500 hover:text-zinc-300"
+        >
+          <Search size={20} />
+          <span className="text-[10px] font-mono uppercase tracking-wide">Search</span>
+        </button>
+      </nav>
+
+      {/* Deep Footer Architecture (Hidden on mobile to save space, relies on bottom nav) */}
+      <footer className="hidden md:block border-t border-white/5 bg-black z-20 mt-auto pt-12 pb-12 print:hidden">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
              

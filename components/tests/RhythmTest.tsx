@@ -125,14 +125,21 @@ const RhythmTest: React.FC = () => {
 
   }, [inputLatency]);
 
-  const handleInput = useCallback((e?: React.MouseEvent | KeyboardEvent) => {
+  const handleInput = useCallback((e?: React.MouseEvent | React.TouchEvent | KeyboardEvent) => {
+    if (e) {
+        // Prevent default only if checking phase to allow scrolling when not active?
+        // Actually for rhythm games, we want to prevent scrolling/zooming during the tapping phase
+        if (phase === 'tapping' || phase === 'calibrate') {
+            if(e.cancelable && e.type !== 'mousedown') e.preventDefault(); 
+        }
+    }
+
     if (phase === 'calibrate') {
         handleCalibrationTap();
         return;
     }
     
     if (phase !== 'tapping') return;
-    if (e) e.preventDefault(); 
 
     const now = performance.now();
     
@@ -233,7 +240,7 @@ const RhythmTest: React.FC = () => {
   const lastDev = getLastTapDeviation();
 
   return (
-    <div className="max-w-2xl mx-auto select-none" onMouseDown={() => handleInput()}>
+    <div className="max-w-2xl mx-auto select-none touch-none" onMouseDown={(e) => handleInput(e)} onTouchStart={(e) => handleInput(e)}>
       
       {/* HUD Header */}
       {(phase === 'tapping' || phase === 'result' || phase === 'calibrate') && (
@@ -267,7 +274,7 @@ const RhythmTest: React.FC = () => {
                     Listen to 4 beats, then continue tapping blindly to the grid. Measures your internal clock stability and drift.
                 </p>
                 <div className="inline-flex items-center gap-2 px-3 py-1 bg-zinc-900 border border-zinc-800 rounded text-[10px] text-zinc-500 font-mono">
-                    <span>TIP: USE KEYBOARD SPACEBAR</span>
+                    <span>TIP: USE SPACEBAR OR TAP SCREEN</span>
                 </div>
             </div>
         )}
@@ -337,10 +344,10 @@ const RhythmTest: React.FC = () => {
                 </div>
                 
                 <div className="text-center">
-                    <div className="w-20 h-20 bg-zinc-900 rounded-full border-2 border-zinc-700 mx-auto flex items-center justify-center active:bg-zinc-800 active:border-primary-500 transition-all cursor-pointer shadow-lg">
+                    <div className="w-32 h-32 md:w-20 md:h-20 bg-zinc-900 rounded-full border-2 border-zinc-700 mx-auto flex items-center justify-center active:bg-zinc-800 active:border-primary-500 transition-all cursor-pointer shadow-lg">
                         <MousePointer2 size={24} className="text-zinc-500" />
                     </div>
-                    <div className="text-[10px] text-zinc-600 mt-3 font-mono">TAP HERE OR SPACEBAR</div>
+                    <div className="text-[10px] text-zinc-600 mt-3 font-mono">TAP ANYWHERE</div>
                 </div>
             </div>
         )}

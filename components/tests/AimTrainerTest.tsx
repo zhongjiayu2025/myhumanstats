@@ -117,7 +117,8 @@ const AimTrainerTest: React.FC = () => {
 
   const handleTargetClick = (e: React.MouseEvent | React.TouchEvent, tId: number, bornTime: number) => {
       e.stopPropagation();
-      // Handle potential double fire from touch events
+      e.preventDefault(); // Prevent double firing and scrolling
+      
       if (phase !== 'play' || mode !== 'gridshot') return;
       
       playUiSound('success');
@@ -148,7 +149,8 @@ const AimTrainerTest: React.FC = () => {
       setTargets(prev => prev.map(t => t.id === tId ? generateTarget() : t));
   };
 
-  const handleBackgroundClick = () => {
+  const handleBackgroundClick = (e: React.MouseEvent | React.TouchEvent) => {
+      if (e.cancelable) e.preventDefault(); // Prevent scrolling on background miss
       if (phase === 'play') {
           playUiSound('snap');
           if (navigator.vibrate) navigator.vibrate(5);
@@ -182,6 +184,9 @@ const AimTrainerTest: React.FC = () => {
 
   const mousePos = useRef({x: 0, y: 0});
   const handleMouseMove = (e: React.MouseEvent | React.TouchEvent) => {
+      // Prevent scrolling while tracking
+      if(e.cancelable) e.preventDefault();
+
       if (containerRef.current) {
           const rect = containerRef.current.getBoundingClientRect();
           let clientX, clientY;
@@ -276,7 +281,7 @@ const AimTrainerTest: React.FC = () => {
                    <div className="mb-8 p-4 bg-yellow-900/20 border border-yellow-500/30 rounded-lg text-sm text-yellow-200 flex items-center gap-3 text-left">
                        <Smartphone size={24} className="shrink-0" />
                        <div>
-                           <strong>Mobile Detected:</strong> This test is designed for mouse & keyboard. Accuracy may be affected by touch input.
+                           <strong>Touch Mode Active:</strong> Tracking mode requires holding your finger on the target. Gridshot requires tapping.
                        </div>
                    </div>
                )}
@@ -324,14 +329,14 @@ const AimTrainerTest: React.FC = () => {
                    </div>
                </div>
 
-               {/* Game Area */}
+               {/* Game Area - Responsive Height */}
                <div 
                   ref={containerRef}
                   onMouseDown={handleBackgroundClick}
                   onMouseMove={handleMouseMove}
-                  onTouchStart={(e) => { handleBackgroundClick(); handleMouseMove(e); }}
+                  onTouchStart={(e) => { handleBackgroundClick(e); handleMouseMove(e); }}
                   onTouchMove={handleMouseMove}
-                  className="w-full h-[500px] bg-zinc-950 border border-zinc-800 relative overflow-hidden cursor-crosshair shadow-[inset_0_0_50px_rgba(0,0,0,0.5)] rounded-lg touch-none"
+                  className="w-full h-[50vh] md:h-[500px] bg-zinc-950 border border-zinc-800 relative overflow-hidden cursor-crosshair shadow-[inset_0_0_50px_rgba(0,0,0,0.5)] rounded-lg touch-none"
                >
                    <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:50px_50px] pointer-events-none"></div>
 
@@ -352,7 +357,7 @@ const AimTrainerTest: React.FC = () => {
                           key={t.id}
                           onMouseDown={(e) => handleTargetClick(e, t.id, t.born)}
                           onTouchStart={(e) => handleTargetClick(e, t.id, t.born)}
-                          className="absolute w-16 h-16 -translate-x-1/2 -translate-y-1/2 rounded-full bg-zinc-900 border-2 border-primary-500 flex items-center justify-center cursor-pointer active:scale-95 transition-transform duration-75 z-10 animate-in zoom-in-50 duration-100 group"
+                          className="absolute w-16 h-16 -translate-x-1/2 -translate-y-1/2 rounded-full bg-zinc-900 border-2 border-primary-500 flex items-center justify-center cursor-pointer active:scale-95 transition-transform duration-75 z-10 animate-in zoom-in-50 duration-100 group touch-manipulation"
                           style={{ left: `${t.x}%`, top: `${t.y}%` }}
                        >
                            {/* Bullseye inner */}
