@@ -7,10 +7,25 @@ const getCtx = () => {
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
   }
+  // Robust resume for Safari/Mobile
   if (audioCtx.state === 'suspended') {
-    audioCtx.resume();
+    audioCtx.resume().catch(e => console.error("Audio resume failed", e));
   }
   return audioCtx;
+};
+
+// Global unlock function to be called on first user interaction if needed
+export const unlockAudio = () => {
+    const ctx = getCtx();
+    if (ctx.state === 'suspended') {
+        ctx.resume();
+    }
+    // Create and play silent buffer to unlock iOS audio
+    const buffer = ctx.createBuffer(1, 1, 22050);
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(ctx.destination);
+    source.start(0);
 };
 
 export const playUiSound = (type: SoundType) => {

@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect } from 'react';
 import { Download, Share2 } from 'lucide-react';
 
@@ -54,45 +55,76 @@ const ShareCard: React.FC<ShareCardProps> = ({
     ctx.fillStyle = grad1;
     ctx.fillRect(0, 0, width, height);
 
-    // 5. Text Drawing
+    // 5. Data Box (Center)
+    ctx.fillStyle = '#000000';
+    ctx.strokeStyle = '#27272a';
+    ctx.lineWidth = 1;
+    ctx.fillRect(width/2 - 400, height/2 - 150, 800, 300);
+    ctx.strokeRect(width/2 - 400, height/2 - 150, 800, 300);
+
+    // 6. Text Drawing
     ctx.textAlign = 'center';
     
     // "VERIFIED RESULT" Badge
-    ctx.fillStyle = '#27272a';
-    ctx.roundRect(width/2 - 100, 60, 200, 40, 20);
+    ctx.fillStyle = '#18181b';
+    ctx.roundRect(width/2 - 120, 100, 240, 40, 20);
     ctx.fill();
     ctx.strokeStyle = '#3f3f46';
     ctx.stroke();
-    ctx.fillStyle = '#a1a1aa';
+    ctx.fillStyle = color;
     ctx.font = 'bold 16px "Courier New", monospace';
-    ctx.fillText('VERIFIED RESULT', width/2, 86);
+    ctx.fillText('VERIFIED DATA STREAM', width/2, 126);
 
     // Main Score
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 140px "Inter", sans-serif';
+    ctx.font = 'bold 120px "Inter", sans-serif';
     ctx.shadowColor = color;
-    ctx.shadowBlur = 30;
+    ctx.shadowBlur = 40;
     ctx.fillText(scoreDisplay, width/2, height/2 + 20);
     ctx.shadowBlur = 0;
 
     // Result Label
-    ctx.fillStyle = color;
-    ctx.font = 'bold 40px "Inter", sans-serif';
-    ctx.fillText(resultLabel.toUpperCase(), width/2, height/2 + 90);
+    ctx.fillStyle = '#a1a1aa';
+    ctx.font = '30px "Inter", sans-serif';
+    ctx.fillText(resultLabel.toUpperCase(), width/2, height/2 + 80);
 
-    // Test Name
-    ctx.fillStyle = '#71717a';
-    ctx.font = '30px "Courier New", monospace';
-    ctx.fillText(`// MODULE: ${testName.toUpperCase()}`, width/2, height/2 - 100);
+    // Test Name Header
+    ctx.textAlign = 'left';
+    ctx.fillStyle = color;
+    ctx.font = 'bold 24px "Courier New", monospace';
+    ctx.fillText(`// MODULE: ${testName.toUpperCase()}`, 50, 60);
 
     // Footer / Branding
+    ctx.textAlign = 'right';
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 24px "Inter", sans-serif';
-    ctx.fillText('MyHumanStats.org', width/2, height - 50);
+    ctx.fillText('MyHumanStats.org', width - 50, height - 40);
     
-    ctx.fillStyle = '#52525b';
-    ctx.font = '20px "Inter", sans-serif';
-    ctx.fillText('Quantify Your Existence', width/2, height - 25);
+    // QR Code Placeholder (Visual Only)
+    ctx.fillStyle = 'white';
+    const qrSize = 80;
+    const qrX = width - 130;
+    const qrY = 50;
+    ctx.fillStyle = '#18181b';
+    ctx.fillRect(qrX, qrY, qrSize, qrSize);
+    // Draw pseudo-random blocks
+    ctx.fillStyle = '#ffffff';
+    for(let i=0; i<64; i++) {
+        if(Math.random() > 0.5) {
+            const row = Math.floor(i / 8);
+            const col = i % 8;
+            ctx.fillRect(qrX + col*10 + 2, qrY + row*10 + 2, 6, 6);
+        }
+    }
+    // Corner markers
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(qrX, qrY, 20, 20);
+    ctx.fillRect(qrX + 60, qrY, 20, 20);
+    ctx.fillRect(qrX, qrY + 60, 20, 20);
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(qrX+5, qrY+5, 10, 10);
+    ctx.fillRect(qrX + 65, qrY+5, 10, 10);
+    ctx.fillRect(qrX+5, qrY + 65, 10, 10);
 
     // Tech corners
     ctx.strokeStyle = color;
@@ -101,8 +133,8 @@ const ShareCard: React.FC<ShareCardProps> = ({
     const pad = 30;
     // TL
     ctx.beginPath(); ctx.moveTo(pad, pad + cornerSize); ctx.lineTo(pad, pad); ctx.lineTo(pad + cornerSize, pad); ctx.stroke();
-    // BR
-    ctx.beginPath(); ctx.moveTo(width-pad, height-pad-cornerSize); ctx.lineTo(width-pad, height-pad); ctx.lineTo(width-pad-cornerSize, height-pad); ctx.stroke();
+    // BL
+    ctx.beginPath(); ctx.moveTo(pad, height-pad-cornerSize); ctx.lineTo(pad, height-pad); ctx.lineTo(pad + cornerSize, height-pad); ctx.stroke();
   };
 
   const handleDownload = () => {

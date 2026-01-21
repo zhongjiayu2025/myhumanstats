@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Eye, Crosshair, MousePointer2 } from 'lucide-react';
 import { saveStat } from '../../lib/core';
@@ -176,7 +177,7 @@ const PeripheralVisionTest: React.FC = () => {
   );
 
   return (
-    <div className="max-w-4xl mx-auto text-center select-none">
+    <div className="max-w-4xl mx-auto text-center select-none touch-none">
        {phase === 'intro' && (
            <div className="py-12 animate-in fade-in zoom-in">
                <Eye size={64} className="mx-auto text-zinc-600 mb-6" />
@@ -185,14 +186,18 @@ const PeripheralVisionTest: React.FC = () => {
                    Measure your visual field reactivity.
                    <br/><br/>
                    1. Stare at the <strong>Central Cross</strong>. Do not move your eyes.<br/>
-                   2. Press <strong>SPACEBAR</strong> immediately when you see a white dot flash in your peripheral vision.
+                   2. Press <strong>SPACEBAR</strong> or <strong>TAP SCREEN</strong> immediately when you see a white dot flash in your peripheral vision.
                </p>
                <button onClick={startGame} className="btn-primary">Start Examination</button>
            </div>
        )}
 
        {phase === 'test' && (
-           <div className="relative w-full aspect-video bg-black border border-zinc-800 rounded-xl overflow-hidden cursor-none shadow-2xl">
+           <div 
+              className="relative w-full aspect-video bg-black border border-zinc-800 rounded-xl overflow-hidden cursor-none shadow-2xl active:border-primary-500/50"
+              onTouchStart={(e) => { e.preventDefault(); handleInput(); }}
+              onMouseDown={(e) => { if(window.innerWidth > 768) handleInput(); }}
+           >
                {/* Radar Grid UI */}
                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.8)_100%)] z-10 pointer-events-none"></div>
                <div className="absolute inset-0 opacity-20 pointer-events-none">
@@ -224,7 +229,7 @@ const PeripheralVisionTest: React.FC = () => {
                    TARGETS: {round}/{TOTAL_ROUNDS}
                </div>
                <div className="absolute bottom-4 right-4 text-xs font-mono text-zinc-500 z-30 flex items-center gap-2">
-                   <MousePointer2 size={12} /> PRESS SPACE
+                   <MousePointer2 size={12} /> TAP ANYWHERE
                </div>
            </div>
        )}

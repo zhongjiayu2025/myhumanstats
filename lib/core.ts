@@ -1,6 +1,26 @@
 
 import { TestCategory, TestDefinition, UserStats, CategoryScore } from '../types';
 
+// --- Helper for High DPI Canvas Rendering ---
+export const setupHiDPICanvas = (canvas: HTMLCanvasElement, width: number, height: number) => {
+  const dpr = window.devicePixelRatio || 1;
+  
+  // Set the internal resolution matches screen density
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  
+  // Set the CSS size to match the layout
+  canvas.style.width = `${width}px`;
+  canvas.style.height = `${height}px`;
+  
+  // Scale the context so drawing operations happen in logical pixels
+  const ctx = canvas.getContext('2d');
+  if (ctx) {
+    ctx.scale(dpr, dpr);
+  }
+  return ctx;
+};
+
 export const TESTS: TestDefinition[] = [
   // --- AUDITORY STATS ---
   {

@@ -2,7 +2,7 @@
 <html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="theme-color" content="#050505" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -69,6 +69,19 @@
         color: #e4e4e7;
         -webkit-font-smoothing: antialiased;
         overflow-x: hidden;
+        overscroll-behavior-y: none; /* Prevent pull-to-refresh on mobile games */
+      }
+
+      /* Mobile Game Optimization Helpers */
+      .touch-none {
+        touch-action: none;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+      }
+
+      .no-tap-highlight {
+        -webkit-tap-highlight-color: transparent;
       }
 
       /* 1. CRT Scanline Effect */

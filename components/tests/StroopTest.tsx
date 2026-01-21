@@ -131,7 +131,7 @@ const StroopTest: React.FC = () => {
   ];
 
   return (
-    <div className="max-w-xl mx-auto text-center select-none">
+    <div className="max-w-xl mx-auto text-center select-none touch-none">
        {phase === 'intro' && (
           <div className="py-12 animate-in fade-in">
              <Brain size={64} className="mx-auto text-zinc-600 mb-6" />
@@ -139,14 +139,14 @@ const StroopTest: React.FC = () => {
              <p className="text-zinc-400 mb-8 max-w-md mx-auto">
                 Test your inhibitory control. Click the button that matches the <strong>INK COLOR</strong>, not the word text.
                 <br/>
-                <span className="text-xs text-zinc-500 font-mono mt-2 block"><Keyboard size={12} className="inline mr-1"/> Keys 1 (Red), 2 (Blue), 3 (Green), 4 (Yellow)</span>
+                <span className="text-xs text-zinc-500 font-mono mt-2 block"><Keyboard size={12} className="inline mr-1"/> Keys 1-4 or Tap Buttons</span>
              </p>
              <button onClick={start} className="btn-primary">Start Cognitive Test</button>
           </div>
        )}
 
        {phase === 'play' && (
-          <div className="h-[450px] flex flex-col justify-between">
+          <div className="h-[500px] flex flex-col justify-between">
              {/* HUD */}
              <div className="flex justify-between items-center px-4 pt-2">
                  <div className="text-[10px] text-zinc-600 font-mono">TRIAL {count + 1}/{TOTAL_TRIALS}</div>
@@ -175,17 +175,17 @@ const StroopTest: React.FC = () => {
                 </h1>
              </div>
              
-             {/* Controls */}
-             <div className="grid grid-cols-2 gap-4">
+             {/* Mobile Optimized Controls */}
+             <div className="grid grid-cols-2 gap-4 pb-4">
                 {COLORS.map(c => (
                    <button 
                       key={c.name}
-                      onClick={() => handleAnswer(c.name)}
-                      className="py-6 border border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-white font-bold uppercase tracking-widest clip-corner-sm relative group active:scale-[0.98] transition-transform"
+                      onMouseDown={(e) => { e.preventDefault(); handleAnswer(c.name); }}
+                      onTouchStart={(e) => { e.preventDefault(); handleAnswer(c.name); }}
+                      className="py-8 border border-zinc-700 bg-zinc-900 active:bg-zinc-700 text-white font-bold uppercase tracking-widest clip-corner-sm relative group active:scale-[0.98] transition-transform no-tap-highlight"
                    >
                       <span className="text-xl">{c.name}</span>
-                      <span className="absolute top-2 left-2 text-[10px] text-zinc-600 font-mono group-hover:text-primary-500">[{c.key}]</span>
-                      <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                      <div className="absolute top-2 left-2 w-3 h-3 rounded-full" style={{ backgroundColor: c.hex }}></div>
                    </button>
                 ))}
              </div>

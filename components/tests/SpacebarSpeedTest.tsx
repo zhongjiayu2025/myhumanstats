@@ -116,38 +116,37 @@ const SpacebarSpeedTest: React.FC = () => {
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [active, timeLeft]);
 
+  const handleInput = (e?: Event) => {
+      if (finished) return;
+      if (!active) setActive(true);
+      
+      setCount(c => c + 1);
+      setIsPressed(true);
+      setTimeout(() => setIsPressed(false), 50);
+
+      // Track instant speed
+      const now = Date.now();
+      clicksHistory.current.push(now);
+      clicksHistory.current = clicksHistory.current.filter(t => now - t < 1000);
+      
+      const cps = clicksHistory.current.length;
+      setInstantCps(cps);
+      instantCpsRef.current = cps;
+  };
+
   useEffect(() => {
       const handleDown = (e: KeyboardEvent) => {
           if (e.code === 'Space') {
-              e.preventDefault(); // Prevent scrolling
+              e.preventDefault(); 
               if (!finished && !e.repeat) {
-                  if (!active) setActive(true);
-                  setIsPressed(true);
-                  setCount(c => c + 1);
-                  
-                  // Track instant speed
-                  const now = Date.now();
-                  clicksHistory.current.push(now);
-                  clicksHistory.current = clicksHistory.current.filter(t => now - t < 1000);
-                  
-                  const cps = clicksHistory.current.length;
-                  setInstantCps(cps);
-                  instantCpsRef.current = cps; // Update ref for canvas loop
+                  handleInput();
               }
           }
       };
       
-      const handleUp = (e: KeyboardEvent) => {
-          if (e.code === 'Space') {
-              setIsPressed(false);
-          }
-      };
-
       window.addEventListener('keydown', handleDown);
-      window.addEventListener('keyup', handleUp);
       return () => {
           window.removeEventListener('keydown', handleDown);
-          window.removeEventListener('keyup', handleUp);
       }
   }, [active, finished]);
 
@@ -187,7 +186,7 @@ const SpacebarSpeedTest: React.FC = () => {
   };
 
   return (
-    <div className="max-w-xl mx-auto select-none text-center relative overflow-hidden rounded-xl border border-zinc-800">
+    <div className="max-w-xl mx-auto select-none text-center relative overflow-hidden rounded-xl border border-zinc-800 touch-none">
        
        {/* Background Starfield Canvas */}
        <canvas 
@@ -195,7 +194,21 @@ const SpacebarSpeedTest: React.FC = () => {
           className="absolute inset-0 w-full h-full pointer-events-none opacity-50 z-0"
        />
 
-       <div className="relative z-10 p-8 bg-gradient-to-b from-transparent to-black/80">
+       {/* Giant Tap Area for Mobile overlay */}
+       {!finished && (
+           <div 
+              className="absolute inset-0 z-20 cursor-pointer md:pointer-events-none no-tap-highlight"
+              onTouchStart={(e) => { e.preventDefault(); handleInput(); }}
+              onMouseDown={(e) => { 
+                  // Only on desktop if clicking outside visual button (mobile uses touchstart)
+                  if(window.innerWidth > 768) { 
+                      e.preventDefault(); handleInput(); 
+                  }
+              }}
+           ></div>
+       )}
+
+       <div className="relative z-10 p-8 bg-gradient-to-b from-transparent to-black/80 pointer-events-none">
            {/* Dashboard */}
            <div className="grid grid-cols-3 gap-4 mb-8">
               <div className="bg-zinc-900/80 backdrop-blur border border-zinc-800 p-4 rounded flex flex-col justify-center">
@@ -232,13 +245,13 @@ const SpacebarSpeedTest: React.FC = () => {
                >
                   {active ? (
                       <span className="font-mono text-2xl font-bold tracking-widest">
-                          {instantCps > 8 ? 'HYPERSPACE!' : 'SMASH SPACE'}
+                          {instantCps > 8 ? 'HYPERSPACE!' : 'TAP RAPIDLY'}
                       </span>
                   ) : finished ? (
                       <span className="font-mono text-2xl font-bold text-white">COMPLETE</span>
                   ) : (
                       <div className="flex flex-col items-center gap-2">
-                          <span className="font-mono text-sm font-bold uppercase">Press Space to Start</span>
+                          <span className="font-mono text-sm font-bold uppercase">Press Space / Tap Screen</span>
                       </div>
                   )}
                </div>
@@ -255,7 +268,7 @@ const SpacebarSpeedTest: React.FC = () => {
            )}
 
            {finished && (
-               <div className="animate-in slide-in-from-bottom-4">
+               <div className="animate-in slide-in-from-bottom-4 pointer-events-auto relative z-30">
                    <div className="text-6xl font-bold text-white mb-2 font-mono">{(count / 5).toFixed(1)}</div>
                    <p className="text-primary-400 text-sm mb-8 uppercase tracking-widest font-bold">Clicks Per Second</p>
                    <button onClick={reset} className="btn-secondary w-full">Try Again</button>
