@@ -85,7 +85,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const NavItem = ({ to, icon: Icon, label, active }: any) => (
     <Link 
       to={to} 
-      className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${active ? 'text-primary-400' : 'text-zinc-500 hover:text-zinc-300'}`}
+      className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${active ? 'text-primary-400' : 'text-zinc-400 hover:text-zinc-300'}`}
       aria-label={label}
       aria-current={active ? 'page' : undefined}
     >
@@ -146,21 +146,21 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <nav className="hidden md:flex items-center gap-1 bg-surface/50 p-1 border border-white/5 rounded-none clip-corner-sm" role="navigation">
               <Link 
                 to="/" 
-                className={`px-4 py-1.5 text-xs font-mono transition-all clip-corner-sm ${isDashboard ? 'bg-primary-500/10 text-primary-400 border border-primary-500/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}
+                className={`px-4 py-1.5 text-xs font-mono transition-all clip-corner-sm ${isDashboard ? 'bg-primary-500/10 text-primary-400 border border-primary-500/20' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
                 aria-current={isDashboard ? 'page' : undefined}
               >
                 [DASHBOARD]
               </Link>
               <Link 
                 to="/tools" 
-                className={`px-4 py-1.5 text-xs font-mono transition-all clip-corner-sm ${location.pathname.startsWith('/tools') ? 'bg-primary-500/10 text-primary-400 border border-primary-500/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}
+                className={`px-4 py-1.5 text-xs font-mono transition-all clip-corner-sm ${location.pathname.startsWith('/tools') ? 'bg-primary-500/10 text-primary-400 border border-primary-500/20' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
                 aria-current={location.pathname.startsWith('/tools') ? 'page' : undefined}
               >
                 [TOOLS]
               </Link>
               <Link 
                 to="/blog" 
-                className={`px-4 py-1.5 text-xs font-mono transition-all clip-corner-sm ${location.pathname.startsWith('/blog') ? 'bg-primary-500/10 text-primary-400 border border-primary-500/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}
+                className={`px-4 py-1.5 text-xs font-mono transition-all clip-corner-sm ${location.pathname.startsWith('/blog') ? 'bg-primary-500/10 text-primary-400 border border-primary-500/20' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
                 aria-current={location.pathname.startsWith('/blog') ? 'page' : undefined}
               >
                 [BLOG]
@@ -171,7 +171,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                {/* Omni-Search Trigger */}
                <button 
                   onClick={() => setIsPaletteOpen(true)}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded text-xs text-zinc-500 hover:text-white hover:border-zinc-600 transition-all group"
+                  className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded text-xs text-zinc-400 hover:text-white hover:border-zinc-600 transition-all group"
                   aria-label="Open Command Palette (Search)"
                >
                   <Search size={12} aria-hidden="true" />
@@ -185,7 +185,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <div className="relative">
                     <button 
                         onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-                        className={`p-2 rounded hover:bg-zinc-800 transition-colors ${isSettingsOpen ? 'bg-zinc-800 text-white' : 'text-zinc-500'}`}
+                        className={`p-2 rounded hover:bg-zinc-800 transition-colors ${isSettingsOpen ? 'bg-zinc-800 text-white' : 'text-zinc-400'}`}
                         aria-label="Open Settings"
                         aria-expanded={isSettingsOpen}
                     >
@@ -253,7 +253,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                      <span className="w-1.5 h-1.5 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-pulse"></span>
                      <span className="text-[10px] text-zinc-400 font-mono tracking-widest">ONLINE</span>
                   </div>
-                  <span className="text-[9px] text-zinc-700 font-mono">V.2.2.0</span>
+                  <span className="text-[9px] text-zinc-600 font-mono">V.2.2.1</span>
                </div>
             </div>
           </div>
@@ -272,7 +272,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <NavItem to="/blog" icon={BookOpen} label="Blog" active={location.pathname.startsWith('/blog')} />
         <button 
           onClick={() => setIsPaletteOpen(true)}
-          className="flex flex-col items-center justify-center w-full h-full space-y-1 text-zinc-500 hover:text-zinc-300"
+          className="flex flex-col items-center justify-center w-full h-full space-y-1 text-zinc-400 hover:text-zinc-300"
           aria-label="Search"
         >
           <Search size={20} aria-hidden="true" />
@@ -291,7 +291,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                    <Activity size={16} className="text-primary-500" aria-hidden="true" />
                    <span className="text-sm font-bold text-white">MyHumanStats</span>
                 </div>
-                <p className="text-xs text-zinc-500 leading-relaxed mb-4">
+                <p className="text-xs text-zinc-400 leading-relaxed mb-4">
                    Scientific benchmarking tools for the digital age. Local-first privacy architecture.
                 </p>
                 <div className="flex flex-col gap-2" aria-hidden="true">
@@ -340,7 +340,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
 
           <div className="border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-             <div className="text-[10px] text-zinc-700 font-mono uppercase tracking-wider">
+             <div className="text-[10px] text-zinc-600 font-mono uppercase tracking-wider">
                © 2026 MyHumanStats. All systems nominal.
              </div>
              <div className="flex gap-4">

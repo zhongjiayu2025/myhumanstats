@@ -129,7 +129,7 @@ const Dashboard: React.FC = () => {
              <div className="mt-auto space-y-6">
                 <div>
                   <div className="flex justify-between items-end mb-2">
-                    <span className="text-[10px] text-zinc-500 font-mono">DATA_INTEGRITY</span>
+                    <span className="text-[10px] text-zinc-400 font-mono">DATA_INTEGRITY</span>
                     <span className="text-2xl font-mono text-primary-400 text-glow">{progressPercent}%</span>
                   </div>
                   {/* Custom Progress Bar */}
@@ -140,11 +140,11 @@ const Dashboard: React.FC = () => {
 
                 <div className="grid grid-cols-2 gap-4">
                    <div className="p-3 bg-black/50 border border-zinc-800">
-                      <div className="text-[9px] text-zinc-600 uppercase mb-1">Modules</div>
+                      <div className="text-[9px] text-zinc-400 uppercase mb-1">Modules</div>
                       <div className="text-lg text-white font-mono">{completedCount}/{TESTS.length}</div>
                    </div>
                    <div className="p-3 bg-black/50 border border-zinc-800">
-                      <div className="text-[9px] text-zinc-600 uppercase mb-1">Rank</div>
+                      <div className="text-[9px] text-zinc-400 uppercase mb-1">Rank</div>
                       <div className="text-lg text-white font-mono">{progressPercent > 80 ? 'ALPHA' : 'BETA'}</div>
                    </div>
                 </div>
@@ -162,7 +162,7 @@ const Dashboard: React.FC = () => {
                 <Icons.Activity size={14} className="text-primary-500" />
                 <span className="text-xs font-mono font-bold text-white tracking-widest">PHENOTYPE_MATRIX</span>
              </div>
-             <p className="text-[10px] text-zinc-600 font-mono">Multi-axial capability assessment</p>
+             <p className="text-[10px] text-zinc-400 font-mono">Multi-axial capability assessment</p>
           </figcaption>
 
           <div className="w-full h-full flex items-center justify-center p-6">
@@ -177,8 +177,11 @@ const Dashboard: React.FC = () => {
         </figure>
       </section>
 
-      {/* Test Modules Grid - Use MAIN or SECTION for list of items */}
-      <div className="space-y-16 pb-12" role="list">
+      {/* Test Modules Grid - Use standard container without conflicting roles */}
+      {/* Hidden H2 for SEO structure hierarchy (H1 -> H2 -> H3) */}
+      <h2 className="sr-only">Test Categories and Modules</h2>
+      
+      <div className="space-y-16 pb-12">
         {categories.map((category, catIdx) => {
           const catTests = TESTS.filter(t => t.category === category);
           
@@ -186,7 +189,7 @@ const Dashboard: React.FC = () => {
             <section key={category} className="relative" aria-labelledby={`cat-${catIdx}`}>
               {/* Tactical Header */}
               <header className="flex items-center gap-4 mb-8">
-                 <div className="w-12 h-12 bg-surface border border-zinc-800 flex items-center justify-center text-zinc-600 font-mono font-bold text-xl clip-corner-sm">
+                 <div className="w-12 h-12 bg-surface border border-zinc-800 flex items-center justify-center text-zinc-500 font-mono font-bold text-xl clip-corner-sm">
                     0{catIdx + 1}
                  </div>
                  <div className="flex flex-col">
@@ -218,17 +221,16 @@ const Dashboard: React.FC = () => {
                            ? 'bg-primary-900/10 border-primary-500/40' 
                            : 'bg-surface border-border hover:border-primary-500/30 hover:bg-zinc-900'}
                       `}
-                      role="listitem"
                     >
                       {/* Active Corner Brackets */}
                       <div className={`absolute top-0 left-0 w-2 h-2 border-t border-l transition-colors duration-300 ${isHovered ? 'border-primary-400' : 'border-transparent'}`}></div>
                       <div className={`absolute bottom-0 right-0 w-2 h-2 border-b border-r transition-colors duration-300 ${isHovered ? 'border-primary-400' : 'border-transparent'}`}></div>
 
                       <div className="flex justify-between items-start mb-6">
-                        <div className={`p-2 rounded-none clip-corner-sm transition-all duration-300 ${hasScore ? 'bg-primary-500 text-black' : 'bg-black border border-zinc-800 text-zinc-500 group-hover:text-primary-400 group-hover:border-primary-500/50'}`}>
+                        <div className={`p-2 rounded-none clip-corner-sm transition-all duration-300 ${hasScore ? 'bg-primary-500 text-black' : 'bg-black border border-zinc-800 text-zinc-400 group-hover:text-primary-400 group-hover:border-primary-500/50'}`}>
                           <LucideIcon size={20} strokeWidth={2} />
                         </div>
-                        <span className="text-[9px] font-mono text-zinc-700 group-hover:text-primary-500/50">ID.{String(i + 1).padStart(3, '0')}</span>
+                        <span className="text-[9px] font-mono text-zinc-600 group-hover:text-primary-500/50">ID.{String(i + 1).padStart(3, '0')}</span>
                       </div>
 
                       <div className="relative z-10">
@@ -242,7 +244,7 @@ const Dashboard: React.FC = () => {
                              <span className="text-[10px] text-zinc-500 font-mono mb-1">/100</span>
                           </div>
                         ) : (
-                          <div className="text-[10px] text-zinc-600 font-mono group-hover:text-primary-500 transition-colors flex items-center gap-1">
+                          <div className="text-[10px] text-zinc-500 font-mono group-hover:text-primary-500 transition-colors flex items-center gap-1">
                              <span>INITIATE_TEST</span>
                              <Icons.ChevronRight size={10} />
                           </div>
