@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Activity, Shield, Terminal, Zap, BookOpen, Search, Command, Settings, Monitor, ZapOff, Download, Upload, Home, Wrench, Menu } from 'lucide-react';
+import { Activity, Shield, Terminal, Zap, BookOpen, Search, Command, Settings, Monitor, ZapOff, Download, Upload, Home, Wrench } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import CommandPalette from './CommandPalette';
 import LiveTicker from './LiveTicker';
