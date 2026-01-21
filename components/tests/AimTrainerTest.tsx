@@ -357,7 +357,7 @@ const AimTrainerTest: React.FC = () => {
                           key={t.id}
                           onMouseDown={(e) => handleTargetClick(e, t.id, t.born)}
                           onTouchStart={(e) => handleTargetClick(e, t.id, t.born)}
-                          className="absolute w-16 h-16 -translate-x-1/2 -translate-y-1/2 rounded-full bg-zinc-900 border-2 border-primary-500 flex items-center justify-center cursor-pointer active:scale-95 transition-transform duration-75 z-10 animate-in zoom-in-50 duration-100 group touch-manipulation"
+                          className="absolute w-16 h-16 -translate-x-1/2 -translate-y-1/2 rounded-full bg-zinc-900 border-2 border-primary-500 flex items-center justify-center cursor-pointer active:scale-95 transition-transform duration-75 z-10 animate-in zoom-in-50 duration-100 group touch-manipulation touch-none"
                           style={{ left: `${t.x}%`, top: `${t.y}%` }}
                        >
                            {/* Bullseye inner */}

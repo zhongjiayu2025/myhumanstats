@@ -1,21 +1,41 @@
+
 import React from 'react';
 import { Mail, MessageSquare, ExternalLink } from 'lucide-react';
 import SEO from '../components/SEO';
+import { Helmet } from 'react-helmet-async';
 
 const Contact: React.FC = () => {
+  const contactSchema = {
+    "@context": "https://schema.org",
+    "@type": "ContactPage",
+    "description": "Contact information for MyHumanStats. Official support channels for bug reports and inquiries.",
+    "mainEntity": {
+      "@type": "Organization",
+      "name": "MyHumanStats",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "email": "info@myhumanstats.org",
+        "contactType": "customer support"
+      }
+    }
+  };
+
   return (
     <div className="max-w-2xl mx-auto py-20 animate-in fade-in zoom-in duration-500">
       <SEO 
         title="Contact Us"
         description="Get in touch with the MyHumanStats team for feedback, bug reports, or partnership inquiries."
       />
+      <Helmet>
+        <script type="application/ld+json">{JSON.stringify(contactSchema)}</script>
+      </Helmet>
       
-      <div className="text-center mb-12">
+      <header className="text-center mb-12">
         <h1 className="text-4xl font-bold text-white mb-4">Initialize Connection</h1>
         <p className="text-zinc-400">
           Have a feature request, bug report, or partnership inquiry?
         </p>
-      </div>
+      </header>
 
       <div className="bg-surface border border-zinc-800 p-10 clip-corner-lg relative overflow-hidden group">
         <div className="absolute inset-0 bg-grid opacity-10"></div>
@@ -48,16 +68,16 @@ const Contact: React.FC = () => {
         </div>
       </div>
 
-      <div className="mt-12 grid grid-cols-2 gap-4">
+      <nav className="mt-12 grid grid-cols-2 gap-4">
          <a href="#" className="flex items-center justify-center gap-3 p-4 bg-zinc-900 border border-zinc-800 hover:border-primary-500/50 transition-all group rounded">
             <MessageSquare size={18} className="text-zinc-500 group-hover:text-white" />
             <span className="text-zinc-400 group-hover:text-white text-sm">Feedback Form</span>
          </a>
-         <a href="#" className="flex items-center justify-center gap-3 p-4 bg-zinc-900 border border-zinc-800 hover:border-primary-500/50 transition-all group rounded">
+         <a href="https://twitter.com/myhumanstats" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-3 p-4 bg-zinc-900 border border-zinc-800 hover:border-primary-500/50 transition-all group rounded">
             <ExternalLink size={18} className="text-zinc-500 group-hover:text-white" />
             <span className="text-zinc-400 group-hover:text-white text-sm">Twitter / X</span>
          </a>
-      </div>
+      </nav>
     </div>
   );
 };

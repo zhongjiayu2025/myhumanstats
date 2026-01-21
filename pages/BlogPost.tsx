@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Clock, Calendar, Share2, Tag, ChevronRight, Activity, Volume2, StopCircle, List } from 'lucide-react';
@@ -86,11 +87,35 @@ const BlogPost: React.FC = () => {
     );
   }
 
-  // Schema for "Speakable" (Beta, but good practice)
-  const speakableSchema = {
+  // Robust BlogPosting Schema
+  const blogSchema = {
     "@context": "https://schema.org",
-    "@type": "SpeakableSpecification",
-    "xpath": ["/html/head/title", "//h1", "//article"],
+    "@type": "BlogPosting",
+    "headline": post.title,
+    "description": post.excerpt,
+    "image": [post.coverImage],
+    "datePublished": new Date(post.date).toISOString(),
+    "dateModified": new Date(post.date).toISOString(), // Assume modified same as publish for now
+    "author": {
+      "@type": "Organization",
+      "name": "MyHumanStats Research Team",
+      "url": "https://myhumanstats.org"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "MyHumanStats",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://myhumanstats.org/logo.png"
+      }
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": `https://myhumanstats.org/blog/${post.slug}`
+    },
+    "keywords": post.tags.join(", "),
+    "articleSection": post.category,
+    "wordCount": post.content.split(/\s+/).length
   };
 
   return (
@@ -102,7 +127,7 @@ const BlogPost: React.FC = () => {
         type="article"
       />
       <Helmet>
-         <script type="application/ld+json">{JSON.stringify(speakableSchema)}</script>
+         <script type="application/ld+json">{JSON.stringify(blogSchema)}</script>
       </Helmet>
       
       <div className="max-w-7xl mx-auto px-4 md:px-6 relative z-30 pt-4 print:hidden">

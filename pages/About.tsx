@@ -1,14 +1,42 @@
+
 import React from 'react';
 import { Activity, Shield, Cpu, Globe } from 'lucide-react';
 import SEO from '../components/SEO';
+import { Helmet } from 'react-helmet-async';
 
 const About: React.FC = () => {
+  // Enhanced Organization Schema for E-E-A-T (Experience, Expertise, Authoritativeness, and Trustworthiness)
+  const orgSchema = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "MyHumanStats",
+    "url": "https://myhumanstats.org",
+    "logo": "https://myhumanstats.org/logo.png",
+    "description": "MyHumanStats is a digital laboratory dedicated to the measurement of human perception, cognition, and personality using local-first browser technologies.",
+    "foundingDate": "2024",
+    "knowsAbout": [
+      "Psychometrics",
+      "Audiometry",
+      "Cognitive Science",
+      "Reaction Time",
+      "Color Vision Deficiency",
+      "Web Audio API"
+    ],
+    "sameAs": [
+      "https://github.com/myhumanstats",
+      "https://twitter.com/myhumanstats"
+    ]
+  };
+
   return (
     <div className="max-w-4xl mx-auto py-12 animate-in fade-in duration-500">
       <SEO 
         title="About Us"
         description="Learn about MyHumanStats, a privacy-first platform for quantifying human perception and cognition using local-first browser technologies."
       />
+      <Helmet>
+        <script type="application/ld+json">{JSON.stringify(orgSchema)}</script>
+      </Helmet>
       
       {/* Hero Section */}
       <div className="text-center mb-16">

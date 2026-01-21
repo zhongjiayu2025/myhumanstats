@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
 
@@ -8,6 +9,7 @@ interface SEOProps {
   type?: 'website' | 'article';
   image?: string;
   noIndex?: boolean;
+  schema?: Record<string, any>; // Allow passing custom schema
 }
 
 const SEO: React.FC<SEOProps> = ({ 
@@ -16,23 +18,43 @@ const SEO: React.FC<SEOProps> = ({
   canonical, 
   type = 'website',
   image = 'https://myhumanstats.org/og-image-default.png',
-  noIndex = false
+  noIndex = false,
+  schema
 }) => {
   const siteTitle = 'MyHumanStats';
   const fullTitle = title === siteTitle ? siteTitle : `${title} | ${siteTitle}`;
   
-  // SEO Best Practice: Enforce production domain and strip query parameters
-  // This prevents ?fbclid=... or ?ref=... from creating duplicate content issues
   const baseUrl = 'https://myhumanstats.org';
   const currentPath = window.location.pathname;
-  // If a specific canonical is passed, use it. Otherwise, construct it from base + path (no query params)
   const canonicalUrl = canonical || `${baseUrl}${currentPath === '/' ? '' : currentPath}`;
+
+  // Default Schema if none provided
+  const defaultSchema = {
+    "@context": "https://schema.org",
+    "@type": type === 'article' ? 'BlogPosting' : 'WebApplication',
+    "name": fullTitle,
+    "description": description,
+    "url": canonicalUrl,
+    "applicationCategory": "HealthApplication",
+    "operatingSystem": "Browser",
+    "browserRequirements": "Requires JavaScript",
+    "author": {
+      "@type": "Organization",
+      "name": "MyHumanStats"
+    },
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    }
+  };
 
   return (
     <Helmet>
       {/* Standard Metadata */}
       <title>{fullTitle}</title>
       <meta name="description" content={description} />
+      <meta name="author" content="MyHumanStats" />
       {noIndex ? (
         <meta name="robots" content="noindex, nofollow" />
       ) : (
@@ -51,6 +73,8 @@ const SEO: React.FC<SEOProps> = ({
 
       {/* Twitter */}
       <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:site" content="@myhumanstats" />
+      <meta name="twitter:creator" content="@myhumanstats" />
       <meta name="twitter:title" content={fullTitle} />
       <meta name="twitter:description" content={description} />
       <meta name="twitter:image" content={image} />
@@ -58,20 +82,7 @@ const SEO: React.FC<SEOProps> = ({
       {/* Schema.org JSON-LD */}
       {!noIndex && (
         <script type="application/ld+json">
-          {JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": type === 'article' ? 'BlogPosting' : 'WebApplication',
-            "name": fullTitle,
-            "description": description,
-            "url": canonicalUrl,
-            "applicationCategory": "HealthApplication",
-            "operatingSystem": "Browser",
-            "offers": {
-              "@type": "Offer",
-              "price": "0",
-              "priceCurrency": "USD"
-            }
-          })}
+          {JSON.stringify(schema || defaultSchema)}
         </script>
       )}
     </Helmet>

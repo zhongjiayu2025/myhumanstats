@@ -80,6 +80,7 @@ const CpsTest: React.FC = () => {
 
   const handleInteraction = (e: React.MouseEvent | React.TouchEvent) => {
      if (finished) return;
+     if (e.cancelable && e.type === 'touchstart') e.preventDefault();
      
      // Coords relative to container
      let clientX, clientY;
@@ -152,7 +153,7 @@ const CpsTest: React.FC = () => {
   const rank = CPS_RANKS.slice().reverse().find(r => (clicks/10) >= r.threshold) || CPS_RANKS[0];
 
   return (
-    <div className="max-w-xl mx-auto select-none">
+    <div className="max-w-xl mx-auto select-none touch-none">
        {/* HUD */}
        <div className="grid grid-cols-2 gap-4 mb-4">
           <div className="tech-border bg-surface p-4 flex items-center justify-between">
@@ -175,7 +176,7 @@ const CpsTest: React.FC = () => {
               onMouseDown={handleInteraction}
               onTouchStart={handleInteraction}
               className={`
-                 w-full h-64 tech-border bg-black relative overflow-hidden group transition-all duration-50 active:scale-[0.99] cursor-crosshair
+                 w-full h-64 tech-border bg-black relative overflow-hidden group transition-all duration-50 active:scale-[0.99] cursor-crosshair touch-none
                  ${active ? 'border-primary-500 shadow-[0_0_30px_rgba(34,211,238,0.1)]' : 'border-zinc-700 hover:bg-zinc-900'}
               `}
               // Shake effect proportional to CPS

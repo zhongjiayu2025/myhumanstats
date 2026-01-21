@@ -37,6 +37,19 @@ const ToneGenPage: React.FC = () => {
   const sweepRafRef = useRef<number | null>(null);
   const sweepStartTimeRef = useRef<number>(0);
 
+  // Dedicated Tool Schema
+  const toolSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Online Tone Generator & Frequency Sweep",
+    "url": "https://myhumanstats.org/tools/tone-generator",
+    "description": "Free online audio signal generator. Create pure sine waves, binaural beats, and frequency sweeps from 20Hz to 20kHz directly in your browser.",
+    "applicationCategory": "MultimediaApplication",
+    "operatingSystem": "Any",
+    "featureList": "Sine wave generation, Binaural beats, Frequency sweep, Audio equipment testing",
+    "browserRequirements": "Requires Web Audio API support"
+  };
+
   const initAudio = () => {
      if (!audioCtxRef.current) {
         audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -205,6 +218,7 @@ const ToneGenPage: React.FC = () => {
        <SEO 
           title="Online Tone Generator + Frequency Sweep"
           description="Generate pure sine waves and binaural beats. Includes Frequency Sweep function for testing audio equipment and hearing range."
+          schema={toolSchema}
        />
        
        <Breadcrumbs items={[{ label: 'Tools', path: '/tools' }, { label: 'Tone Generator' }]} />

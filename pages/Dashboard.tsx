@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as Icons from 'lucide-react';
@@ -100,11 +101,11 @@ const Dashboard: React.FC = () => {
         <script type="application/ld+json">{JSON.stringify(collectionSchema)}</script>
       </Helmet>
       
-      {/* Top Section: Identity & Radar */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      {/* Top Section: Identity & Radar - Use SECTION for major grouping */}
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-6" aria-label="User Statistics Overview">
         
-        {/* Identity Module (Left) */}
-        <div className="lg:col-span-4 flex flex-col h-full">
+        {/* Identity Module (Left) - Use ASIDE as it's user-specific meta-info */}
+        <aside className="lg:col-span-4 flex flex-col h-full">
           <div className="bg-surface border border-border clip-corner-lg p-8 h-full relative overflow-hidden group">
              {/* Tech Decor Lines */}
              <div className="absolute top-0 right-0 w-24 h-24 border-r border-t border-white/10 rounded-tr-3xl pointer-events-none"></div>
@@ -113,7 +114,7 @@ const Dashboard: React.FC = () => {
              {/* Scanner Animation */}
              <div className="absolute top-0 left-0 w-full h-[2px] bg-primary-500/50 shadow-[0_0_15px_rgba(34,211,238,0.5)] animate-scan opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity"></div>
 
-             <div className="flex items-start justify-between mb-8">
+             <header className="flex items-start justify-between mb-8">
                 <div>
                    <h2 className="text-[10px] text-primary-500 font-mono uppercase tracking-[0.3em] mb-2">Subject Identity</h2>
                    <h1 className="text-3xl md:text-4xl font-bold text-white font-sans tracking-tight leading-none">
@@ -123,7 +124,7 @@ const Dashboard: React.FC = () => {
                    </h1>
                 </div>
                 <Icons.Fingerprint size={48} className="text-zinc-800 group-hover:text-primary-500/20 transition-colors" />
-             </div>
+             </header>
 
              <div className="mt-auto space-y-6">
                 <div>
@@ -149,53 +150,53 @@ const Dashboard: React.FC = () => {
                 </div>
              </div>
           </div>
-        </div>
+        </aside>
 
-        {/* Radar Visualization (Right) */}
-        <div className="lg:col-span-8 bg-surface border border-border clip-corner-lg relative overflow-hidden min-h-[400px]">
+        {/* Radar Visualization (Right) - Keep as DIV or FIGURE as it's a chart */}
+        <figure className="lg:col-span-8 bg-surface border border-border clip-corner-lg relative overflow-hidden min-h-[400px]">
           {/* Grid Overlay */}
           <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none"></div>
           
-          <div className="absolute top-4 left-6 z-10">
+          <figcaption className="absolute top-4 left-6 z-10">
              <div className="flex items-center gap-2 mb-1">
                 <Icons.Activity size={14} className="text-primary-500" />
                 <span className="text-xs font-mono font-bold text-white tracking-widest">PHENOTYPE_MATRIX</span>
              </div>
              <p className="text-[10px] text-zinc-600 font-mono">Multi-axial capability assessment</p>
-          </div>
+          </figcaption>
 
           <div className="w-full h-full flex items-center justify-center p-6">
             <StatsRadar data={categoryScores} />
           </div>
 
           {/* Decorative Corner Stats */}
-          <div className="absolute bottom-4 right-6 text-right hidden md:block">
+          <div className="absolute bottom-4 right-6 text-right hidden md:block" aria-hidden="true">
              <div className="text-[9px] text-zinc-600 font-mono">X-AXIS: CATEGORY</div>
              <div className="text-[9px] text-zinc-600 font-mono">Y-AXIS: PROFICIENCY</div>
           </div>
-        </div>
-      </div>
+        </figure>
+      </section>
 
-      {/* Test Modules Grid */}
-      <div className="space-y-16 pb-12">
+      {/* Test Modules Grid - Use MAIN or SECTION for list of items */}
+      <div className="space-y-16 pb-12" role="list">
         {categories.map((category, catIdx) => {
           const catTests = TESTS.filter(t => t.category === category);
           
           return (
-            <div key={category} className="relative">
+            <section key={category} className="relative" aria-labelledby={`cat-${catIdx}`}>
               {/* Tactical Header */}
-              <div className="flex items-center gap-4 mb-8">
+              <header className="flex items-center gap-4 mb-8">
                  <div className="w-12 h-12 bg-surface border border-zinc-800 flex items-center justify-center text-zinc-600 font-mono font-bold text-xl clip-corner-sm">
                     0{catIdx + 1}
                  </div>
                  <div className="flex flex-col">
-                    <h3 className="text-xl font-bold text-white uppercase tracking-wider">{category}</h3>
+                    <h3 id={`cat-${catIdx}`} className="text-xl font-bold text-white uppercase tracking-wider">{category}</h3>
                     <div className="flex items-center gap-2">
                        <div className="w-16 h-0.5 bg-primary-500"></div>
                        <span className="text-[10px] text-primary-500 font-mono tracking-widest">SECTOR_UNLOCKED</span>
                     </div>
                  </div>
-              </div>
+              </header>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
                 {catTests.map((test, i) => {
@@ -205,7 +206,7 @@ const Dashboard: React.FC = () => {
                   const isHovered = hoveredTest === test.id;
 
                   return (
-                    <div 
+                    <article 
                       key={test.id}
                       onMouseEnter={() => setHoveredTest(test.id)}
                       onMouseLeave={() => setHoveredTest(null)}
@@ -217,6 +218,7 @@ const Dashboard: React.FC = () => {
                            ? 'bg-primary-900/10 border-primary-500/40' 
                            : 'bg-surface border-border hover:border-primary-500/30 hover:bg-zinc-900'}
                       `}
+                      role="listitem"
                     >
                       {/* Active Corner Brackets */}
                       <div className={`absolute top-0 left-0 w-2 h-2 border-t border-l transition-colors duration-300 ${isHovered ? 'border-primary-400' : 'border-transparent'}`}></div>
@@ -255,17 +257,17 @@ const Dashboard: React.FC = () => {
                             </div>
                          </div>
                       )}
-                    </div>
+                    </article>
                   );
                 })}
               </div>
-            </div>
+            </section>
           );
         })}
       </div>
 
-      {/* SEO: Scientific Context Section (Heavy Content) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-12 border-t border-zinc-800 pt-12">
+      {/* SEO: Scientific Context Section (Heavy Content) - Use ARTICLE */}
+      <article className="grid grid-cols-1 md:grid-cols-2 gap-12 border-t border-zinc-800 pt-12">
          <div className="prose prose-invert prose-sm text-zinc-400">
             <h2 className="text-white text-2xl font-bold mb-4">The Science of Human Benchmarking</h2>
             <p>
@@ -284,10 +286,10 @@ const Dashboard: React.FC = () => {
                <li><strong>Self-Awareness:</strong> Personality assessments based on the Big Five and ASRS-v1.1 models help navigate social dynamics.</li>
             </ul>
          </div>
-      </div>
+      </article>
 
       {/* SEO FAQ Section */}
-      <div className="border-t border-zinc-800 pt-12 pb-8">
+      <section className="border-t border-zinc-800 pt-12 pb-8">
          <h2 className="text-xl font-bold text-white mb-8 flex items-center gap-2">
             <Icons.HelpCircle className="text-zinc-500" size={20} /> 
             <span>Common Queries</span>
@@ -300,7 +302,7 @@ const Dashboard: React.FC = () => {
                </div>
             ))}
          </div>
-      </div>
+      </section>
     </div>
   );
 };

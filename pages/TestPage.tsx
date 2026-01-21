@@ -1,13 +1,32 @@
-import React, { Suspense } from 'react';
+
+import React, { Suspense, useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Cpu, Info, FileText, ChevronRight, Loader2, HelpCircle, BookOpen, Microscope, CheckCircle2, Bookmark, BarChart3 } from 'lucide-react';
+import { ArrowLeft, Cpu, Info, FileText, ChevronRight, Loader2, HelpCircle, BookOpen, Microscope, CheckCircle2, Bookmark, BarChart3, History, Wrench, AlertTriangle } from 'lucide-react';
 import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { Helmet } from 'react-helmet-async';
-import { TESTS } from '../lib/core';
+import { TESTS, getHistory } from '../lib/core';
 import { BLOG_POSTS } from '../lib/blogData';
 import { TEST_REGISTRY } from '../components/tests/registry';
 import RecommendedTests from '../components/RecommendedTests';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+
+// --- Tool Mapping Strategy ---
+const TEST_TO_TOOL_MAP: Record<string, { id: string, name: string, desc: string, icon: any }[]> = {
+    // Audio Tests -> Mic/Speaker Tools
+    'hearing-age-test': [{ id: 'tone-generator', name: 'Tone Generator', desc: 'Verify speaker frequency response.', icon: Wrench }],
+    'vocal-range-test': [{ id: 'mic-test', name: 'Mic Check', desc: 'Verify input clarity and volume.', icon: Wrench }],
+    'rhythm-test': [{ id: 'bpm-counter', name: 'BPM Counter', desc: 'Manually tap tempo to calibrate.', icon: Wrench }],
+    'stereo-test': [{ id: 'stereo-test', name: 'Left/Right Check', desc: 'Ensure channels are not flipped.', icon: Wrench }],
+    
+    // Visual Tests -> Screen Tools
+    'color-blind-test': [{ id: 'dead-pixel-test', name: 'Dead Pixel Check', desc: 'Ensure screen color accuracy.', icon: Wrench }],
+    'contrast-test': [{ id: 'dead-pixel-test', name: 'Monitor Check', desc: 'Verify black levels.', icon: Wrench }],
+    
+    // Cognitive Tests -> Input Tools
+    'reaction-time-test': [{ id: 'hz-test', name: 'Hz Checker', desc: 'Is your 60Hz monitor slowing you down?', icon: Wrench }],
+    'aim-trainer-test': [{ id: 'hz-test', name: 'Hz Checker', desc: 'Frame rate affects tracking accuracy.', icon: Wrench }],
+};
 
 const LoadingModule = () => (
   <div className="flex flex-col items-center justify-center h-[400px] text-zinc-500 animate-pulse">
@@ -16,6 +35,56 @@ const LoadingModule = () => (
      <div className="text-[10px] font-mono mt-2">LOADING_ASSETS</div>
   </div>
 );
+
+// Component: History Visualization
+const HistorySection = ({ testId }: { testId: string }) => {
+  const [history, setHistory] = useState<any[]>([]);
+
+  useEffect(() => {
+    const load = () => {
+      const h = getHistory(testId);
+      const chartData = h.map((entry, i) => ({
+        index: i + 1,
+        date: new Date(entry.timestamp).toLocaleDateString(),
+        value: entry.raw !== undefined ? entry.raw : entry.score,
+        score: entry.score 
+      }));
+      setHistory(chartData);
+    };
+    load();
+    window.addEventListener('storage-update', load);
+    return () => window.removeEventListener('storage-update', load);
+  }, [testId]);
+
+  if (history.length < 2) return null;
+
+  return (
+    <section className="tech-border bg-black/50 p-6 mb-8 border border-zinc-800 rounded-lg animate-in fade-in slide-in-from-bottom-4">
+       <div className="flex items-center gap-3 mb-6">
+          <History className="text-purple-500" size={20} />
+          <h3 className="text-lg font-bold text-white uppercase tracking-wide">Historical Data</h3>
+       </div>
+       <div className="h-64 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+             <LineChart data={history}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                <XAxis dataKey="index" stroke="#555" fontSize={10} tickLine={false} axisLine={false} label={{ value: 'Attempts', position: 'insideBottom', offset: -5, fontSize: 10, fill: '#555' }} />
+                <YAxis stroke="#555" fontSize={10} tickLine={false} axisLine={false} />
+                <Tooltip 
+                    contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', fontSize: '12px' }}
+                    itemStyle={{ color: '#a855f7' }}
+                    labelFormatter={(i) => `Attempt #${i}`}
+                />
+                <Line type="monotone" dataKey="value" stroke="#a855f7" strokeWidth={2} dot={{r: 3, fill: '#a855f7'}} activeDot={{r: 5}} />
+             </LineChart>
+          </ResponsiveContainer>
+       </div>
+       <div className="mt-4 text-center text-[10px] text-zinc-500 font-mono">
+          TRACKING_SINCE: {history[0].date}
+       </div>
+    </section>
+  );
+};
 
 const TestPage: React.FC = () => {
   const { id } = useParams();
@@ -28,18 +97,14 @@ const TestPage: React.FC = () => {
 
   const TestComponent = id ? TEST_REGISTRY[id] : null;
   const relatedPosts = BLOG_POSTS.filter(p => p.relatedTestId === id);
+  const relatedTools = TEST_TO_TOOL_MAP[testDef.id] || [];
   const currentYear = new Date().getFullYear();
 
-  // Optimized Title for CTR (Click Through Rate)
   const pageTitle = `${testDef.title} (${currentYear} Online Benchmark)`;
-
-  // Generate a deterministic rating based on the test ID string to be consistent across renders but seemingly random per test
-  // This avoids hydration errors while providing "Rich Snippet" stars data
   const charCodeSum = testDef.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const fakeRatingValue = (4.5 + (charCodeSum % 5) / 10).toFixed(1); // 4.5 to 4.9
+  const fakeRatingValue = (4.5 + (charCodeSum % 5) / 10).toFixed(1); 
   const fakeRatingCount = 1000 + (charCodeSum * 12);
 
-  // Schema.org for Web Applications
   const softwareSchema = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
@@ -55,17 +120,21 @@ const TestPage: React.FC = () => {
     "featureList": `Measure your ${testDef.category} capabilities online`,
     "screenshot": "https://myhumanstats.org/og-image-default.png",
     "datePublished": "2026-01-01",
-    "dateModified": new Date().toISOString().split('T')[0], // Freshness signal
+    "dateModified": new Date().toISOString().split('T')[0], 
     "aggregateRating": {
       "@type": "AggregateRating",
       "ratingValue": fakeRatingValue,
       "ratingCount": fakeRatingCount,
       "bestRating": "5",
       "worstRating": "1"
-    }
+    },
+    "subjectOf": relatedPosts.map(p => ({
+        "@type": "BlogPosting",
+        "headline": p.title,
+        "url": `https://myhumanstats.org/blog/${p.slug}`
+    }))
   };
 
-  // Schema.org for HowTo
   const howToSchema = testDef.instructions ? {
     "@context": "https://schema.org",
     "@type": "HowTo",
@@ -78,7 +147,6 @@ const TestPage: React.FC = () => {
     }))
   } : null;
 
-  // Schema.org for FAQ
   const faqSchema = testDef.faqs ? {
     "@context": "https://schema.org",
     "@type": "FAQPage",
@@ -92,7 +160,6 @@ const TestPage: React.FC = () => {
     }))
   } : null;
 
-  // Schema.org for DefinedTerms (Glossary)
   const glossarySchema = testDef.concepts ? {
     "@context": "https://schema.org",
     "@type": "DefinedTermSet",
@@ -117,7 +184,6 @@ const TestPage: React.FC = () => {
         {glossarySchema && <script type="application/ld+json">{JSON.stringify(glossarySchema)}</script>}
       </Helmet>
       
-      {/* Breadcrumbs & Navigation */}
       <div>
         <Breadcrumbs items={[
           { label: testDef.category, path: `/#module-${testDef.category}` },
@@ -128,6 +194,7 @@ const TestPage: React.FC = () => {
           <button 
             onClick={() => navigate('/')}
             className="flex items-center gap-2 text-zinc-500 hover:text-white transition-colors group"
+            aria-label="Return to Dashboard"
           >
             <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
             <span className="text-xs font-mono tracking-widest uppercase">ABORT_TEST / RETURN</span>
@@ -160,13 +227,41 @@ const TestPage: React.FC = () => {
                 <span className="text-white">{testDef.estimatedTime}</span>
              </div>
           </div>
+
+          {/* NEW: Hardware Check Cross-Sell */}
+          {relatedTools.length > 0 && (
+             <div className="bg-yellow-900/10 border border-yellow-700/30 p-4 rounded-lg">
+                <div className="flex items-center gap-2 text-yellow-500 mb-2 font-bold text-xs uppercase tracking-wider">
+                   <AlertTriangle size={14} /> Hardware Check
+                </div>
+                <p className="text-[10px] text-yellow-200/70 mb-3 leading-relaxed">
+                   Low score? It might be your device, not you.
+                </p>
+                <div className="space-y-2">
+                   {relatedTools.map(tool => (
+                      <Link 
+                         key={tool.id} 
+                         to={`/tools/${tool.id}`}
+                         className="flex items-center gap-3 p-2 bg-black border border-yellow-900/30 hover:border-yellow-500/50 rounded transition-colors group"
+                      >
+                         <div className="bg-zinc-900 p-1.5 rounded text-zinc-400 group-hover:text-yellow-400">
+                            <tool.icon size={14} />
+                         </div>
+                         <div className="flex-1 min-w-0">
+                            <div className="text-xs font-bold text-zinc-300 group-hover:text-white">{tool.name}</div>
+                            <div className="text-[9px] text-zinc-600 truncate">{tool.desc}</div>
+                         </div>
+                         <ChevronRight size={12} className="text-zinc-700 group-hover:text-yellow-500" />
+                      </Link>
+                   ))}
+                </div>
+             </div>
+          )}
         </aside>
 
         {/* Test Container */}
         <div className="lg:col-span-9">
           <div className="relative w-full min-h-[500px] bg-black border border-zinc-800 flex flex-col mb-8">
-             
-             {/* Test Header Decor */}
              <div className="h-8 border-b border-zinc-800 bg-zinc-900/50 flex items-center justify-center relative">
                 <div className="absolute left-4 flex gap-1">
                    <div className="w-2 h-2 rounded-full bg-zinc-700"></div>
@@ -176,9 +271,7 @@ const TestPage: React.FC = () => {
                 <span className="text-[10px] text-zinc-600 font-mono uppercase">{testDef.id}.EXE</span>
              </div>
 
-             {/* Viewport */}
              <div className="flex-grow relative flex items-center justify-center p-8 overflow-hidden">
-                {/* Background Grid inside test */}
                 <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none"></div>
                 
                 <div className="relative z-10 w-full">
@@ -195,14 +288,15 @@ const TestPage: React.FC = () => {
                 </div>
              </div>
 
-             {/* Footer Status */}
              <div className="h-6 border-t border-zinc-800 bg-black flex items-center px-4 justify-between">
                 <span className="text-[9px] text-zinc-600 font-mono">MEMORY_USAGE: LOW</span>
                 <span className="text-[9px] text-zinc-600 font-mono">LATENCY: 0ms</span>
              </div>
           </div>
 
-          {/* Clinical Relevance (Topical Authority) */}
+          <HistorySection testId={testDef.id} />
+
+          {/* Clinical Relevance */}
           {testDef.clinicalRelevance && testDef.clinicalRelevance.length > 0 && (
              <div className="tech-border bg-black/50 p-6 mb-8 border-l-4 border-l-primary-500">
                 <div className="flex items-center gap-3 mb-4">
@@ -221,7 +315,7 @@ const TestPage: React.FC = () => {
              </div>
           )}
 
-          {/* SEO Rich Content Area (Article) */}
+          {/* SEO Rich Content */}
           {testDef.seoContent && (
              <article className="tech-border bg-surface p-8 animate-in fade-in slide-in-from-bottom-8 mb-8">
                 <div className="flex items-center gap-3 mb-6">
@@ -235,7 +329,7 @@ const TestPage: React.FC = () => {
              </article>
           )}
 
-          {/* Global Benchmarks Table (Featured Snippet Bait) */}
+          {/* Global Benchmarks */}
           {testDef.benchmarks && (
              <section className="tech-border bg-zinc-900/30 p-8 mb-8 overflow-hidden">
                 <div className="flex items-center gap-3 mb-6">
@@ -274,7 +368,7 @@ const TestPage: React.FC = () => {
              </section>
           )}
 
-          {/* Key Concepts (Glossary/Entities) */}
+          {/* Key Concepts */}
           {testDef.concepts && testDef.concepts.length > 0 && (
              <section className="tech-border bg-zinc-900/30 p-8 mb-8">
                 <div className="flex items-center gap-3 mb-6">
@@ -292,7 +386,7 @@ const TestPage: React.FC = () => {
              </section>
           )}
 
-          {/* FAQ Section */}
+          {/* FAQ */}
           {testDef.faqs && testDef.faqs.length > 0 && (
              <section className="tech-border bg-surface p-8 mb-8">
                 <div className="flex items-center gap-3 mb-6">
@@ -315,7 +409,7 @@ const TestPage: React.FC = () => {
              </section>
           )}
 
-          {/* Scientific Citations (E-E-A-T) */}
+          {/* Citations */}
           {testDef.citations && testDef.citations.length > 0 && (
              <div className="mb-8 border-t border-zinc-800 pt-8">
                 <h4 className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-4 flex items-center gap-2">
@@ -364,7 +458,6 @@ const TestPage: React.FC = () => {
                 </aside>
              )}
 
-             {/* Internal Linking Mesh: Recommended Tests */}
              <RecommendedTests currentTestId={testDef.id} category={testDef.category} />
           </div>
 

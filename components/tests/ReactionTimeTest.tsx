@@ -249,6 +249,14 @@ const ReactionTimeTest: React.FC = () => {
   return (
     <div className="max-w-xl mx-auto select-none relative touch-none">
       
+      {/* Live Region for Screen Readers */}
+      <div className="sr-only" aria-live="polite">
+          {gameState === GameState.WAITING && "Waiting for signal..."}
+          {gameState === GameState.READY && "Click now!"}
+          {gameState === GameState.RESULT && `Test complete. Average reaction time ${average} milliseconds.`}
+          {gameState === GameState.EARLY && "Too early. Try again."}
+      </div>
+
       {/* Settings Modal */}
       {showSettings && (
           <div className="absolute inset-0 z-50 bg-black/90 backdrop-blur flex items-center justify-center p-4 animate-in fade-in rounded-2xl">
@@ -293,7 +301,7 @@ const ReactionTimeTest: React.FC = () => {
                       <Volume2 size={14} /> Audio
                   </button>
               </div>
-              <button onClick={() => setShowSettings(true)} className="text-zinc-600 hover:text-white transition-colors">
+              <button onClick={() => setShowSettings(true)} className="text-zinc-600 hover:text-white transition-colors" aria-label="Settings">
                   <Settings2 size={18} />
               </button>
           </div>
@@ -302,14 +310,18 @@ const ReactionTimeTest: React.FC = () => {
       {/* Main Click Area */}
       {gameState !== GameState.RESULT ? (
           <div 
+            role="button"
+            tabIndex={0}
             onMouseDown={handleAction}
             onTouchStart={handleAction}
+            onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') handleAction(e as any); }}
             className={`
-                relative w-full h-[50vh] min-h-[300px] md:h-[400px] rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-colors duration-150 shadow-2xl overflow-hidden group
+                relative w-full h-[50vh] min-h-[300px] md:h-[400px] rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-colors duration-150 shadow-2xl overflow-hidden group touch-none
                 ${ui.bg}
                 ${gameState === GameState.IDLE ? 'hover:bg-zinc-800 border border-zinc-700' : ''}
                 ${shake ? 'animate-[shake_0.5s_cubic-bezier(.36,.07,.19,.97)_both]' : ''}
             `}
+            aria-label={ui.title}
           >
              <style>{`
                 @keyframes shake {

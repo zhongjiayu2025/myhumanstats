@@ -1,11 +1,13 @@
+
 import React from 'react';
 import { useParams, Link, Navigate } from 'react-router-dom';
-import { ChevronRight, Activity, Layers } from 'lucide-react';
+import { ChevronRight, Activity, Layers, HelpCircle } from 'lucide-react';
 import SEO from '../components/SEO';
 import { TESTS } from '../lib/core';
 import { CATEGORY_DATA } from '../lib/categoryData';
 import { TestCategory } from '../types';
 import Breadcrumbs from '../components/Breadcrumbs';
+import { Helmet } from 'react-helmet-async';
 import * as Icons from 'lucide-react';
 
 const CategoryPage: React.FC = () => {
@@ -23,12 +25,29 @@ const CategoryPage: React.FC = () => {
   const meta = CATEGORY_DATA[categoryEnum];
   const categoryTests = TESTS.filter(t => t.category === categoryEnum);
 
+  // Generate FAQ Schema dynamically
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": meta.faqs.map(faq => ({
+      "@type": "Question",
+      "name": faq.question,
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": faq.answer
+      }
+    }))
+  };
+
   return (
     <div className="max-w-6xl mx-auto py-12 animate-in fade-in duration-500">
       <SEO 
         title={meta.title}
         description={meta.description}
       />
+      <Helmet>
+        <script type="application/ld+json">{JSON.stringify(faqSchema)}</script>
+      </Helmet>
       
       <Breadcrumbs items={[
          { label: 'Categories', path: '/sitemap' },
@@ -57,7 +76,7 @@ const CategoryPage: React.FC = () => {
                <Activity size={16} /> Available Modules
             </h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-16">
                {categoryTests.map(test => {
                   const LucideIcon = (Icons as any)[test.iconName] || Icons.Circle;
                   return (
@@ -84,6 +103,22 @@ const CategoryPage: React.FC = () => {
                      </Link>
                   );
                })}
+            </div>
+
+            {/* Visual FAQ Section */}
+            <div className="border-t border-zinc-800 pt-12">
+                <h2 className="text-xl font-bold text-white mb-8 flex items-center gap-2">
+                    <HelpCircle size={20} className="text-zinc-500" />
+                    <span>Common Questions</span>
+                </h2>
+                <div className="space-y-4">
+                    {meta.faqs.map((faq, idx) => (
+                        <div key={idx} className="bg-zinc-900/30 border border-zinc-800/50 p-6 rounded hover:border-zinc-700 transition-colors">
+                            <h3 className="text-white font-bold mb-2">{faq.question}</h3>
+                            <p className="text-zinc-400 text-sm leading-relaxed">{faq.answer}</p>
+                        </div>
+                    ))}
+                </div>
             </div>
          </div>
 

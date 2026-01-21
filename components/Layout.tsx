@@ -86,8 +86,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     <Link 
       to={to} 
       className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${active ? 'text-primary-400' : 'text-zinc-500 hover:text-zinc-300'}`}
+      aria-label={label}
+      aria-current={active ? 'page' : undefined}
     >
-      <Icon size={20} />
+      <Icon size={20} aria-hidden="true" />
       <span className="text-[10px] font-mono uppercase tracking-wide">{label}</span>
     </Link>
   );
@@ -110,21 +112,21 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       </a>
       
       {/* Global VFX - Conditionally Rendered based on Settings */}
-      {showScanlines && <div className="scanlines print:hidden"></div>}
-      <div className="vignette print:hidden"></div>
-      {!reducedMotion && <div className="fixed inset-0 bg-grid z-0 pointer-events-none print:hidden" />}
+      {showScanlines && <div className="scanlines print:hidden" aria-hidden="true"></div>}
+      <div className="vignette print:hidden" aria-hidden="true"></div>
+      {!reducedMotion && <div className="fixed inset-0 bg-grid z-0 pointer-events-none print:hidden" aria-hidden="true" />}
       
       {/* Ambient Light - Disable if Reduced Motion for performance/distraction */}
       {!reducedMotion && (
-        <div className="fixed top-[-10%] left-[20%] w-[500px] h-[500px] bg-primary-500/5 rounded-full blur-[120px] pointer-events-none z-0 print:hidden" />
+        <div className="fixed top-[-10%] left-[20%] w-[500px] h-[500px] bg-primary-500/5 rounded-full blur-[120px] pointer-events-none z-0 print:hidden" aria-hidden="true" />
       )}
 
       {/* Technical Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-background/90 backdrop-blur-md print:hidden">
+      <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-background/90 backdrop-blur-md print:hidden" role="banner">
         <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3 group" aria-label="MyHumanStats Home">
             {/* Logo Container */}
-            <div className="relative flex items-center justify-center w-10 h-10 bg-surface border border-white/10 clip-corner-sm overflow-hidden group-hover:border-primary-500/50 transition-all">
+            <div className="relative flex items-center justify-center w-10 h-10 bg-surface border border-white/10 clip-corner-sm overflow-hidden group-hover:border-primary-500/50 transition-all" aria-hidden="true">
               <Activity className="text-primary-400 w-5 h-5 z-10" />
               {/* Scanline effect inside logo - Hide if reduced motion */}
               {!reducedMotion && (
@@ -141,22 +143,25 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </Link>
           
           <div className="flex items-center gap-6">
-            <nav className="hidden md:flex items-center gap-1 bg-surface/50 p-1 border border-white/5 rounded-none clip-corner-sm">
+            <nav className="hidden md:flex items-center gap-1 bg-surface/50 p-1 border border-white/5 rounded-none clip-corner-sm" role="navigation">
               <Link 
                 to="/" 
                 className={`px-4 py-1.5 text-xs font-mono transition-all clip-corner-sm ${isDashboard ? 'bg-primary-500/10 text-primary-400 border border-primary-500/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}
+                aria-current={isDashboard ? 'page' : undefined}
               >
                 [DASHBOARD]
               </Link>
               <Link 
                 to="/tools" 
                 className={`px-4 py-1.5 text-xs font-mono transition-all clip-corner-sm ${location.pathname.startsWith('/tools') ? 'bg-primary-500/10 text-primary-400 border border-primary-500/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}
+                aria-current={location.pathname.startsWith('/tools') ? 'page' : undefined}
               >
                 [TOOLS]
               </Link>
               <Link 
                 to="/blog" 
                 className={`px-4 py-1.5 text-xs font-mono transition-all clip-corner-sm ${location.pathname.startsWith('/blog') ? 'bg-primary-500/10 text-primary-400 border border-primary-500/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}
+                aria-current={location.pathname.startsWith('/blog') ? 'page' : undefined}
               >
                 [BLOG]
               </Link>
@@ -167,11 +172,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                <button 
                   onClick={() => setIsPaletteOpen(true)}
                   className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded text-xs text-zinc-500 hover:text-white hover:border-zinc-600 transition-all group"
-                  aria-label="Search"
+                  aria-label="Open Command Palette (Search)"
                >
-                  <Search size={12} />
+                  <Search size={12} aria-hidden="true" />
                   <span className="hidden lg:inline">Search...</span>
-                  <div className="hidden lg:flex items-center gap-0.5 ml-2 px-1 bg-zinc-800 rounded border border-zinc-700 text-[10px] font-mono group-hover:bg-zinc-700">
+                  <div className="hidden lg:flex items-center gap-0.5 ml-2 px-1 bg-zinc-800 rounded border border-zinc-700 text-[10px] font-mono group-hover:bg-zinc-700" aria-hidden="true">
                      <Command size={8} /> K
                   </div>
                </button>
@@ -181,14 +186,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <button 
                         onClick={() => setIsSettingsOpen(!isSettingsOpen)}
                         className={`p-2 rounded hover:bg-zinc-800 transition-colors ${isSettingsOpen ? 'bg-zinc-800 text-white' : 'text-zinc-500'}`}
-                        aria-label="Settings"
+                        aria-label="Open Settings"
+                        aria-expanded={isSettingsOpen}
                     >
-                        <Settings size={16} />
+                        <Settings size={16} aria-hidden="true" />
                     </button>
                     
                     {/* Settings Dropdown */}
                     {isSettingsOpen && (
-                        <div className="absolute right-0 top-full mt-2 w-64 bg-black border border-zinc-700 shadow-2xl rounded-lg p-3 z-50 animate-in fade-in zoom-in-95">
+                        <div className="absolute right-0 top-full mt-2 w-64 bg-black border border-zinc-700 shadow-2xl rounded-lg p-3 z-50 animate-in fade-in zoom-in-95" role="dialog" aria-label="Settings Menu">
                             <div className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-3 pb-2 border-b border-zinc-800">
                                 Visual & Accessibility
                             </div>
@@ -196,6 +202,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                                 <button 
                                     onClick={() => setReducedMotion(!reducedMotion)}
                                     className="w-full flex items-center justify-between text-left p-2 hover:bg-zinc-900 rounded text-xs text-zinc-300"
+                                    role="switch"
+                                    aria-checked={reducedMotion}
                                 >
                                     <div className="flex items-center gap-2"><ZapOff size={14} /> Reduced Motion</div>
                                     <div className={`w-2 h-2 rounded-full ${reducedMotion ? 'bg-emerald-500' : 'bg-zinc-700'}`}></div>
@@ -203,6 +211,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                                 <button 
                                     onClick={() => setShowScanlines(!showScanlines)}
                                     className="w-full flex items-center justify-between text-left p-2 hover:bg-zinc-900 rounded text-xs text-zinc-300"
+                                    role="switch"
+                                    aria-checked={showScanlines}
                                 >
                                     <div className="flex items-center gap-2"><Monitor size={14} /> Scanlines</div>
                                     <div className={`w-2 h-2 rounded-full ${showScanlines ? 'bg-emerald-500' : 'bg-zinc-700'}`}></div>
@@ -231,13 +241,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                                   className="hidden" 
                                   accept=".json" 
                                   onChange={handleFileChange}
+                                  aria-hidden="true"
                                 />
                             </div>
                         </div>
                     )}
                 </div>
 
-               <div className="hidden md:flex flex-col items-end">
+               <div className="hidden md:flex flex-col items-end" aria-hidden="true">
                   <div className="flex items-center gap-1.5">
                      <span className="w-1.5 h-1.5 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-pulse"></span>
                      <span className="text-[10px] text-zinc-400 font-mono tracking-widest">ONLINE</span>
@@ -250,39 +261,40 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       </header>
 
       {/* Main Content */}
-      <main id="main-content" className="flex-grow w-full max-w-7xl mx-auto px-4 md:px-6 pt-24 pb-24 md:pb-16 z-20 relative outline-none" tabIndex={-1}>
+      <main id="main-content" className="flex-grow w-full max-w-7xl mx-auto px-4 md:px-6 pt-24 pb-24 md:pb-16 z-20 relative outline-none" tabIndex={-1} role="main">
         {children}
       </main>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 h-16 bg-black/95 backdrop-blur-lg border-t border-zinc-800 z-50 md:hidden flex justify-around items-center px-2">
+      <nav className="fixed bottom-0 left-0 right-0 h-16 bg-black/95 backdrop-blur-lg border-t border-zinc-800 z-50 md:hidden flex justify-around items-center px-2" role="navigation" aria-label="Mobile Navigation">
         <NavItem to="/" icon={Home} label="Home" active={location.pathname === '/'} />
         <NavItem to="/tools" icon={Wrench} label="Tools" active={location.pathname.startsWith('/tools')} />
         <NavItem to="/blog" icon={BookOpen} label="Blog" active={location.pathname.startsWith('/blog')} />
         <button 
           onClick={() => setIsPaletteOpen(true)}
           className="flex flex-col items-center justify-center w-full h-full space-y-1 text-zinc-500 hover:text-zinc-300"
+          aria-label="Search"
         >
-          <Search size={20} />
+          <Search size={20} aria-hidden="true" />
           <span className="text-[10px] font-mono uppercase tracking-wide">Search</span>
         </button>
       </nav>
 
-      {/* Deep Footer Architecture (Hidden on mobile to save space, relies on bottom nav) */}
-      <footer className="hidden md:block border-t border-white/5 bg-black z-20 mt-auto pt-12 pb-12 print:hidden">
+      {/* Deep Footer Architecture */}
+      <footer className="hidden md:block border-t border-white/5 bg-black z-20 mt-auto pt-12 pb-12 print:hidden" role="contentinfo">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
              
              {/* Col 1: Brand */}
              <div className="col-span-2 md:col-span-1">
                 <div className="flex items-center gap-2 mb-4">
-                   <Activity size={16} className="text-primary-500" />
+                   <Activity size={16} className="text-primary-500" aria-hidden="true" />
                    <span className="text-sm font-bold text-white">MyHumanStats</span>
                 </div>
                 <p className="text-xs text-zinc-500 leading-relaxed mb-4">
                    Scientific benchmarking tools for the digital age. Local-first privacy architecture.
                 </p>
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2" aria-hidden="true">
                    <div className="flex items-center gap-2 text-zinc-600 text-[10px] font-mono uppercase tracking-wider">
                       <Terminal size={10} />
                       <span>System Status: Optimal</span>

@@ -1,8 +1,10 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Music, Activity, ArrowRight, Wrench, Monitor, Headphones, Mic, Zap } from 'lucide-react';
 import SEO from '../components/SEO';
 import Breadcrumbs from '../components/Breadcrumbs';
+import { Helmet } from 'react-helmet-async';
 
 const ToolsIndex: React.FC = () => {
   const tools = [
@@ -56,12 +58,28 @@ const ToolsIndex: React.FC = () => {
      }
   ];
 
+  // ItemList Schema for "Apps" or "Tools"
+  const itemListSchema = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "itemListElement": tools.map((tool, index) => ({
+      "@type": "ListItem",
+      "position": index + 1,
+      "name": tool.title,
+      "description": tool.desc,
+      "url": `https://myhumanstats.org${tool.path}`
+    }))
+  };
+
   return (
     <div className="max-w-6xl mx-auto py-12 animate-in fade-in duration-500">
       <SEO 
         title="Tools & Utilities | Calibration Suite"
         description="Free online utilities for hardware calibration and measurement. Hz Test, Mic Test, Tone Generator, and more."
       />
+      <Helmet>
+        <script type="application/ld+json">{JSON.stringify(itemListSchema)}</script>
+      </Helmet>
       
       <Breadcrumbs items={[{ label: 'Tools' }]} />
 
