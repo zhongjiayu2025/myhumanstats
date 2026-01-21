@@ -9,7 +9,7 @@ import StatsRadar from '@/components/RadarChart';
 import { TESTS, getStats, calculateCategoryScores } from '@/lib/core';
 import { UserStats, CategoryScore } from '@/types';
 
-// Animated Typing Title Component
+// Optimized Typing Title: Prevents CLS by reserving space with invisible text
 const TypingTitle = ({ text }: { text: string }) => {
   const [display, setDisplay] = useState('');
   
@@ -23,7 +23,17 @@ const TypingTitle = ({ text }: { text: string }) => {
     return () => clearInterval(interval);
   }, [text]);
 
-  return <span aria-hidden="true">{display}<span className="animate-pulse">_</span></span>;
+  return (
+    <span className="relative inline-block">
+      {/* Ghost text to reserve exact space (CLS Fix) */}
+      <span className="opacity-0 select-none pointer-events-none" aria-hidden="true">{text}_</span>
+      
+      {/* Absolute positioned typing effect overlay */}
+      <span className="absolute top-0 left-0">
+        {display}<span className="animate-pulse text-primary-500">_</span>
+      </span>
+    </span>
+  );
 };
 
 export default function Dashboard() {
@@ -68,14 +78,14 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-12 animate-in fade-in duration-500">
       
       {/* Top Section: Identity & Radar */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-6" aria-label="User Statistics Overview">
         
         {/* Identity Module (Left) */}
-        <aside className="lg:col-span-4 flex flex-col h-full">
-          <div className="bg-surface border border-border clip-corner-lg p-8 h-full relative overflow-hidden group">
+        <aside className="lg:col-span-4 flex flex-col h-full min-h-[400px]">
+          <div className="bg-surface border border-border clip-corner-lg p-8 h-full relative overflow-hidden group flex flex-col justify-between">
              {/* Tech Decor Lines */}
              <div className="absolute top-0 right-0 w-24 h-24 border-r border-t border-white/10 rounded-tr-3xl pointer-events-none"></div>
              <div className="absolute bottom-0 left-0 w-8 h-8 border-l border-b border-primary-500/30 pointer-events-none"></div>
@@ -86,15 +96,15 @@ export default function Dashboard() {
              <header className="flex items-start justify-between mb-8">
                 <div>
                    <h2 className="text-[10px] text-primary-500 font-mono uppercase tracking-[0.3em] mb-2">Subject Identity</h2>
-                   <h1 className="text-3xl md:text-4xl font-bold text-white font-sans tracking-tight leading-none">
+                   <h1 className="text-3xl md:text-4xl font-bold text-white font-sans tracking-tight leading-none min-h-[40px]">
                       <span className="sr-only">HUMAN DATA DASHBOARD</span>
                       <TypingTitle text="HUMAN_DATA" />
                    </h1>
                 </div>
-                <Icons.Fingerprint size={48} className="text-zinc-800 group-hover:text-primary-500/20 transition-colors" />
+                <Icons.Fingerprint size={48} className="text-zinc-800 group-hover:text-primary-500/20 transition-colors shrink-0" />
              </header>
 
-             <div className="mt-auto space-y-6">
+             <div className="space-y-6">
                 <div>
                   <div className="flex justify-between items-end mb-2">
                     <span className="text-[10px] text-zinc-400 font-mono">DATA_INTEGRITY</span>
@@ -121,8 +131,9 @@ export default function Dashboard() {
         </aside>
 
         {/* Radar Visualization (Right) */}
-        <figure className="lg:col-span-8 bg-surface border border-border clip-corner-lg relative overflow-hidden min-h-[400px]">
-          {/* Grid Overlay */}
+        {/* LCP Fix: Ensure container has a fixed minimum height and background so the 'paint' happens before the chart loads */}
+        <figure className="lg:col-span-8 bg-surface border border-border clip-corner-lg relative overflow-hidden h-[400px] lg:h-auto min-h-[400px]">
+          {/* Grid Overlay - Rendered immediately */}
           <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none"></div>
           
           <figcaption className="absolute top-4 left-6 z-10">

@@ -35,11 +35,19 @@ const StatsRadar: React.FC<StatsRadarProps> = ({ data }) => {
   }, []);
 
   if (!mounted) {
-    // Return a skeleton that matches the chart size to prevent CLS
+    // Highly optimized static skeleton that mimics the exact size of the final chart
+    // Matches the outerRadius="70%" roughly
     return (
-        <div className="w-full h-[350px] md:h-[450px] flex items-center justify-center relative">
-            <div className="w-[70%] h-[70%] border border-dashed border-zinc-800 rounded-full opacity-30 animate-pulse"></div>
-            <div className="absolute inset-0 flex items-center justify-center text-xs font-mono text-zinc-600">LOADING_MATRIX...</div>
+        <div className="w-full h-full flex items-center justify-center relative animate-pulse">
+            {/* Fake Rings */}
+            <div className="w-[60%] aspect-square border border-zinc-800 rounded-full absolute"></div>
+            <div className="w-[40%] aspect-square border border-zinc-800 rounded-full absolute"></div>
+            <div className="w-[20%] aspect-square border border-zinc-800 rounded-full absolute"></div>
+            {/* Fake Crosshairs */}
+            <div className="w-[70%] h-px bg-zinc-800 absolute"></div>
+            <div className="h-[70%] w-px bg-zinc-800 absolute"></div>
+            
+            <div className="absolute inset-0 flex items-center justify-center text-[10px] font-mono text-zinc-700 tracking-widest">LOADING...</div>
         </div>
     );
   }
@@ -52,7 +60,7 @@ const StatsRadar: React.FC<StatsRadarProps> = ({ data }) => {
   }));
 
   return (
-    <div className="w-full h-[350px] md:h-[450px] relative select-none animate-in fade-in duration-500">
+    <div className="w-full h-full relative select-none animate-in fade-in duration-500">
       {/* Decorative HUD Elements */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4">
