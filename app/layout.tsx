@@ -21,8 +21,12 @@ export const metadata: Metadata = {
   description: "A personal digital ability dashboard to measure your auditory, visual, cognitive, and personality traits through scientific testing.",
   manifest: "/manifest.json",
   icons: {
-    icon: "/logo.png",
-    apple: "/logo.png",
+    icon: [
+      { url: "/logo.svg", type: "image/svg+xml" }
+    ],
+    apple: [
+      { url: "/logo.svg", type: "image/svg+xml" }
+    ]
   }
 };
 

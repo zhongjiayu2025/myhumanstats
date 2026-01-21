@@ -78,7 +78,7 @@ export default function BlogPost({ params }: Props) {
       "name": "MyHumanStats",
       "logo": {
         "@type": "ImageObject",
-        "url": "https://myhumanstats.org/logo.png"
+        "url": "https://myhumanstats.org/logo.svg"
       }
     },
     "mainEntityOfPage": {

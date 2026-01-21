@@ -9,14 +9,10 @@
   "description": "Quantify your auditory, visual, and cognitive performance.",
   "icons": [
     {
-      "src": "/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png"
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
   ],
   "shortcuts": [
@@ -25,28 +21,28 @@
       "short_name": "Reflex",
       "description": "Measure your visual reaction speed",
       "url": "/test/reaction-time-test",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/logo.svg", "sizes": "any", "type": "image/svg+xml" }]
     },
     {
       "name": "Hearing Test",
       "short_name": "Hearing",
       "description": "Check your high frequency hearing limit",
       "url": "/test/hearing-age-test",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/logo.svg", "sizes": "any", "type": "image/svg+xml" }]
     },
     {
       "name": "Tone Generator",
       "short_name": "Tone Gen",
       "description": "Generate audio frequencies",
       "url": "/tools/tone-generator",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/logo.svg", "sizes": "any", "type": "image/svg+xml" }]
     },
     {
       "name": "BPM Counter",
       "short_name": "BPM",
       "description": "Tap to find tempo",
       "url": "/tools/bpm-counter",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/logo.svg", "sizes": "any", "type": "image/svg+xml" }]
     }
   ]
 }

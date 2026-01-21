@@ -15,7 +15,7 @@ const About = () => {
     "@type": "Organization",
     "name": "MyHumanStats",
     "url": "https://myhumanstats.org",
-    "logo": "https://myhumanstats.org/logo.png",
+    "logo": "https://myhumanstats.org/logo.svg",
     "description": "MyHumanStats is a digital laboratory dedicated to the measurement of human perception, cognition, and personality using local-first browser technologies.",
     "foundingDate": "2024",
     "knowsAbout": [
