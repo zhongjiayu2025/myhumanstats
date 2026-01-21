@@ -1,8 +1,9 @@
 
 import React from 'react';
 import Link from 'next/link';
-import * as Icons from 'lucide-react';
+import { GitBranch, Clock, Circle } from 'lucide-react';
 import { TESTS } from '../lib/core';
+import { iconMap } from '@/lib/iconMap';
 
 interface RecommendedTestsProps {
   currentTestId: string;
@@ -30,13 +31,13 @@ const RecommendedTests: React.FC<RecommendedTestsProps> = ({ currentTestId, cate
   return (
     <div className="border-t border-zinc-800 pt-12 mt-12">
       <div className="flex items-center gap-2 mb-6">
-         <Icons.GitBranch className="text-primary-500" size={20} />
+         <GitBranch className="text-primary-500" size={20} />
          <h3 className="text-xl font-bold text-white uppercase tracking-widest">Recommended Modules</h3>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {recommendations.map(test => {
-          const LucideIcon = (Icons as any)[test.iconName] || Icons.Circle;
+          const IconComponent = iconMap[test.iconName] || Circle;
           
           return (
             <Link 
@@ -46,7 +47,7 @@ const RecommendedTests: React.FC<RecommendedTestsProps> = ({ currentTestId, cate
             >
               <div className="flex items-center gap-3 mb-3">
                  <div className="p-2 bg-black border border-zinc-700 rounded-sm text-zinc-400 group-hover:text-primary-400 group-hover:border-primary-500/50 transition-colors">
-                    <LucideIcon size={18} />
+                    <IconComponent size={18} />
                  </div>
                  <span className="text-[10px] font-mono text-zinc-600 uppercase group-hover:text-primary-500/70">{test.category}</span>
               </div>
@@ -55,7 +56,7 @@ const RecommendedTests: React.FC<RecommendedTestsProps> = ({ currentTestId, cate
                  {test.title}
               </h4>
               <div className="flex items-center gap-2 text-[10px] text-zinc-500 font-mono">
-                 <Icons.Clock size={10} />
+                 <Clock size={10} />
                  <span>{test.estimatedTime}</span>
               </div>
             </Link>

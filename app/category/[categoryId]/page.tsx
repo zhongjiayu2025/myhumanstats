@@ -2,13 +2,13 @@
 import React from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ChevronRight, Activity, Layers, HelpCircle } from 'lucide-react';
-import * as Icons from 'lucide-react';
+import { ChevronRight, Activity, Layers, HelpCircle, Circle } from 'lucide-react';
 import { TESTS } from '@/lib/core';
 import { CATEGORY_DATA } from '@/lib/categoryData';
 import { TestCategory } from '@/types';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import { Metadata } from 'next';
+import { iconMap } from '@/lib/iconMap';
 
 interface Props {
   params: { categoryId: string };
@@ -94,7 +94,7 @@ export default function CategoryPage({ params }: Props) {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-16">
                {categoryTests.map(test => {
-                  const LucideIcon = (Icons as any)[test.iconName] || Icons.Circle;
+                  const IconComponent = iconMap[test.iconName] || Circle;
                   return (
                      <Link 
                         key={test.id} 
@@ -103,7 +103,7 @@ export default function CategoryPage({ params }: Props) {
                      >
                         <div className="flex items-start justify-between mb-4">
                            <div className="p-3 bg-black border border-zinc-800 text-zinc-400 group-hover:text-primary-400 group-hover:border-primary-500/30 transition-colors">
-                              <LucideIcon size={24} />
+                              <IconComponent size={24} />
                            </div>
                            <ChevronRight className="text-zinc-700 group-hover:text-white transition-colors" />
                         </div>

@@ -3,9 +3,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import * as Icons from 'lucide-react';
+import { ChevronRight, Circle } from 'lucide-react';
 import { TestDefinition } from '@/types';
 import { getStats } from '@/lib/core';
+import { iconMap } from '@/lib/iconMap';
 
 interface TestCardProps {
   test: TestDefinition;
@@ -17,8 +18,8 @@ const TestCard: React.FC<TestCardProps> = ({ test, index }) => {
   const [score, setScore] = useState<number | undefined>(undefined);
   const [isHovered, setIsHovered] = useState(false);
   
-  // Icon resolution
-  const LucideIcon = (Icons as any)[test.iconName] || Icons.Circle;
+  // Resolve icon from map, fallback to Circle if not found
+  const IconComponent = iconMap[test.iconName] || Circle;
 
   useEffect(() => {
     const loadScore = () => {
@@ -51,7 +52,7 @@ const TestCard: React.FC<TestCardProps> = ({ test, index }) => {
 
       <div className="flex justify-between items-start mb-6">
         <div className={`p-2 rounded-none clip-corner-sm transition-all duration-300 ${hasScore ? 'bg-primary-500 text-black' : 'bg-black border border-zinc-800 text-zinc-400 group-hover:text-primary-400 group-hover:border-primary-500/50'}`}>
-          <LucideIcon size={20} strokeWidth={2} />
+          <IconComponent size={20} strokeWidth={2} />
         </div>
         <span className="text-[9px] font-mono text-zinc-600 group-hover:text-primary-500/50">ID.{String(index + 1).padStart(3, '0')}</span>
       </div>
@@ -69,7 +70,7 @@ const TestCard: React.FC<TestCardProps> = ({ test, index }) => {
         ) : (
           <div className="text-[10px] text-zinc-500 font-mono group-hover:text-primary-500 transition-colors flex items-center gap-1">
              <span>INITIATE_TEST</span>
-             <Icons.ChevronRight size={10} />
+             <ChevronRight size={10} />
           </div>
         )}
       </div>

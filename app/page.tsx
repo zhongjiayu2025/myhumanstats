@@ -1,6 +1,6 @@
 
 import React from 'react';
-import * as Icons from 'lucide-react';
+import { Fingerprint, Activity, HelpCircle } from 'lucide-react';
 import { TESTS } from '@/lib/core';
 import TypingTitle from '@/components/TypingTitle';
 import DashboardRadar from '@/components/DashboardRadar';
@@ -50,7 +50,7 @@ export default function Dashboard() {
                       <TypingTitle text="HUMAN_DATA" />
                    </h1>
                 </div>
-                <Icons.Fingerprint size={48} className="text-zinc-800 group-hover:text-primary-500/20 transition-colors shrink-0" />
+                <Fingerprint size={48} className="text-zinc-800 group-hover:text-primary-500/20 transition-colors shrink-0" />
              </header>
 
              {/* Client Component for Dynamic Stats */}
@@ -65,7 +65,7 @@ export default function Dashboard() {
           
           <figcaption className="absolute top-4 left-6 z-10">
              <div className="flex items-center gap-2 mb-1">
-                <Icons.Activity size={14} className="text-primary-500" />
+                <Activity size={14} className="text-primary-500" />
                 <span className="text-xs font-mono font-bold text-white tracking-widest">PHENOTYPE_MATRIX</span>
              </div>
              <p className="text-[10px] text-zinc-400 font-mono">Multi-axial capability assessment</p>
@@ -140,7 +140,7 @@ export default function Dashboard() {
       {/* SEO FAQ Section (Static - Server Rendered) */}
       <section className="border-t border-zinc-800 pt-12 pb-8">
          <h2 className="text-xl font-bold text-white mb-8 flex items-center gap-2">
-            <Icons.HelpCircle className="text-zinc-500" size={20} /> 
+            <HelpCircle className="text-zinc-500" size={20} /> 
             <span>Common Queries</span>
          </h2>
          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
