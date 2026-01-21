@@ -97,7 +97,6 @@ const VocalRangeTest: React.FC = () => {
   
   // System
   const [error, setError] = useState('');
-  const noiseThreshold = -45; // dB
   
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyzerRef = useRef<AnalyserNode | null>(null);
@@ -230,12 +229,6 @@ const VocalRangeTest: React.FC = () => {
 
     if (foundMonitor && bestOffset > 0) {
         // 3. Octave Error Correction
-        // Check if a sub-harmonic (lower octave / larger offset) has a similar correlation strength
-        // Usually octave errors manifest as detecting 2x freq (half offset) or 0.5x freq (double offset)
-        // Here we try to find the largest valid period (lowest freq) that has high correlation to avoid "Doubling" errors
-        // However, for human voice, usually we want to avoid catching harmonics as the fundamental.
-        
-        // Simple parabolic interpolation for precision
         const shift = (correlations[bestOffset + 1] - correlations[bestOffset - 1]) / 2;
         const adj = shift * shift / (2 * (2 * correlations[bestOffset] - correlations[bestOffset - 1] - correlations[bestOffset + 1]));
         return { freq: sampleRate / (bestOffset + adj), clarity: maxCorrelation };
