@@ -1,3 +1,8 @@
+
+// This file is no longer used in the Next.js application structure.
+// Keeping it commented out to prevent build errors due to missing 'vite' dependency.
+
+/*
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
@@ -15,3 +20,6 @@ export default defineConfig({
     },
   },
 })
+*/
+
+export default {};
