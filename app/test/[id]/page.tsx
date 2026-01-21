@@ -23,9 +23,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${testDef.title} | MyHumanStats`,
     description: testDef.description,
+    alternates: {
+      canonical: `/test/${testDef.id}`,
+    },
     openGraph: {
         title: `${testDef.title} | Online Benchmark`,
         description: testDef.description,
+        url: `https://myhumanstats.org/test/${testDef.id}`,
         images: [
           {
             url: ogUrl.toString(),

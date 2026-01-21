@@ -39,8 +39,9 @@ export const metadata: Metadata = {
     },
   },
   alternates: {
-    // Setting canonical to './' automatically generates the full canonical URL for every page
-    // based on the metadataBase (https://myhumanstats.org) + the current path.
+    // Sets a default canonical strategy.
+    // './' resolves to the current absolute URL path (e.g. https://myhumanstats.org/about)
+    // Dynamic pages override this with specific IDs.
     canonical: './',
   },
   openGraph: {
@@ -52,7 +53,7 @@ export const metadata: Metadata = {
     siteName: 'MyHumanStats',
     images: [
       {
-        url: '/api/og', // Uses your dynamic OG image generator
+        url: '/api/og', // Uses dynamic OG image generator
         width: 1200,
         height: 630,
         alt: 'MyHumanStats Dashboard',

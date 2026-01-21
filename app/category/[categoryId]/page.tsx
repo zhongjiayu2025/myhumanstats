@@ -23,7 +23,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const meta = CATEGORY_DATA[categoryEnum];
   return {
     title: `${meta.title} | MyHumanStats`,
-    description: meta.description
+    description: meta.description,
+    alternates: {
+      canonical: `/category/${params.categoryId}`,
+    }
   };
 }
 
