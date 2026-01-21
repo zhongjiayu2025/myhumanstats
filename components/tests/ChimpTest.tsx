@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Brain, Trophy, RotateCcw, Banana, Volume2, VolumeX } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 import { playUiSound } from '../../lib/sounds';
