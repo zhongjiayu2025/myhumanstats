@@ -1,10 +1,10 @@
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // output: 'export', // Removed to enable Image Optimization and dynamic server features
+  output: 'export', // Required for standard Cloudflare Pages hosting
   reactStrictMode: true,
   images: {
-    // unoptimized: true, // Removed to allow Next.js to optimize images (WebP/AVIF/Resizing)
+    unoptimized: true, // Required for static export (Next.js Image Optimization needs a server)
     remotePatterns: [
       {
         protocol: 'https',

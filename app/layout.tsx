@@ -39,9 +39,6 @@ export const metadata: Metadata = {
     },
   },
   alternates: {
-    // Sets a default canonical strategy.
-    // './' resolves to the current absolute URL path (e.g. https://myhumanstats.org/about)
-    // Dynamic pages override this with specific IDs.
     canonical: './',
   },
   openGraph: {
@@ -53,9 +50,9 @@ export const metadata: Metadata = {
     siteName: 'MyHumanStats',
     images: [
       {
-        url: '/api/og', // Uses dynamic OG image generator
-        width: 1200,
-        height: 630,
+        url: '/logo.svg', // Fallback to static logo since dynamic API is disabled
+        width: 512,
+        height: 512,
         alt: 'MyHumanStats Dashboard',
       }
     ],
@@ -64,7 +61,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'MyHumanStats | Quantify Yourself',
     description: 'Measure your auditory, visual, and cognitive performance.',
-    images: ['/api/og'],
+    images: ['/logo.svg'],
     creator: '@myhumanstats',
   },
   manifest: "/manifest.json",
