@@ -1,6 +1,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, Clock, Calendar, Share2, Tag, ChevronRight, Activity, List } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
@@ -31,7 +32,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-// Generate static params for SSG
 export async function generateStaticParams() {
   return BLOG_POSTS.map((post) => ({
     slug: post.slug,
@@ -47,7 +47,6 @@ export default function BlogPost({ params }: Props) {
 
   const relatedTest = post ? TESTS.find(t => t.id === post.relatedTestId) : null;
   
-  // Generate ToC from H2/H3 tags in content string using regex
   const regex = /<h2.*?>(.*?)<\/h2>/g;
   const matches = [...post.content.matchAll(regex)];
   const toc = matches.map((match) => {
@@ -56,7 +55,6 @@ export default function BlogPost({ params }: Props) {
       return { id, text };
   });
 
-  // Inject IDs into content for scrolling
   const processedContent = post.content.replace(
      /<h2(.*?)>(.*?)<\/h2>/g, 
      (_, attrs, text) => {
@@ -65,7 +63,6 @@ export default function BlogPost({ params }: Props) {
      }
   );
 
-  // Schema.org
   const blogSchema = {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
@@ -113,10 +110,12 @@ export default function BlogPost({ params }: Props) {
       {/* Hero Image */}
       <div className="w-full h-[400px] md:h-[500px] relative mb-12 -mt-10 print:h-[200px] print:mb-6">
          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent z-10 print:hidden"></div>
-         <img 
+         <Image
             src={post.coverImage} 
             alt={post.title} 
-            className="w-full h-full object-cover"
+            fill
+            priority
+            className="object-cover"
          />
          
          <div className="absolute bottom-0 left-0 w-full z-20 max-w-7xl mx-auto px-4 md:px-6 pb-12 print:relative print:pb-0 print:text-black">

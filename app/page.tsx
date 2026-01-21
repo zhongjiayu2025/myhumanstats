@@ -1,13 +1,12 @@
 
 import React from 'react';
 import { Fingerprint, Activity, HelpCircle } from 'lucide-react';
-import { TESTS } from '@/lib/data'; // Import from data
+import { TESTS } from '@/lib/data';
 import TypingTitle from '@/components/TypingTitle';
 import DashboardRadar from '@/components/DashboardRadar';
 import TestCard from '@/components/TestCard';
 import DashboardStatsOverview from '@/components/DashboardStatsOverview';
 
-// Data for Server Rendering
 const categories = Array.from(new Set(TESTS.map(t => t.category)));
 
 const faqs = [
@@ -26,8 +25,25 @@ const faqs = [
 ];
 
 export default function Dashboard() {
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": faqs.map(f => ({
+      "@type": "Question",
+      "name": f.q,
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": f.a
+      }
+    }))
+  };
+
   return (
     <div className="space-y-12 animate-in fade-in duration-500">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
       
       {/* Top Section: Identity & Radar */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-6" aria-label="User Statistics Overview">
@@ -35,11 +51,8 @@ export default function Dashboard() {
         {/* Identity Module (Left) */}
         <aside className="lg:col-span-4 flex flex-col h-full min-h-[400px]">
           <div className="bg-surface border border-border clip-corner-lg p-8 h-full relative overflow-hidden group flex flex-col justify-between">
-             {/* Tech Decor Lines */}
              <div className="absolute top-0 right-0 w-24 h-24 border-r border-t border-white/10 rounded-tr-3xl pointer-events-none"></div>
              <div className="absolute bottom-0 left-0 w-8 h-8 border-l border-b border-primary-500/30 pointer-events-none"></div>
-             
-             {/* Scanner Animation */}
              <div className="absolute top-0 left-0 w-full h-[2px] bg-primary-500/50 shadow-[0_0_15px_rgba(34,211,238,0.5)] animate-scan opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity"></div>
 
              <header className="flex items-start justify-between mb-8">
@@ -53,14 +66,12 @@ export default function Dashboard() {
                 <Fingerprint size={48} className="text-zinc-800 group-hover:text-primary-500/20 transition-colors shrink-0" />
              </header>
 
-             {/* Client Component for Dynamic Stats */}
              <DashboardStatsOverview />
           </div>
         </aside>
 
         {/* Radar Visualization (Right) */}
         <figure className="lg:col-span-8 bg-surface border border-border clip-corner-lg relative overflow-hidden h-[400px] lg:h-auto min-h-[400px]">
-          {/* Grid Overlay - Rendered immediately on server */}
           <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none"></div>
           
           <figcaption className="absolute top-4 left-6 z-10">
@@ -72,7 +83,6 @@ export default function Dashboard() {
           </figcaption>
 
           <div className="w-full h-full flex items-center justify-center p-6">
-            {/* Client Component: Fetches Data & Renders Chart */}
             <DashboardRadar />
           </div>
 
@@ -115,7 +125,7 @@ export default function Dashboard() {
         })}
       </div>
 
-      {/* SEO: Scientific Context Section (Static - Server Rendered) */}
+      {/* SEO: Scientific Context Section */}
       <article className="grid grid-cols-1 md:grid-cols-2 gap-12 border-t border-zinc-800 pt-12">
          <div className="prose prose-invert prose-sm text-zinc-400">
             <h2 className="text-white text-2xl font-bold mb-4">The Science of Human Benchmarking</h2>
@@ -137,7 +147,7 @@ export default function Dashboard() {
          </div>
       </article>
 
-      {/* SEO FAQ Section (Static - Server Rendered) */}
+      {/* SEO FAQ Section */}
       <section className="border-t border-zinc-800 pt-12 pb-8">
          <h2 className="text-xl font-bold text-white mb-8 flex items-center gap-2">
             <HelpCircle className="text-zinc-500" size={20} /> 

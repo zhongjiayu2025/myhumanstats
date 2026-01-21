@@ -1,6 +1,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Calendar, Clock, ChevronRight } from 'lucide-react';
 import { Metadata } from 'next';
 import { BLOG_POSTS } from '@/lib/blogData';
@@ -34,12 +35,14 @@ const BlogIndex = () => {
           >
             {/* Image Container - Aspect Ratio Fix for CLS */}
             <div className="relative aspect-video w-full overflow-hidden border-b border-zinc-800 bg-zinc-900">
-               <img 
+               <Image
                  src={post.coverImage} 
                  alt={post.title}
-                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-80 group-hover:opacity-100"
+                 fill
+                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                 className="object-cover transition-transform duration-700 group-hover:scale-110 opacity-80 group-hover:opacity-100"
                />
-               <div className="absolute top-4 left-4 bg-black/80 backdrop-blur px-3 py-1 border border-zinc-700">
+               <div className="absolute top-4 left-4 bg-black/80 backdrop-blur px-3 py-1 border border-zinc-700 z-10">
                   <span className="text-[10px] font-mono text-primary-400 uppercase tracking-wider">{post.category}</span>
                </div>
             </div>

@@ -59,7 +59,6 @@ const PLATES: PlateConfig[] = [
 const CVDFilters = () => (
   <svg className="hidden">
     <defs>
-      {/* Protanopia (Red Blind) */}
       <filter id="protanopia">
         <feColorMatrix
           type="matrix"
@@ -69,7 +68,6 @@ const CVDFilters = () => (
                   0, 0, 0, 1, 0"
         />
       </filter>
-      {/* Deuteranopia (Green Blind) */}
       <filter id="deuteranopia">
         <feColorMatrix
           type="matrix"
@@ -79,7 +77,6 @@ const CVDFilters = () => (
                   0, 0, 0, 1, 0"
         />
       </filter>
-      {/* Tritanopia (Blue Blind) */}
       <filter id="tritanopia">
         <feColorMatrix
           type="matrix"
@@ -98,13 +95,12 @@ const ColorBlindTest: React.FC = () => {
   const [currentPlateIndex, setCurrentPlateIndex] = useState(0);
   const [answers, setAnswers] = useState<{expected: string, actual: string, type: DefectType, plateIdx: number}[]>([]);
   const [inputBuffer, setInputBuffer] = useState('');
-  const [simMode, setSimMode] = useState<string | null>(null); // For result page visualizer
+  const [simMode, setSimMode] = useState<string | null>(null); 
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const resultCanvasRef = useRef<HTMLCanvasElement>(null); // For re-drawing mistakes
+  const resultCanvasRef = useRef<HTMLCanvasElement>(null); 
   const animationRef = useRef<number>(0);
 
-  // --- Keyboard Support ---
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (phase !== 'test') return;
@@ -119,14 +115,12 @@ const ColorBlindTest: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [phase, inputBuffer]); 
 
-  // --- Draw Function ---
   const drawPlateToCanvas = (ctx: CanvasRenderingContext2D, width: number, height: number, plateIndex: number, animate = false) => {
     const plate = PLATES[plateIndex];
     const centerX = width / 2;
     const centerY = height / 2;
     const radius = width / 2 - 10;
 
-    // Mask Generation
     const maskCanvas = document.createElement('canvas');
     maskCanvas.width = width;
     maskCanvas.height = height;
@@ -137,18 +131,16 @@ const ColorBlindTest: React.FC = () => {
     maskCtx.textAlign = 'center';
     maskCtx.textBaseline = 'middle';
     maskCtx.fillStyle = '#FFFFFF';
-    const jX = (Math.sin(plateIndex) * 20); // Pseudo-random jitter based on ID
+    const jX = (Math.sin(plateIndex) * 20); 
     const jY = (Math.cos(plateIndex) * 20);
     maskCtx.fillText(plate.number, centerX + jX, centerY + jY);
     const maskData = maskCtx.getImageData(0, 0, width, height).data;
 
-    // Dot Generation
     const dots: {x: number, y: number, r: number, color: string}[] = [];
     const minR = 4;
     const maxR = 14 - (plate.complexity * 1.5); 
     const gridSize = maxR; 
     
-    // Seeded random for consistency
     let seed = plateIndex * 100;
     const random = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
 
@@ -175,7 +167,6 @@ const ColorBlindTest: React.FC = () => {
     }
 
     if (!animate) {
-        // Instant draw for results
         ctx.fillStyle = '#18181b';
         ctx.fillRect(0,0,width,height);
         dots.forEach(dot => {
@@ -185,7 +176,6 @@ const ColorBlindTest: React.FC = () => {
         return;
     }
 
-    // Animation Loop
     const startTime = performance.now();
     const DURATION = 600;
     const renderFrame = (time: number) => {
@@ -260,8 +250,6 @@ const ColorBlindTest: React.FC = () => {
       return { score, rgCorrect, rgTotal, byCorrect, byTotal };
   })();
 
-  // --- Result Simulation Effect ---
-  // When user hovers/clicks a mistake, redraw that plate on a side canvas and apply CSS filter
   const [previewMistake, setPreviewMistake] = useState<typeof answers[0] | null>(null);
   
   useEffect(() => {
@@ -299,7 +287,16 @@ const ColorBlindTest: React.FC = () => {
               </div>
 
               <div className="relative w-full aspect-square max-w-[320px] mx-auto mb-8 bg-zinc-900 rounded-full border-4 border-zinc-800 shadow-2xl overflow-hidden">
-                  <canvas ref={canvasRef} width={640} height={640} className="w-full h-full object-cover" />
+                  <canvas 
+                    ref={canvasRef} 
+                    width={640} 
+                    height={640} 
+                    className="w-full h-full object-cover"
+                    aria-label={`Color vision test plate #${currentPlateIndex + 1}. Contains a hidden number formed by colored dots.`}
+                    role="img"
+                  >
+                    Your browser does not support the HTML5 canvas tag.
+                  </canvas>
                   <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none mix-blend-overlay"></div>
               </div>
 
@@ -401,6 +398,7 @@ const ColorBlindTest: React.FC = () => {
                                           height={300} 
                                           className="w-48 h-48 object-contain rounded-full border-4 border-zinc-800"
                                           style={{ filter: simMode ? `url(#${simMode})` : 'none' }}
+                                          aria-hidden="true"
                                       />
                                   </div>
                                   <div className="mt-4 text-center text-xs text-zinc-500">

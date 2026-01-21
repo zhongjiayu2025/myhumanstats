@@ -1,10 +1,10 @@
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
+  // output: 'export', // Removed to enable Image Optimization and dynamic server features
   reactStrictMode: true,
   images: {
-    unoptimized: true,
+    // unoptimized: true, // Removed to allow Next.js to optimize images (WebP/AVIF/Resizing)
     remotePatterns: [
       {
         protocol: 'https',
@@ -12,7 +12,6 @@ const nextConfig = {
       },
     ],
   },
-  // Ensure legacy pages don't conflict during build if possible, though Next.js handles both.
 };
 
 export default nextConfig;
