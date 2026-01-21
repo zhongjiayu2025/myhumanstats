@@ -12,6 +12,9 @@ const ToastContent = () => {
   const [data, setData] = useState<{ score: string; user: string } | null>(null);
 
   useEffect(() => {
+    // Guard clause for when searchParams hasn't loaded yet
+    if (!searchParams) return;
+
     const score = searchParams.get('score');
     const user = searchParams.get('challenger') || 'A friend';
     
