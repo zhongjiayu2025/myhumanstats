@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React from 'react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { CategoryScore } from '../types';
 
@@ -27,31 +28,10 @@ const CustomTooltip = ({ active, payload }: any) => {
 };
 
 const StatsRadar: React.FC<StatsRadarProps> = ({ data }) => {
-  // Use state to detect client-side hydration to avoid mismatched HTML
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    // Highly optimized static skeleton that mimics the exact size of the final chart
-    // Matches the outerRadius="70%" roughly
-    return (
-        <div className="w-full h-full flex items-center justify-center relative animate-pulse">
-            {/* Fake Rings */}
-            <div className="w-[60%] aspect-square border border-zinc-800 rounded-full absolute"></div>
-            <div className="w-[40%] aspect-square border border-zinc-800 rounded-full absolute"></div>
-            <div className="w-[20%] aspect-square border border-zinc-800 rounded-full absolute"></div>
-            {/* Fake Crosshairs */}
-            <div className="w-[70%] h-px bg-zinc-800 absolute"></div>
-            <div className="h-[70%] w-px bg-zinc-800 absolute"></div>
-            
-            <div className="absolute inset-0 flex items-center justify-center text-[10px] font-mono text-zinc-700 tracking-widest">LOADING...</div>
-        </div>
-    );
-  }
-
+  // Optimization: Removed internal 'mounted' check and skeleton.
+  // The parent component (DashboardRadar) now handles the loading state 
+  // via next/dynamic, passing the SVG RadarSkeleton while this chunk loads.
+  
   const hasData = data.some(d => d.score > 0);
   
   const chartData = data.map(d => ({
