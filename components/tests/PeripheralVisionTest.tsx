@@ -196,7 +196,7 @@ const PeripheralVisionTest: React.FC = () => {
            <div 
               className="relative w-full aspect-video bg-black border border-zinc-800 rounded-xl overflow-hidden cursor-none shadow-2xl active:border-primary-500/50"
               onTouchStart={(e) => { e.preventDefault(); handleInput(); }}
-              onMouseDown={(e) => { if(window.innerWidth > 768) handleInput(); }}
+              onMouseDown={() => { if(window.innerWidth > 768) handleInput(); }}
            >
                {/* Radar Grid UI */}
                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.8)_100%)] z-10 pointer-events-none"></div>

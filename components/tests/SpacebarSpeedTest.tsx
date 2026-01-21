@@ -116,7 +116,7 @@ const SpacebarSpeedTest: React.FC = () => {
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [active, timeLeft]);
 
-  const handleInput = (e?: Event) => {
+  const handleInput = () => {
       if (finished) return;
       if (!active) setActive(true);
       
