@@ -2,7 +2,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { GitBranch, Clock, Circle } from 'lucide-react';
-import { TESTS } from '../lib/core';
+import { TESTS } from '@/lib/data'; // Use new data source
 import { iconMap } from '@/lib/iconMap';
 
 interface RecommendedTestsProps {

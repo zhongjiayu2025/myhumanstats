@@ -1,8 +1,10 @@
+
 import React from 'react';
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
-import { TESTS } from '@/lib/core';
+import { TESTS } from '@/lib/data'; // Use new data file
 import TestRunnerClient from '@/components/TestRunnerClient';
+import RecommendedTests from '@/components/RecommendedTests';
 
 interface Props {
   params: { id: string };
@@ -128,6 +130,11 @@ export default function TestPage({ params }: Props) {
       )}
       
       <TestRunnerClient id={params.id} />
+      
+      <div className="max-w-6xl mx-auto px-4 md:px-6 pb-12">
+         {/* Render RecommendedTests here on the SERVER so it doesn't add data to client bundle */}
+         <RecommendedTests currentTestId={testDef.id} category={testDef.category} />
+      </div>
     </>
   );
 }

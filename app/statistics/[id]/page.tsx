@@ -1,9 +1,10 @@
+
 import React from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Metadata } from 'next';
 import { BarChart3, ArrowLeft, ArrowUpRight, Database, Activity } from 'lucide-react';
-import { TESTS } from '@/lib/core';
+import { TESTS } from '@/lib/data';
 import Breadcrumbs from '@/components/Breadcrumbs';
 
 interface Props {

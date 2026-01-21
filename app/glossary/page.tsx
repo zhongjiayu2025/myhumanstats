@@ -3,8 +3,8 @@ import React from 'react';
 import Link from 'next/link';
 import { Book, Search, ExternalLink } from 'lucide-react';
 import { Metadata } from 'next';
-import { TESTS } from '@/lib/core';
-import GlossaryClient from './GlossaryClient'; // We'll separate the search logic
+import { TESTS } from '@/lib/data';
+import GlossaryClient from './GlossaryClient'; 
 
 export const metadata: Metadata = {
   title: "Codex | Human Performance Glossary",

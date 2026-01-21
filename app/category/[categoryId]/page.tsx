@@ -3,7 +3,7 @@ import React from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ChevronRight, Activity, Layers, HelpCircle, Circle } from 'lucide-react';
-import { TESTS } from '@/lib/core';
+import { TESTS } from '@/lib/data';
 import { CATEGORY_DATA } from '@/lib/categoryData';
 import { TestCategory } from '@/types';
 import Breadcrumbs from '@/components/Breadcrumbs';

@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation';
 import { ArrowLeft, Clock, Calendar, Share2, Tag, ChevronRight, Activity, List } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import { BLOG_POSTS } from '@/lib/blogData';
-import { TESTS } from '@/lib/core';
+import { TESTS } from '@/lib/data';
 import { Metadata } from 'next';
 
 interface Props {

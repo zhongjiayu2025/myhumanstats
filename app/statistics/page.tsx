@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { BarChart2, Database, ArrowUpRight } from 'lucide-react';
 import { Metadata } from 'next';
 import Breadcrumbs from '@/components/Breadcrumbs';
-import { TESTS } from '@/lib/core';
+import { TESTS } from '@/lib/data';
 
 export const metadata: Metadata = {
   title: "Global Statistics & Human Benchmarks | MyHumanStats",

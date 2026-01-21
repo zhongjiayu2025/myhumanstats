@@ -2,7 +2,8 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { TESTS, getStats } from '@/lib/core';
+import { TESTS } from '@/lib/data';
+import { getStats } from '@/lib/core';
 
 export default function DashboardStatsOverview() {
   const [completedCount, setCompletedCount] = useState(0);

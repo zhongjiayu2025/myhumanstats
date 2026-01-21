@@ -3,7 +3,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Activity, Layers, Book } from 'lucide-react';
 import { Metadata } from 'next';
-import { TESTS } from '@/lib/core';
+import { TESTS } from '@/lib/data';
 import { BLOG_POSTS } from '@/lib/blogData';
 import { TestCategory } from '@/types';
 
@@ -63,7 +63,7 @@ const SitemapHTML = () => {
                           <span className="text-zinc-300 font-bold text-sm group-hover:text-emerald-400 transition-colors block mb-1">
                              {post.title}
                           </span>
-                          <span className="text-[10px] text-zinc-600 font-mono uppercase">
+                          <span className="text--[10px] text-zinc-600 font-mono uppercase">
                              {post.date} • {post.category}
                           </span>
                        </Link>

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Fingerprint, Activity, HelpCircle } from 'lucide-react';
-import { TESTS } from '@/lib/core';
+import { TESTS } from '@/lib/data'; // Import from data
 import TypingTitle from '@/components/TypingTitle';
 import DashboardRadar from '@/components/DashboardRadar';
 import TestCard from '@/components/TestCard';

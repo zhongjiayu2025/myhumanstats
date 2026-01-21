@@ -6,10 +6,10 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Cpu, Info, FileText, ChevronRight, Loader2, HelpCircle, BookOpen, Microscope, CheckCircle2, Bookmark, BarChart3, History, Wrench, AlertTriangle } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
-import { TESTS, getHistory } from '@/lib/core';
+import { TESTS } from '@/lib/data'; // Ensure we import from data
+import { getHistory } from '@/lib/core';
 import { BLOG_POSTS } from '@/lib/blogData';
 import { TEST_REGISTRY } from '@/components/tests/registry';
-import RecommendedTests from '@/components/RecommendedTests';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 const TEST_TO_TOOL_MAP: Record<string, { id: string, name: string, desc: string, icon: any }[]> = {
@@ -23,7 +23,6 @@ const TEST_TO_TOOL_MAP: Record<string, { id: string, name: string, desc: string,
     'aim-trainer-test': [{ id: 'hz-test', name: 'Hz Checker', desc: 'Frame rate affects tracking accuracy.', icon: Wrench }],
 };
 
-// Optimized Skeleton Loader to match Test Container height (CLS Fix)
 const LoadingModule = () => (
   <div className="flex flex-col items-center justify-center w-full h-full min-h-[500px] text-zinc-500 bg-zinc-900/20">
      <Loader2 size={48} className="animate-spin text-primary-500 mb-4" />
@@ -339,41 +338,36 @@ export default function TestRunnerClient({ id }: { id: string }) {
              </div>
           )}
 
-          {/* Related Articles & Recommended Tests */}
-          <div className="space-y-8">
-             
-             {relatedPosts.length > 0 && (
-                <aside>
-                   <h3 className="text-sm font-mono text-zinc-500 uppercase tracking-widest flex items-center gap-2 mb-4">
-                      <FileText size={14} /> Related Research Logs
-                   </h3>
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {relatedPosts.map(post => (
-                         <Link 
-                            key={post.slug} 
-                            href={`/blog/${post.slug}`}
-                            className="flex items-start gap-4 p-4 border border-zinc-800 bg-zinc-900/30 hover:bg-zinc-900 hover:border-primary-500/30 transition-all group clip-corner-sm"
-                         >
-                            <img 
-                               src={post.coverImage} 
-                               alt={post.title} 
-                               className="w-16 h-16 object-cover opacity-80 group-hover:opacity-100 transition-opacity"
-                            />
-                            <div className="flex-1 min-w-0">
-                                <h4 className="text-sm font-bold text-white truncate group-hover:text-primary-400 transition-colors mb-1">{post.title}</h4>
-                                <p className="text-xs text-zinc-500 line-clamp-2">{post.excerpt}</p>
-                                <div className="mt-2 flex items-center gap-1 text-[10px] text-primary-500 font-mono">
-                                  READ_ENTRY <ChevronRight size={10} />
-                                </div>
-                            </div>
-                         </Link>
-                      ))}
-                   </div>
-                </aside>
-             )}
-
-             <RecommendedTests currentTestId={testDef.id} category={testDef.category} />
-          </div>
+          {/* Related Articles */}
+          {relatedPosts.length > 0 && (
+             <aside>
+                <h3 className="text-sm font-mono text-zinc-500 uppercase tracking-widest flex items-center gap-2 mb-4">
+                   <FileText size={14} /> Related Research Logs
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   {relatedPosts.map(post => (
+                      <Link 
+                         key={post.slug} 
+                         href={`/blog/${post.slug}`}
+                         className="flex items-start gap-4 p-4 border border-zinc-800 bg-zinc-900/30 hover:bg-zinc-900 hover:border-primary-500/30 transition-all group clip-corner-sm"
+                      >
+                         <img 
+                            src={post.coverImage} 
+                            alt={post.title} 
+                            className="w-16 h-16 object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                         />
+                         <div className="flex-1 min-w-0">
+                             <h4 className="text-sm font-bold text-white truncate group-hover:text-primary-400 transition-colors mb-1">{post.title}</h4>
+                             <p className="text-xs text-zinc-500 line-clamp-2">{post.excerpt}</p>
+                             <div className="mt-2 flex items-center gap-1 text-[10px] text-primary-500 font-mono">
+                               READ_ENTRY <ChevronRight size={10} />
+                             </div>
+                         </div>
+                      </Link>
+                   ))}
+                </div>
+             </aside>
+          )}
 
         </div>
 

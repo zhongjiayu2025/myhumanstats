@@ -4,8 +4,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, ChevronRight, Activity, FileText, Command } from 'lucide-react';
-import { TESTS } from '@/lib/core';
-import { BLOG_POSTS } from '@/lib/blogData';
+import { TEST_INDEX, BLOG_INDEX, STATIC_PAGES } from '@/lib/searchIndex';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -19,7 +18,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
   const router = useRouter();
 
   // Combine Data Sources
-  const allTests = TESTS.map(t => ({
+  const allTests = TEST_INDEX.map(t => ({
     type: 'test',
     title: t.title,
     subtitle: t.category,
@@ -28,7 +27,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
     icon: Activity
   }));
 
-  const allBlogs = BLOG_POSTS.map(b => ({
+  const allBlogs = BLOG_INDEX.map(b => ({
     type: 'blog',
     title: b.title,
     subtitle: b.category,
@@ -37,11 +36,10 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
     icon: FileText
   }));
 
-  const staticPages = [
-    { type: 'page', title: 'Dashboard', subtitle: 'Home', id: 'home', path: '/', icon: Command },
-    { type: 'page', title: 'About Methodology', subtitle: 'System Info', id: 'about', path: '/about', icon: Command },
-    { type: 'page', title: 'Research Log', subtitle: 'Blog Index', id: 'blog', path: '/blog', icon: Command },
-  ];
+  const staticPages = STATIC_PAGES.map(p => ({
+    ...p,
+    icon: Command
+  }));
 
   const allItems = [...staticPages, ...allTests, ...allBlogs];
 
