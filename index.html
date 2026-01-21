@@ -10,196 +10,11 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="icon" type="image/svg+xml" href="/logo.png" />
     
-    <!-- Performance Hints -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <!-- Preconnect to Unsplash for faster Blog Image loading -->
     <link rel="preconnect" href="https://images.unsplash.com">
     
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
-    
-    <!-- Tailwind CSS (Vite will handle CSS extraction in production, but keeping CDN for quick styling if post-css fails in some dev environments) -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        darkMode: 'class',
-        theme: {
-          extend: {
-            fontFamily: {
-              sans: ['Inter', 'sans-serif'],
-              mono: ['JetBrains Mono', 'monospace'],
-            },
-            colors: {
-              background: '#050505', 
-              surface: '#0F0F11',    
-              border: '#27272A',
-              
-              primary: {
-                400: '#22d3ee', // Cyan
-                500: '#06b6d4', 
-                600: '#0891b2', 
-                dim: 'rgba(34, 211, 238, 0.1)'
-              },
-              secondary: {
-                400: '#818cf8', 
-                500: '#6366f1', 
-              },
-              warning: '#eab308',
-              danger: '#ef4444',
-              success: '#10b981'
-            },
-            backgroundImage: {
-              'grid-pattern': "linear-gradient(to right, #1f1f1f 1px, transparent 1px), linear-gradient(to bottom, #1f1f1f 1px, transparent 1px)",
-            },
-            animation: {
-              'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-              'scan': 'scan 4s linear infinite',
-            },
-            keyframes: {
-              scan: {
-                '0%': { transform: 'translateY(-100%)' },
-                '100%': { transform: 'translateY(100%)' },
-              }
-            }
-          }
-        }
-      }
-    </script>
-    <style>
-      body {
-        background-color: #050505;
-        color: #e4e4e7;
-        -webkit-font-smoothing: antialiased;
-        overflow-x: hidden;
-        overscroll-behavior-y: none; /* Prevent pull-to-refresh on mobile games */
-      }
-
-      /* Mobile Game Optimization Helpers */
-      .touch-none {
-        touch-action: none;
-        -webkit-user-select: none;
-        user-select: none;
-        -webkit-touch-callout: none;
-      }
-
-      .no-tap-highlight {
-        -webkit-tap-highlight-color: transparent;
-      }
-
-      /* 1. CRT Scanline Effect */
-      .scanlines {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background: linear-gradient(
-          to bottom,
-          rgba(255,255,255,0),
-          rgba(255,255,255,0) 50%,
-          rgba(0,0,0,0.1) 50%,
-          rgba(0,0,0,0.1)
-        );
-        background-size: 100% 4px;
-        pointer-events: none;
-        z-index: 9999;
-        opacity: 0.6;
-      }
-      
-      .vignette {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background: radial-gradient(circle, rgba(0,0,0,0) 60%, rgba(0,0,0,0.4) 100%);
-        pointer-events: none;
-        z-index: 9998;
-      }
-
-      /* 2. Angled Corners (Clip Path) */
-      .clip-corner-sm {
-        clip-path: polygon(
-          10px 0, 100% 0, 
-          100% calc(100% - 10px), calc(100% - 10px) 100%, 
-          0 100%, 0 10px
-        );
-      }
-      
-      .clip-corner-lg {
-        clip-path: polygon(
-          20px 0, 100% 0, 
-          100% calc(100% - 20px), calc(100% - 20px) 100%, 
-          0 100%, 0 20px
-        );
-      }
-
-      /* 3. Tech Grid Background */
-      .bg-grid {
-        background-size: 50px 50px;
-        background-image: 
-          linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-          linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-        mask-image: radial-gradient(circle at 50% 50%, black 40%, transparent 100%);
-      }
-
-      /* Scrollbar */
-      ::-webkit-scrollbar { width: 6px; }
-      ::-webkit-scrollbar-track { background: #050505; }
-      ::-webkit-scrollbar-thumb { background: #333; border-radius: 0; }
-      ::-webkit-scrollbar-thumb:hover { background: #22d3ee; }
-      
-      /* Utilities */
-      .text-glow {
-        text-shadow: 0 0 10px rgba(34, 211, 238, 0.5);
-      }
-      .border-glow {
-        box-shadow: 0 0 10px rgba(34, 211, 238, 0.1);
-      }
-
-      /* SEO Data Tables Styling */
-      .prose table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 2rem 0;
-        font-size: 0.875rem;
-        font-family: 'JetBrains Mono', monospace;
-      }
-      .prose th {
-        text-align: left;
-        padding: 0.75rem 1rem;
-        background-color: rgba(6, 182, 212, 0.1); /* primary-500/10 */
-        color: #22d3ee; /* primary-400 */
-        border: 1px solid #27272A;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        font-weight: 700;
-      }
-      .prose td {
-        padding: 0.75rem 1rem;
-        border: 1px solid #27272A;
-        color: #a1a1aa;
-      }
-      .prose tr:nth-child(even) {
-        background-color: #0F0F11;
-      }
-      .prose tr:hover td {
-        color: white;
-        background-color: rgba(255, 255, 255, 0.02);
-      }
-
-      /* PRINT STYLES */
-      @media print {
-        body { background-color: white !important; color: black !important; }
-        .scanlines, .vignette, .bg-grid, header, footer, button, .btn-primary, .btn-secondary, .fixed { display: none !important; }
-        .prose { color: black !important; max-width: 100% !important; }
-        .prose p, .prose li, .prose h1, .prose h2, .prose h3 { color: black !important; text-shadow: none !important; }
-        .bg-surface, .bg-black, .bg-zinc-900 { background: white !important; border: none !important; }
-        a { text-decoration: underline; color: black !important; }
-      }
-    </style>
-<script type="importmap">
+    <!-- NOTE: Tailwind CSS and Fonts are now loaded via entry module build process -->
+    <script type="importmap">
 {
   "imports": {
     "react": "https://esm.sh/react@^19.2.3",
@@ -210,7 +25,9 @@
     "react-helmet-async": "https://esm.sh/react-helmet-async@^2.0.5",
     "recharts": "https://esm.sh/recharts@^3.6.0",
     "vite": "https://esm.sh/vite@^7.3.1",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
+    "@fontsource/inter/": "https://esm.sh/@fontsource/inter@^5.2.8/",
+    "@fontsource/jetbrains-mono/": "https://esm.sh/@fontsource/jetbrains-mono@^5.2.8/"
   }
 }
 </script>
