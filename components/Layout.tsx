@@ -4,10 +4,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Activity, Shield, Terminal, Zap, BookOpen, Search, Command, Settings, Monitor, ZapOff, Download, Upload, Home, Wrench } from 'lucide-react';
+import { Activity, Shield, Terminal, Zap, BookOpen, Search, Command, Settings, Monitor, ZapOff, Download, Upload, Home, Wrench, RefreshCcw } from 'lucide-react';
 import CommandPalette from './CommandPalette';
 import LiveTicker from './LiveTicker';
 import SocialChallengeToast from './SocialChallengeToast';
+import OnboardingWizard from './OnboardingWizard';
 import { useSettings } from '../lib/settings';
 import { exportUserData, importUserData } from '../lib/core';
 
@@ -54,6 +55,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
   };
 
+  const replayOnboarding = () => {
+      setIsSettingsOpen(false);
+      window.dispatchEvent(new Event('mhs-replay-onboarding'));
+  };
+
   const NavItem = ({ to, icon: Icon, label, active }: any) => (
     <Link 
       href={to} 
@@ -69,9 +75,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div className={`min-h-screen flex flex-col font-sans relative overflow-hidden bg-background ${highContrast ? 'contrast-125' : ''}`}>
       
+      {/* Global Overlays */}
+      <OnboardingWizard />
       <CommandPalette isOpen={isPaletteOpen} onClose={() => setIsPaletteOpen(false)} />
-      
-      {/* Social Features */}
       <SocialChallengeToast />
 
       {/* Accessibility Skip Link */}
@@ -164,7 +170,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     {isSettingsOpen && (
                         <div className="absolute right-0 top-full mt-2 w-64 bg-black border border-zinc-700 shadow-2xl rounded-lg p-3 z-50 animate-in fade-in zoom-in-95" role="dialog" aria-label="Settings Menu">
                             <div className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-3 pb-2 border-b border-zinc-800">
-                                Visual & Accessibility
+                                System Preferences
                             </div>
                             <div className="space-y-2 mb-4">
                                 <button 
@@ -184,6 +190,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                                 >
                                     <div className="flex items-center gap-2"><Monitor size={14} /> Scanlines</div>
                                     <div className={`w-2 h-2 rounded-full ${showScanlines ? 'bg-emerald-500' : 'bg-zinc-700'}`}></div>
+                                </button>
+                                <button 
+                                    onClick={replayOnboarding}
+                                    className="w-full flex items-center gap-2 p-2 hover:bg-zinc-900 rounded text-xs text-primary-400 hover:text-primary-300"
+                                >
+                                    <RefreshCcw size={14} /> Re-Initialize System
                                 </button>
                             </div>
 
@@ -221,7 +233,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                      <span className="w-1.5 h-1.5 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-pulse"></span>
                      <span className="text-[10px] text-zinc-400 font-mono tracking-widest">ONLINE</span>
                   </div>
-                  <span className="text-[9px] text-zinc-600 font-mono">V.2.2.1</span>
+                  <span className="text-[9px] text-zinc-600 font-mono">V.2.3.0</span>
                </div>
             </div>
           </div>

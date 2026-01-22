@@ -7,7 +7,6 @@ import DashboardRadar from '@/components/DashboardRadar';
 import TestCard from '@/components/TestCard';
 import DashboardStatsOverview from '@/components/DashboardStatsOverview';
 import WorkoutSection from '@/components/WorkoutSection';
-import OnboardingWizard from '@/components/OnboardingWizard';
 
 const categories = Array.from(new Set(TESTS.map(t => t.category)));
 
@@ -46,8 +45,6 @@ export default function Dashboard() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
       />
-      
-      <OnboardingWizard />
       
       {/* Top Section: Identity & Radar */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-6" aria-label="User Statistics Overview">
