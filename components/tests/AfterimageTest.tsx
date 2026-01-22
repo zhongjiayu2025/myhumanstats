@@ -49,9 +49,9 @@ const AfterimageTest: React.FC = () => {
   const RenderRGB = () => (
     <svg viewBox="0 0 200 200" className="w-full h-full drop-shadow-2xl">
         {/* Primary Colors (Additive) -> CMY Subtractive Afterimage */}
-        <circle cx="70" cy="70" r="40" fill="#00FFFF" mixBlendMode="screen" />
-        <circle cx="130" cy="70" r="40" fill="#FF00FF" mixBlendMode="screen" />
-        <circle cx="100" cy="130" r="40" fill="#FFFF00" mixBlendMode="screen" />
+        <circle cx="70" cy="70" r="40" fill="#00FFFF" style={{ mixBlendMode: 'screen' }} />
+        <circle cx="130" cy="70" r="40" fill="#FF00FF" style={{ mixBlendMode: 'screen' }} />
+        <circle cx="100" cy="130" r="40" fill="#FFFF00" style={{ mixBlendMode: 'screen' }} />
         <circle cx="100" cy="90" r="2" fill="black" />
     </svg>
   );
