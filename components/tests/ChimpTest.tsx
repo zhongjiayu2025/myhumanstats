@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Brain, Trophy, RotateCcw, Banana, Volume2, VolumeX } from 'lucide-react';
+import { Brain, Trophy, RotateCcw, Banana, Volume2, VolumeX, Eye } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 import { playUiSound } from '../../lib/sounds';
 import CountdownOverlay from '../CountdownOverlay';
@@ -30,8 +30,8 @@ const ChimpTest: React.FC = () => {
   const [isRevealing, setIsRevealing] = useState(false);
   const [wrongClickId, setWrongClickId] = useState<number | null>(null);
 
-  const GRID_COLS = 8;
-  const GRID_ROWS = 5;
+  // Dynamic Grid State
+  const [gridConfig, setGridConfig] = useState({ rows: 5, cols: 8 });
 
   const initiateTest = () => {
       setLives(3);
@@ -40,20 +40,29 @@ const ChimpTest: React.FC = () => {
       setPhase('countdown');
   };
 
+  const getGridSizeForLevel = (lvl: number) => {
+      if (lvl <= 6) return { rows: 4, cols: 5 }; // Compact for easy
+      if (lvl <= 10) return { rows: 5, cols: 6 }; // Medium
+      return { rows: 6, cols: 8 }; // Large
+  };
+
   const prepareLevel = (numCount: number) => {
       setNextNum(1);
       setIsMasked(false);
       setIsRevealing(false);
       setWrongClickId(null);
       
+      const dims = getGridSizeForLevel(numCount);
+      setGridConfig(dims);
+
       const positions = new Set<string>();
       const newNodes: Node[] = [];
       
       for(let i=1; i<=numCount; i++) {
           let r, c, key;
           do {
-              r = Math.floor(Math.random() * GRID_ROWS);
-              c = Math.floor(Math.random() * GRID_COLS);
+              r = Math.floor(Math.random() * dims.rows);
+              c = Math.floor(Math.random() * dims.cols);
               key = `${r}-${c}`;
           } while(positions.has(key));
           
@@ -115,7 +124,7 @@ const ChimpTest: React.FC = () => {
               } else {
                   retryLevel();
               }
-          }, 3000); // 3s to review mistakes
+          }, 4000); // 4s to review mistakes (Ghost Replay time)
       }
   };
 
@@ -133,12 +142,20 @@ const ChimpTest: React.FC = () => {
       const sorted = [...allNodes].sort((a,b) => a.val - b.val);
       
       return sorted.map(n => {
-          // Center X: col * 100 + 50 (if grid is 100 wide units)
-          const x = (n.col / GRID_COLS) * 100 + (1/GRID_COLS)*50; 
-          const y = (n.row / GRID_ROWS) * 100 + (1/GRID_ROWS)*50;
+          const x = (n.col / gridConfig.cols) * 100 + (1/gridConfig.cols)*50; 
+          const y = (n.row / gridConfig.rows) * 100 + (1/gridConfig.rows)*50;
           return `${x},${y}`;
       }).join(' ');
   };
+
+  // Rank Title
+  const getRank = () => {
+      if (level > 15) return "AI Supercomputer";
+      if (level > 10) return "Silverback";
+      if (level > 7) return "Chimpanzee";
+      if (level > 5) return "Macaque";
+      return "Human";
+  }
 
   return (
     <div className="max-w-4xl mx-auto select-none relative">
@@ -185,12 +202,15 @@ const ChimpTest: React.FC = () => {
                </div>
 
                {/* Game Board - Responsive Aspect Ratio */}
-               <div className="relative w-full aspect-[4/5] md:aspect-[8/5] bg-[#0c0c0e] border border-zinc-800 rounded-xl shadow-2xl mx-auto max-w-[800px] overflow-hidden">
+               <div 
+                  className="relative w-full bg-[#0c0c0e] border border-zinc-800 rounded-xl shadow-2xl mx-auto max-w-[800px] overflow-hidden transition-all duration-500"
+                  style={{ aspectRatio: `${gridConfig.cols}/${gridConfig.rows}` }}
+                >
                    <div className="absolute inset-0 bg-grid opacity-5 pointer-events-none"></div>
 
                    {/* Reveal Path Overlay */}
                    {isRevealing && (
-                       <svg className="absolute inset-0 w-full h-full pointer-events-none z-10" preserveAspectRatio="none" viewBox="0 0 100 100">
+                       <svg className="absolute inset-0 w-full h-full pointer-events-none z-10 animate-in fade-in duration-1000" preserveAspectRatio="none" viewBox="0 0 100 100">
                            <polyline 
                                points={getPathPoints()}
                                fill="none"
@@ -199,6 +219,10 @@ const ChimpTest: React.FC = () => {
                                strokeOpacity="0.5"
                                strokeDasharray="2 1"
                            />
+                           {/* Ghost Animation Pulse */}
+                           <circle r="1" fill="#ef4444">
+                               <animateMotion dur="2s" repeatCount="indefinite" path={`M ${getPathPoints().replace(/ /g, ' L ')}`} />
+                           </circle>
                        </svg>
                    )}
 
@@ -215,12 +239,12 @@ const ChimpTest: React.FC = () => {
                                   : 'bg-white border-2 border-white text-black shadow-[0_4px_0_#ccc] active:shadow-none active:translate-y-[4px]'}
                           `}
                           style={{
-                              left: `${(node.col / GRID_COLS) * 100}%`,
-                              top: `${(node.row / GRID_ROWS) * 100}%`,
-                              width: `${(1/GRID_COLS)*85}%`,
-                              height: `${(1/GRID_ROWS)*85}%`,
-                              marginLeft: `${(1/GRID_COLS)*7.5}%`,
-                              marginTop: `${(1/GRID_ROWS)*7.5}%`,
+                              left: `${(node.col / gridConfig.cols) * 100}%`,
+                              top: `${(node.row / gridConfig.rows) * 100}%`,
+                              width: `${(1/gridConfig.cols)*85}%`,
+                              height: `${(1/gridConfig.rows)*85}%`,
+                              marginLeft: `${(1/gridConfig.cols)*7.5}%`,
+                              marginTop: `${(1/gridConfig.rows)*7.5}%`,
                           }}
                        >
                            {!isMasked && (
@@ -229,35 +253,36 @@ const ChimpTest: React.FC = () => {
                        </div>
                    ))}
 
-                   {/* Reveal Mode Nodes (Re-render everything to show correct order) */}
+                   {/* Reveal Mode Nodes (Ghost Replay) */}
                    {isRevealing && (
                        <>
-                           {/* Show full sequence */}
                            {allNodes.map((node) => (
                                <div
                                   key={node.val}
                                   className={`
-                                      absolute flex items-center justify-center rounded-lg border-2 z-20
+                                      absolute flex items-center justify-center rounded-lg border-2 z-20 transition-all duration-500
                                       ${node.val < nextNum ? 'bg-emerald-900/50 border-emerald-700 text-emerald-500 opacity-50' : ''}
                                       ${node.val === nextNum ? 'bg-emerald-500 text-black border-emerald-500' : ''}
                                       ${node.val === wrongClickId ? 'bg-red-500 text-white border-red-500 animate-shake' : ''}
                                       ${node.val > nextNum ? 'bg-zinc-800/50 border-zinc-600 text-zinc-500' : ''}
                                   `}
                                   style={{
-                                      left: `${(node.col / GRID_COLS) * 100}%`,
-                                      top: `${(node.row / GRID_ROWS) * 100}%`,
-                                      width: `${(1/GRID_COLS)*85}%`,
-                                      height: `${(1/GRID_ROWS)*85}%`,
-                                      marginLeft: `${(1/GRID_COLS)*7.5}%`,
-                                      marginTop: `${(1/GRID_ROWS)*7.5}%`,
+                                      left: `${(node.col / gridConfig.cols) * 100}%`,
+                                      top: `${(node.row / gridConfig.rows) * 100}%`,
+                                      width: `${(1/gridConfig.cols)*85}%`,
+                                      height: `${(1/gridConfig.rows)*85}%`,
+                                      marginLeft: `${(1/gridConfig.cols)*7.5}%`,
+                                      marginTop: `${(1/gridConfig.rows)*7.5}%`,
                                   }}
                                >
                                    <span className="text-2xl md:text-4xl font-bold">{node.val}</span>
                                </div>
                            ))}
                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
-                               <div className="bg-black/80 px-6 py-3 rounded-xl border border-red-500/50 text-red-500 font-bold text-xl uppercase tracking-widest animate-in zoom-in">
-                                   Strike!
+                               <div className="bg-black/90 px-6 py-4 rounded-xl border border-red-500/50 text-red-500 font-bold text-xl uppercase tracking-widest animate-in zoom-in flex flex-col items-center gap-2">
+                                   <Eye size={24} />
+                                   <span>Ghost Replay</span>
+                                   <span className="text-xs text-zinc-500 font-mono">Memorize pattern for next try...</span>
                                </div>
                            </div>
                        </>
@@ -270,7 +295,8 @@ const ChimpTest: React.FC = () => {
            <div className="text-center py-16 animate-in zoom-in">
                <Trophy size={64} className="mx-auto text-yellow-500 mb-6" />
                <h2 className="text-sm font-mono text-zinc-500 uppercase tracking-widest mb-2">Working Memory Capacity</h2>
-               <div className="text-6xl font-bold text-white mb-6">{level} <span className="text-2xl text-zinc-600">Items</span></div>
+               <div className="text-6xl font-bold text-white mb-2">{level} <span className="text-2xl text-zinc-600">Items</span></div>
+               <div className="text-xl font-bold text-primary-400 mb-6 uppercase tracking-widest">Rank: {getRank()}</div>
                
                <p className="text-zinc-400 mb-8 max-w-sm mx-auto">
                    {level > 9 ? "Superhuman. You rival Ayumu the chimp." :

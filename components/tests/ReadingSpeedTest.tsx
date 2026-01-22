@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect, useRef } from 'react';
-import { BookOpen, Zap, FileText, History, Rocket, Brain, RotateCcw } from 'lucide-react';
+import { BookOpen, Zap, FileText, History, Rocket, Brain, RotateCcw, Eye, Settings2 } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 const TEXT_OPTIONS = [
@@ -51,6 +52,11 @@ const ReadingSpeedTest: React.FC = () => {
   const [wpm, setWpm] = useState(0);
   const [comprehensionScore, setComprehensionScore] = useState(0);
 
+  // Pacer State
+  const [usePacer, setUsePacer] = useState(false);
+  const [pacerSpeed, setPacerSpeed] = useState(250); // WPM target for pacer
+  const [pacerProgress, setPacerProgress] = useState(0);
+
   // RSVP State
   const [targetRsvpWpm, setTargetRsvpWpm] = useState(300);
   const [rsvpIndex, setRsvpIndex] = useState(0);
@@ -58,19 +64,40 @@ const ReadingSpeedTest: React.FC = () => {
   
   const activeText = TEXT_OPTIONS.find(t => t.id === selectedTextId) || TEXT_OPTIONS[0];
   const words = activeText.content.split(/\s+/);
+  
   const rsvpIntervalRef = useRef<number | null>(null);
+  const pacerIntervalRef = useRef<number | null>(null);
+  const textContainerRef = useRef<HTMLDivElement>(null);
 
   // Standard Logic
   const handleStartStandard = () => {
     setMode('standard');
     setPhase('reading');
     setStartTime(Date.now());
+    
+    // Pacer Logic
+    if (usePacer) {
+        const totalWords = words.length;
+        const totalTimeMin = totalWords / pacerSpeed;
+        const totalTimeMs = totalTimeMin * 60 * 1000;
+        const startTime = Date.now();
+        
+        pacerIntervalRef.current = window.setInterval(() => {
+            const elapsed = Date.now() - startTime;
+            const prog = Math.min(100, (elapsed / totalTimeMs) * 100);
+            setPacerProgress(prog);
+            if (prog >= 100) {
+               if (pacerIntervalRef.current) clearInterval(pacerIntervalRef.current);
+            }
+        }, 50);
+    }
   };
 
   const handleFinishReading = () => {
     const timeInSeconds = (Date.now() - startTime) / 1000;
     if (timeInSeconds < 2) return; 
     setDuration(timeInSeconds);
+    if (pacerIntervalRef.current) clearInterval(pacerIntervalRef.current);
     setPhase('quiz');
   };
 
@@ -142,9 +169,13 @@ const ReadingSpeedTest: React.FC = () => {
       const end = word.slice(pivot + 1);
 
       return (
-          <div className="font-mono text-5xl flex items-baseline h-24">
+          <div className="font-mono text-5xl flex items-baseline h-24 relative">
+              {/* Optical Anchor Lines (Focus Reticle) */}
+              <div className="absolute top-0 bottom-0 left-1/2 w-0.5 bg-primary-500/30 -translate-x-1/2"></div>
+              <div className="absolute left-0 right-0 top-[60%] h-0.5 bg-primary-500/30 -translate-y-1/2"></div>
+              
               <span className="text-right w-48 text-zinc-500">{start}</span>
-              <span className="text-red-500 font-bold w-10 text-center border-b-2 border-red-500/50 pb-2">{center}</span>
+              <span className="text-red-500 font-bold w-10 text-center relative z-10">{center}</span>
               <span className="text-left w-48 text-zinc-500">{end}</span>
           </div>
       );
@@ -154,6 +185,7 @@ const ReadingSpeedTest: React.FC = () => {
       setPhase('intro');
       setQuizAnswers([]);
       setDuration(0);
+      setPacerProgress(0);
   };
 
   return (
@@ -187,20 +219,37 @@ const ReadingSpeedTest: React.FC = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-xl mx-auto">
-              <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-lg hover:border-zinc-600 transition-all cursor-pointer" onClick={handleStartStandard}>
+              {/* Standard Mode Config */}
+              <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-lg hover:border-zinc-600 transition-all">
                   <FileText className="mx-auto mb-4 text-zinc-400" size={32} />
                   <h3 className="font-bold text-white mb-2">Standard Mode</h3>
-                  <p className="text-xs text-zinc-500">Natural reading flow. Similar to reading a book or article.</p>
-                  <button className="btn-secondary mt-4 w-full text-xs">Start Reading</button>
+                  <p className="text-xs text-zinc-500 mb-4">Natural reading flow.</p>
+                  
+                  {/* Pacer Toggle */}
+                  <div className="flex flex-col gap-2 items-center mb-4 bg-black/40 p-3 rounded">
+                      <button onClick={() => setUsePacer(!usePacer)} className={`text-xs flex items-center gap-2 ${usePacer ? 'text-primary-400' : 'text-zinc-500'}`}>
+                          <Eye size={12}/> Visual Pacer {usePacer ? 'ON' : 'OFF'}
+                      </button>
+                      {usePacer && (
+                          <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-zinc-500">Target:</span>
+                              <input type="number" value={pacerSpeed} onChange={e => setPacerSpeed(Number(e.target.value))} className="w-12 bg-zinc-800 text-white text-xs text-center rounded border border-zinc-700"/>
+                              <span className="text-[10px] text-zinc-500">WPM</span>
+                          </div>
+                      )}
+                  </div>
+
+                  <button className="btn-secondary w-full text-xs" onClick={handleStartStandard}>Start Reading</button>
               </div>
 
-              <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-lg hover:border-primary-500 transition-all cursor-pointer relative overflow-hidden group" onClick={handleStartRSVP}>
+              {/* RSVP Mode Config */}
+              <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-lg hover:border-primary-500 transition-all relative overflow-hidden group">
                   <div className="absolute top-0 right-0 p-2 bg-primary-600 text-black text-[10px] font-bold">EXPERIMENTAL</div>
                   <Zap className="mx-auto mb-4 text-primary-500 group-hover:animate-pulse" size={32} />
                   <h3 className="font-bold text-white mb-2">RSVP Mode</h3>
-                  <p className="text-xs text-zinc-500">Rapid Serial Visual Presentation. Words flash at fixed speed.</p>
+                  <p className="text-xs text-zinc-500">Rapid Serial Visual Presentation.</p>
                   
-                  <div className="mt-4 flex items-center justify-center gap-2" onClick={(e) => e.stopPropagation()}>
+                  <div className="mt-4 flex items-center justify-center gap-2 mb-4">
                       <span className="text-xs text-zinc-400">Speed:</span>
                       <input 
                          type="number" 
@@ -211,7 +260,7 @@ const ReadingSpeedTest: React.FC = () => {
                       />
                       <span className="text-xs text-zinc-600">WPM</span>
                   </div>
-                  <button className="btn-primary mt-4 w-full text-xs" onClick={(e) => { e.stopPropagation(); handleStartRSVP(); }}>Start RSVP</button>
+                  <button className="btn-primary w-full text-xs" onClick={handleStartRSVP}>Start RSVP</button>
               </div>
           </div>
       </div>
@@ -219,8 +268,20 @@ const ReadingSpeedTest: React.FC = () => {
 
       {phase === 'reading' && mode === 'standard' && (
         <div className="animate-in fade-in max-w-xl mx-auto">
-           <div className="bg-[#fdfbf7] text-black p-8 md:p-12 rounded-lg shadow-2xl border-l-4 border-primary-500 mb-8 font-serif leading-relaxed text-lg">
+           <div 
+              ref={textContainerRef}
+              className="bg-[#fdfbf7] text-black p-8 md:p-12 rounded-lg shadow-2xl border-l-4 border-primary-500 mb-8 font-serif leading-relaxed text-lg relative overflow-hidden"
+           >
                <h3 className="font-bold text-2xl mb-4">{activeText.title}</h3>
+               
+               {/* Visual Pacer Line */}
+               {usePacer && (
+                   <div 
+                      className="absolute left-0 w-full h-1 bg-primary-500/50 pointer-events-none transition-all duration-100 ease-linear shadow-[0_0_10px_#06b6d4]"
+                      style={{ top: `${Math.min(100, pacerProgress)}%` }}
+                   ></div>
+               )}
+               
                <p>{activeText.content}</p>
            </div>
            <button onClick={handleFinishReading} className="btn-primary w-full shadow-lg">
@@ -231,14 +292,12 @@ const ReadingSpeedTest: React.FC = () => {
 
       {phase === 'reading' && mode === 'rsvp' && (
           <div className="flex flex-col items-center justify-center min-h-[400px]">
-              <div className="w-full max-w-md bg-black border border-zinc-700 rounded-lg p-12 text-center relative">
-                  {/* Focus Guides */}
-                  <div className="absolute top-0 bottom-0 left-1/2 w-px bg-zinc-800 -translate-x-1/2"></div>
-                  <div className="absolute left-0 right-0 top-1/2 h-px bg-zinc-800 -translate-y-1/2"></div>
-                  
+              <div className="w-full max-w-md bg-black border border-zinc-700 rounded-lg p-12 text-center relative overflow-hidden">
                   <div className="relative z-10 flex justify-center">
                       {renderRsvpWord()}
                   </div>
+                  {/* Progress Bar */}
+                  <div className="absolute bottom-0 left-0 h-1 bg-primary-500 transition-all duration-100 ease-linear" style={{ width: `${(rsvpIndex / words.length) * 100}%` }}></div>
               </div>
               <div className="mt-8 text-zinc-500 font-mono text-xs">
                   {Math.round((rsvpIndex / words.length) * 100)}% COMPLETE
