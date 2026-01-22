@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { saveStat } from '../../lib/core';
-import { Brain, Keyboard, RotateCcw, Zap } from 'lucide-react';
+import { Brain, Keyboard, RotateCcw, Zap, Shuffle, Type, Palette } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 const COLORS = [
@@ -16,13 +16,16 @@ const StroopTest: React.FC = () => {
   const [count, setCount] = useState(0);
   const [current, setCurrent] = useState({ text: 'Red', color: '#ef4444', isCongruent: true });
   
+  // New: Rule Switching State
+  const [currentRule, setCurrentRule] = useState<'color' | 'text'>('color');
+  
   // Game State
   const [startTime, setStartTime] = useState(0);
-  const [results, setResults] = useState<{type: 'congruent'|'incongruent', time: number, correct: boolean}[]>([]);
+  const [results, setResults] = useState<{type: 'congruent'|'incongruent', rule: 'color'|'text', time: number, correct: boolean}[]>([]);
   const [combo, setCombo] = useState(0);
   const [shake, setShake] = useState(false);
 
-  const TOTAL_TRIALS = 16;
+  const TOTAL_TRIALS = 20;
 
   const nextTrial = () => {
     if (count >= TOTAL_TRIALS) {
@@ -30,7 +33,7 @@ const StroopTest: React.FC = () => {
        return;
     }
     
-    // Generate new stimulus
+    // 1. Generate Stimulus
     const textIdx = Math.floor(Math.random() * 4);
     // 50% chance of congruent (match), 50% chance of incongruent (mismatch)
     const isCongruent = Math.random() > 0.5;
@@ -44,6 +47,12 @@ const StroopTest: React.FC = () => {
             colorIdx = Math.floor(Math.random() * 4);
         } while (colorIdx === textIdx);
     }
+    
+    // 2. Generate Rule (Switching logic)
+    // 30% chance to switch rule from previous
+    // Or simpler: 50/50 rule distribution
+    const newRule = Math.random() > 0.5 ? 'color' : 'text';
+    setCurrentRule(newRule);
     
     setCurrent({
        text: COLORS[textIdx].name,
@@ -62,13 +71,23 @@ const StroopTest: React.FC = () => {
      nextTrial();
   };
 
-  const handleAnswer = (colorName: string) => {
+  const handleAnswer = (selectedColorName: string) => {
      const endTime = performance.now();
      const reaction = endTime - startTime;
 
-     // Correct answer is the COLOR of the text (current.color hex -> match to name)
-     const correctColorObj = COLORS.find(c => c.hex === current.color);
-     const isCorrect = correctColorObj?.name === colorName;
+     // Logic dependent on rule
+     let correctName = "";
+     
+     if (currentRule === 'color') {
+         // Match the INK COLOR
+         const correctColorObj = COLORS.find(c => c.hex === current.color);
+         correctName = correctColorObj?.name || "";
+     } else {
+         // Match the WRITTEN TEXT
+         correctName = current.text;
+     }
+
+     const isCorrect = correctName === selectedColorName;
      
      if (isCorrect) {
          setCombo(c => c + 1);
@@ -80,6 +99,7 @@ const StroopTest: React.FC = () => {
 
      setResults(prev => [...prev, {
          type: current.isCongruent ? 'congruent' : 'incongruent',
+         rule: currentRule,
          time: reaction,
          correct: isCorrect
      }]);
@@ -98,15 +118,13 @@ const StroopTest: React.FC = () => {
       };
       window.addEventListener('keydown', handleKey);
       return () => window.removeEventListener('keydown', handleKey);
-  }, [phase, current]);
+  }, [phase, current, currentRule]);
 
   const finish = () => {
      setPhase('end');
-     const stats = calculateStats(results); // Use local helper
+     const stats = calculateStats(results);
      
-     // Normalize score: Low Stroop Cost is better. 
-     // <50ms cost = 100pts. >300ms cost = 0pts.
-     // Also penalize inaccuracy heavily.
+     // Normalize score with switch cost penalty
      const costScore = Math.max(0, Math.min(100, 100 - ((stats.diff - 50) / 2.5)));
      const accuracy = results.filter(r => r.correct).length / TOTAL_TRIALS;
      const finalScore = Math.round(costScore * accuracy);
@@ -135,11 +153,11 @@ const StroopTest: React.FC = () => {
        {phase === 'intro' && (
           <div className="py-12 animate-in fade-in">
              <Brain size={64} className="mx-auto text-zinc-600 mb-6" />
-             <h2 className="text-3xl font-bold text-white mb-2">Stroop Effect Test</h2>
+             <h2 className="text-3xl font-bold text-white mb-2">Advanced Stroop Test</h2>
              <p className="text-zinc-400 mb-8 max-w-md mx-auto">
-                Test your inhibitory control. Click the button that matches the <strong>INK COLOR</strong>, not the word text.
-                <br/>
-                <span className="text-xs text-zinc-500 font-mono mt-2 block"><Keyboard size={12} className="inline mr-1"/> Keys 1-4 or Tap Buttons</span>
+                Test your Cognitive Flexibility. 
+                <br/>The rule will switch between <strong>MATCH COLOR</strong> and <strong>MATCH TEXT</strong>.
+                <br/>Adapt instantly to the changing instructions.
              </p>
              <button onClick={start} className="btn-primary">Start Cognitive Test</button>
           </div>
@@ -155,6 +173,17 @@ const StroopTest: React.FC = () => {
                          <Zap size={14} fill="currentColor" /> {combo} COMBO
                      </div>
                  )}
+             </div>
+
+             {/* Rule Indicator */}
+             <div className="flex justify-center mt-4">
+                 <div className={`
+                    px-6 py-2 rounded-full border-2 font-bold uppercase tracking-widest text-lg flex items-center gap-2 transition-all duration-300
+                    ${currentRule === 'color' ? 'bg-primary-500/20 border-primary-500 text-primary-400' : 'bg-white/10 border-white text-white'}
+                 `}>
+                     {currentRule === 'color' ? <Palette size={20}/> : <Type size={20}/>}
+                     MATCH {currentRule === 'color' ? 'INK COLOR' : 'WORD TEXT'}
+                 </div>
              </div>
 
              {/* Stimulus */}
@@ -175,7 +204,7 @@ const StroopTest: React.FC = () => {
                 </h1>
              </div>
              
-             {/* Mobile Optimized Controls */}
+             {/* Controls */}
              <div className="grid grid-cols-2 gap-4 pb-4">
                 {COLORS.map(c => (
                    <button 
@@ -194,18 +223,18 @@ const StroopTest: React.FC = () => {
 
        {phase === 'end' && (
           <div className="py-12 animate-in zoom-in">
-             <h2 className="text-2xl text-white font-bold mb-8">Cognitive Processing Report</h2>
+             <h2 className="text-2xl text-white font-bold mb-8">Executive Function Report</h2>
              
              {/* Main Metric */}
              <div className="mb-8">
-                 <div className="text-[10px] text-zinc-500 uppercase font-mono tracking-widest mb-1">Stroop Cost (Brain Lag)</div>
+                 <div className="text-[10px] text-zinc-500 uppercase font-mono tracking-widest mb-1">Stroop Cost (Interference)</div>
                  <div className={`text-5xl font-mono font-bold ${stats.diff < 100 ? 'text-emerald-500' : stats.diff < 200 ? 'text-yellow-500' : 'text-red-500'}`}>
                      {Math.round(stats.diff)}<span className="text-lg text-zinc-600">ms</span>
                  </div>
                  <p className="text-xs text-zinc-400 mt-2 max-w-sm mx-auto">
-                     {stats.diff < 100 ? "Excellent inhibitory control. Your brain filters conflicting information efficiently." : 
-                      stats.diff < 200 ? "Normal range. The conflicting color information slowed you down slightly." : 
-                      "High interference detected. The semantic meaning of the word strongly overrode the visual color processing."}
+                     {stats.diff < 100 ? "Elite Flexibility. Your brain switches contexts effortlessly." : 
+                      stats.diff < 200 ? "Normal Range. Cognitive switching causes expected delay." : 
+                      "High Interference. The conflicting rules slowed down your processing significantly."}
                  </p>
              </div>
 

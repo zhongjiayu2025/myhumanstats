@@ -1,13 +1,22 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Keyboard, Rocket } from 'lucide-react';
+import { Keyboard, Rocket, Gauge, Play, BatteryCharging } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 const SpacebarSpeedTest: React.FC = () => {
+  const [mode, setMode] = useState<'sprint' | 'stamina'>('sprint');
   const [active, setActive] = useState(false);
   const [finished, setFinished] = useState(false);
+  
+  // Sprint Mode State
   const [count, setCount] = useState(0);
   const [timeLeft, setTimeLeft] = useState(5);
+  
+  // Stamina Mode State
+  const [energy, setEnergy] = useState(50); // 0-100
+  const [survivalTime, setSurvivalTime] = useState(0);
+  const [staminaHighScore, setStaminaHighScore] = useState(0);
+
   const [isPressed, setIsPressed] = useState(false);
   
   const timerRef = useRef<number | null>(null);
@@ -16,7 +25,7 @@ const SpacebarSpeedTest: React.FC = () => {
 
   // Gamification: Instant Speed (CPS) calculation
   const [instantCps, setInstantCps] = useState(0);
-  const instantCpsRef = useRef(0); // Ref for animation loop to access fresh value
+  const instantCpsRef = useRef(0);
   const clicksHistory = useRef<number[]>([]); 
 
   // --- Starfield Logic ---
@@ -105,24 +114,50 @@ const SpacebarSpeedTest: React.FC = () => {
       return () => { if (animRef.current) cancelAnimationFrame(animRef.current); };
   }, []);
 
-  // --- Game Logic ---
-
+  // --- Game Loop (Stamina Decay) ---
   useEffect(() => {
-    if (active && timeLeft > 0) {
+      if (active && mode === 'stamina') {
+          const decayInterval = setInterval(() => {
+              setEnergy(prev => {
+                  const decayRate = 0.5 + (survivalTime * 0.05); // Decay speeds up over time
+                  const next = prev - decayRate;
+                  if (next <= 0) {
+                      finish();
+                      return 0;
+                  }
+                  return next;
+              });
+              setSurvivalTime(t => t + 0.05);
+          }, 50);
+          return () => clearInterval(decayInterval);
+      }
+  }, [active, mode, survivalTime]);
+
+  // --- Game Loop (Sprint Timer) ---
+  useEffect(() => {
+    if (active && mode === 'sprint' && timeLeft > 0) {
        timerRef.current = window.setTimeout(() => setTimeLeft(t => t - 1), 1000);
-    } else if (active && timeLeft === 0) {
+    } else if (active && mode === 'sprint' && timeLeft === 0) {
        finish();
     }
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, [active, timeLeft]);
+  }, [active, timeLeft, mode]);
 
   const handleInput = () => {
       if (finished) return;
-      if (!active) setActive(true);
+      if (!active) {
+          setActive(true);
+          if (mode === 'stamina') setEnergy(50);
+      }
       
       setCount(c => c + 1);
       setIsPressed(true);
       setTimeout(() => setIsPressed(false), 50);
+
+      // Stamina: Add Energy
+      if (mode === 'stamina') {
+          setEnergy(prev => Math.min(100, prev + 3)); // +3 per click
+      }
 
       // Track instant speed
       const now = Date.now();
@@ -143,14 +178,11 @@ const SpacebarSpeedTest: React.FC = () => {
               }
           }
       };
-      
       window.addEventListener('keydown', handleDown);
-      return () => {
-          window.removeEventListener('keydown', handleDown);
-      }
+      return () => window.removeEventListener('keydown', handleDown);
   }, [active, finished]);
 
-  // Decay CPS visual if user stops pressing
+  // Decay CPS visual
   useEffect(() => {
       const interval = setInterval(() => {
           if (clicksHistory.current.length > 0) {
@@ -170,9 +202,11 @@ const SpacebarSpeedTest: React.FC = () => {
   const finish = () => {
      setActive(false);
      setFinished(true);
-     const cps = count / 5;
-     const score = Math.min(100, Math.round((cps / 10) * 100)); 
-     saveStat('spacebar-speed', score);
+     if (mode === 'sprint') {
+         const cps = count / 5;
+         const score = Math.min(100, Math.round((cps / 10) * 100)); 
+         saveStat('spacebar-speed', score);
+     }
   };
 
   const reset = () => {
@@ -180,6 +214,8 @@ const SpacebarSpeedTest: React.FC = () => {
      setFinished(false);
      setCount(0);
      setTimeLeft(5);
+     setEnergy(50);
+     setSurvivalTime(0);
      setInstantCps(0);
      instantCpsRef.current = 0;
      clicksHistory.current = [];
@@ -194,13 +230,30 @@ const SpacebarSpeedTest: React.FC = () => {
           className="absolute inset-0 w-full h-full pointer-events-none opacity-50 z-0"
        />
 
-       {/* Giant Tap Area for Mobile overlay */}
+       {/* Mode Switcher */}
+       {!active && !finished && (
+           <div className="absolute top-4 left-0 right-0 z-30 flex justify-center gap-4">
+               <button 
+                  onClick={() => setMode('sprint')} 
+                  className={`px-4 py-2 rounded-full text-xs font-bold uppercase transition-all ${mode === 'sprint' ? 'bg-primary-500 text-black' : 'bg-zinc-900 border border-zinc-700 text-zinc-400'}`}
+               >
+                   <Rocket size={14} className="inline mr-2" /> Sprint (5s)
+               </button>
+               <button 
+                  onClick={() => setMode('stamina')} 
+                  className={`px-4 py-2 rounded-full text-xs font-bold uppercase transition-all ${mode === 'stamina' ? 'bg-amber-500 text-black' : 'bg-zinc-900 border border-zinc-700 text-zinc-400'}`}
+               >
+                   <BatteryCharging size={14} className="inline mr-2" /> Stamina
+               </button>
+           </div>
+       )}
+
+       {/* Giant Tap Area */}
        {!finished && (
            <div 
               className="absolute inset-0 z-20 cursor-pointer md:pointer-events-none no-tap-highlight"
               onTouchStart={(e) => { e.preventDefault(); handleInput(); }}
               onMouseDown={(e) => { 
-                  // Only on desktop if clicking outside visual button (mobile uses touchstart)
                   if(window.innerWidth > 768) { 
                       e.preventDefault(); handleInput(); 
                   }
@@ -208,17 +261,17 @@ const SpacebarSpeedTest: React.FC = () => {
            ></div>
        )}
 
-       <div className="relative z-10 p-8 bg-gradient-to-b from-transparent to-black/80 pointer-events-none">
+       <div className="relative z-10 p-8 bg-gradient-to-b from-transparent to-black/80 pointer-events-none pt-20">
            {/* Dashboard */}
            <div className="grid grid-cols-3 gap-4 mb-8">
               <div className="bg-zinc-900/80 backdrop-blur border border-zinc-800 p-4 rounded flex flex-col justify-center">
-                 <span className="text-[10px] text-zinc-500 uppercase tracking-widest mb-1">Time</span>
-                 <div className={`text-2xl font-mono ${timeLeft < 2 ? 'text-red-500 animate-pulse' : 'text-white'}`}>
-                    {timeLeft}s
+                 <span className="text-[10px] text-zinc-500 uppercase tracking-widest mb-1">{mode === 'sprint' ? 'Time Left' : 'Survived'}</span>
+                 <div className={`text-2xl font-mono ${mode === 'sprint' && timeLeft < 2 ? 'text-red-500 animate-pulse' : 'text-white'}`}>
+                    {mode === 'sprint' ? `${timeLeft}s` : `${survivalTime.toFixed(1)}s`}
                  </div>
               </div>
               <div className="bg-zinc-900/80 backdrop-blur border border-zinc-800 p-4 rounded flex flex-col justify-center">
-                 <span className="text-[10px] text-zinc-500 uppercase tracking-widest mb-1">Count</span>
+                 <span className="text-[10px] text-zinc-500 uppercase tracking-widest mb-1">Clicks</span>
                  <div className="text-2xl font-mono text-primary-400 font-bold">
                     {count}
                  </div>
@@ -245,7 +298,7 @@ const SpacebarSpeedTest: React.FC = () => {
                >
                   {active ? (
                       <span className="font-mono text-2xl font-bold tracking-widest">
-                          {instantCps > 8 ? 'HYPERSPACE!' : 'TAP RAPIDLY'}
+                          {mode === 'stamina' && energy < 20 ? <span className="text-red-600 animate-ping">CRITICAL!</span> : instantCps > 8 ? 'HYPERSPACE!' : 'TAP RAPIDLY'}
                       </span>
                   ) : finished ? (
                       <span className="font-mono text-2xl font-bold text-white">COMPLETE</span>
@@ -257,20 +310,32 @@ const SpacebarSpeedTest: React.FC = () => {
                </div>
            </div>
 
-           {/* Rocket Progress Visual */}
-           {active && (
+           {/* Progress Visuals */}
+           {mode === 'sprint' ? (
                <div className="w-full h-2 bg-zinc-800 rounded-full mb-8 relative overflow-hidden">
                    <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-primary-600 to-white transition-all duration-75" style={{ width: `${Math.min(100, (count / 60) * 100)}%` }}></div>
                    <div className="absolute top-1/2 -translate-y-1/2 transition-all duration-75 text-white" style={{ left: `${Math.min(95, (count / 60) * 100)}%` }}>
                        <Rocket size={16} className={`rotate-45 ${instantCps > 8 ? 'animate-pulse text-amber-500' : ''}`} />
                    </div>
                </div>
+           ) : (
+               <div className="w-full h-4 bg-zinc-800 rounded-full mb-8 relative overflow-hidden border border-zinc-700">
+                   <div 
+                      className={`absolute top-0 left-0 h-full transition-all duration-75 ease-linear ${energy < 20 ? 'bg-red-500' : 'bg-amber-500'}`} 
+                      style={{ width: `${energy}%` }}
+                   ></div>
+                   <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-black mix-blend-overlay">ENERGY</div>
+               </div>
            )}
 
            {finished && (
                <div className="animate-in slide-in-from-bottom-4 pointer-events-auto relative z-30">
-                   <div className="text-6xl font-bold text-white mb-2 font-mono">{(count / 5).toFixed(1)}</div>
-                   <p className="text-primary-400 text-sm mb-8 uppercase tracking-widest font-bold">Clicks Per Second</p>
+                   <div className="text-6xl font-bold text-white mb-2 font-mono">
+                       {mode === 'sprint' ? (count / 5).toFixed(1) : survivalTime.toFixed(1)}
+                   </div>
+                   <p className="text-primary-400 text-sm mb-8 uppercase tracking-widest font-bold">
+                       {mode === 'sprint' ? 'Clicks Per Second' : 'Seconds Survived'}
+                   </p>
                    <button onClick={reset} className="btn-secondary w-full">Try Again</button>
                </div>
            )}
