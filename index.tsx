@@ -1,2 +1,1 @@
-
-// This file is deprecated.
+// This file is deprecated. Please delete it from your repository.
