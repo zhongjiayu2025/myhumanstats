@@ -38,6 +38,9 @@ export const metadata: Metadata = {
       'max-snippet': -1,
     },
   },
+  verification: {
+    google: 'E1jHr8AEwiAZj_z2xiCx4e6hsv6G1HubWpunyL5sYPA',
+  },
   alternates: {
     canonical: './',
   },
