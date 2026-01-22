@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { BookOpen, Zap, FileText, History, Rocket, Brain, RotateCcw, Eye, Settings2 } from 'lucide-react';
+import { BookOpen, Zap, FileText, History, Rocket, Brain, RotateCcw, Eye, Settings2, Edit3, Check } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
-const TEXT_OPTIONS = [
+const DEFAULT_TEXTS = [
   {
     id: 'history',
     icon: History,
@@ -27,23 +27,15 @@ const TEXT_OPTIONS = [
       { q: "How long would it theoretically take to traverse the Milky Way?", options: ["A few thousand years", "A few million years", "A billion years", "It is impossible"], correct: 1 },
       { q: "One proposed solution suggests aliens stay quiet to:", options: ["Save energy", "Meditate", "Avoid detection", "Sleep"], correct: 2 }
     ]
-  },
-  {
-    id: 'philosophy',
-    icon: Brain,
-    title: "Allegory of the Cave",
-    genre: "Philosophy",
-    content: `Plato's Allegory of the Cave is presented by the Greek philosopher Plato in his work Republic. It imagines a group of people who have lived chained to the wall of a cave all their lives, facing a blank wall. The people watch shadows projected on the wall from objects passing in front of a fire behind them and give names to these shadows. The shadows are the prisoners' reality, but are not accurate representations of the real world. Three stages of liberation are described. First, a prisoner is freed and forced to turn and look at the fire. The light would hurt his eyes and make it hard for him to see the objects casting the shadows. If he is then dragged out of the cave into the sunlight, he would be blinded and unable to see anything. Eventually, he would adjust and see the world as it is. If he returned to the cave to tell the others, they would not believe him and might even kill him for trying to free them.`,
-    questions: [
-      { q: "In the cave, what do the prisoners see?", options: ["Real objects", "Shadows", "The fire", "Sunlight"], correct: 1 },
-      { q: "What happens when a prisoner is first freed?", options: ["He is happy", "The light hurts his eyes", "He runs away", "He fights the guards"], correct: 1 },
-      { q: "How would the other prisoners react to the truth?", options: ["With curiosity", "With belief", "With disbelief/hostility", "With joy"], correct: 2 }
-    ]
   }
 ];
 
 const ReadingSpeedTest: React.FC = () => {
   const [selectedTextId, setSelectedTextId] = useState<string>('history');
+  const [customTextContent, setCustomTextContent] = useState('');
+  const [isUsingCustom, setIsUsingCustom] = useState(false);
+  const [showCustomInput, setShowCustomInput] = useState(false);
+
   const [mode, setMode] = useState<'standard' | 'rsvp'>('standard');
   const [phase, setPhase] = useState<'intro' | 'reading' | 'quiz' | 'result'>('intro');
   const [startTime, setStartTime] = useState(0);
@@ -62,8 +54,12 @@ const ReadingSpeedTest: React.FC = () => {
   const [rsvpIndex, setRsvpIndex] = useState(0);
   const [rsvpIsPlaying, setRsvpIsPlaying] = useState(false);
   
-  const activeText = TEXT_OPTIONS.find(t => t.id === selectedTextId) || TEXT_OPTIONS[0];
-  const words = activeText.content.split(/\s+/);
+  // Content Resolution
+  const activeText = isUsingCustom 
+    ? { id: 'custom', title: 'Custom Text', content: customTextContent, questions: [], genre: 'User Input' }
+    : DEFAULT_TEXTS.find(t => t.id === selectedTextId) || DEFAULT_TEXTS[0];
+    
+  const words = activeText.content.trim().split(/\s+/).filter(w => w.length > 0);
   
   const rsvpIntervalRef = useRef<number | null>(null);
   const pacerIntervalRef = useRef<number | null>(null);
@@ -98,7 +94,13 @@ const ReadingSpeedTest: React.FC = () => {
     if (timeInSeconds < 2) return; 
     setDuration(timeInSeconds);
     if (pacerIntervalRef.current) clearInterval(pacerIntervalRef.current);
-    setPhase('quiz');
+    
+    // Skip quiz if custom text (we don't have questions)
+    if (isUsingCustom) {
+        calculateResult(timeInSeconds, []);
+    } else {
+        setPhase('quiz');
+    }
   };
 
   // RSVP Logic
@@ -116,8 +118,12 @@ const ReadingSpeedTest: React.FC = () => {
               setRsvpIndex(prev => {
                   if (prev >= words.length - 1) {
                       if (rsvpIntervalRef.current) clearInterval(rsvpIntervalRef.current);
-                      setDuration((words.length / targetRsvpWpm) * 60);
-                      setTimeout(() => setPhase('quiz'), 500);
+                      const finalDur = (words.length / targetRsvpWpm) * 60;
+                      setDuration(finalDur);
+                      setTimeout(() => {
+                          if(isUsingCustom) calculateResult(finalDur, []);
+                          else setPhase('quiz');
+                      }, 500);
                       return prev;
                   }
                   return prev + 1;
@@ -141,12 +147,15 @@ const ReadingSpeedTest: React.FC = () => {
     // Standard WPM calculation
     const calculatedWpm = mode === 'rsvp' ? targetRsvpWpm : Math.round((words.length / finalDuration) * 60);
     
-    let correctCount = 0;
-    finalAnswers.forEach((ans, idx) => {
-       if (ans === activeText.questions[idx].correct) correctCount++;
-    });
+    let accuracy = 100;
+    if (!isUsingCustom && activeText.questions.length > 0) {
+        let correctCount = 0;
+        finalAnswers.forEach((ans, idx) => {
+           if (ans === activeText.questions[idx].correct) correctCount++;
+        });
+        accuracy = Math.round((correctCount / activeText.questions.length) * 100);
+    }
     
-    const accuracy = Math.round((correctCount / activeText.questions.length) * 100);
     setComprehensionScore(accuracy);
 
     // Effective WPM penalty for low comprehension
@@ -161,22 +170,41 @@ const ReadingSpeedTest: React.FC = () => {
   };
 
   const renderRsvpWord = () => {
-      const word = words[rsvpIndex];
-      const pivot = word.length > 1 ? Math.floor((word.length - 1) / 2) : 0;
+      const word = words[rsvpIndex] || "";
       
+      // ORP Calculation (Optimal Recognition Point)
+      // Usually around 35% into the word, slightly left of center
+      const length = word.length;
+      let pivot = Math.ceil((length - 1) * 0.35); // 0-based index
+      if (length === 1) pivot = 0;
+
       const start = word.slice(0, pivot);
       const center = word[pivot];
       const end = word.slice(pivot + 1);
 
       return (
-          <div className="font-mono text-5xl flex items-baseline h-24 relative">
-              {/* Optical Anchor Lines (Focus Reticle) */}
-              <div className="absolute top-0 bottom-0 left-1/2 w-0.5 bg-primary-500/30 -translate-x-1/2"></div>
-              <div className="absolute left-0 right-0 top-[60%] h-0.5 bg-primary-500/30 -translate-y-1/2"></div>
-              
-              <span className="text-right w-48 text-zinc-500">{start}</span>
-              <span className="text-red-500 font-bold w-10 text-center relative z-10">{center}</span>
-              <span className="text-left w-48 text-zinc-500">{end}</span>
+          <div className="flex items-baseline h-24 relative w-full max-w-xl mx-auto">
+              {/* ORP Guidelines */}
+              <div className="absolute top-0 bottom-0 left-1/2 w-[2px] bg-primary-500/20 -translate-x-1/2 rounded-full"></div>
+              <div className="absolute top-0 bottom-0 left-1/2 w-full h-[2px] bg-primary-500/20 top-[62%] -translate-y-1/2"></div>
+
+              {/* Text Container aligned by flex basis to ORP */}
+              <div className="flex w-full text-5xl md:text-6xl font-mono leading-none">
+                  {/* Left Side (Right Aligned) */}
+                  <div className="flex-1 text-right pr-[1px] text-zinc-400 font-medium">
+                      {start}
+                  </div>
+                  
+                  {/* Pivot (Centered) */}
+                  <div className="text-red-500 font-bold w-[0.6em] text-center flex-shrink-0 relative z-10 -ml-[0.05em]">
+                      {center}
+                  </div>
+                  
+                  {/* Right Side (Left Aligned) */}
+                  <div className="flex-1 text-left pl-[1px] text-zinc-400 font-medium">
+                      {end}
+                  </div>
+              </div>
           </div>
       );
   };
@@ -188,8 +216,36 @@ const ReadingSpeedTest: React.FC = () => {
       setPacerProgress(0);
   };
 
+  const handleCustomTextSubmit = () => {
+      if (customTextContent.trim().length > 10) {
+          setIsUsingCustom(true);
+          setShowCustomInput(false);
+          setSelectedTextId('custom');
+      }
+  };
+
   return (
     <div className="max-w-4xl mx-auto select-none">
+      
+      {/* Custom Text Modal */}
+      {showCustomInput && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+              <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 w-full max-w-lg shadow-2xl animate-in zoom-in">
+                  <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2"><Edit3 size={20}/> Paste Your Content</h3>
+                  <textarea 
+                      className="w-full h-48 bg-black border border-zinc-800 rounded p-4 text-sm text-zinc-300 focus:outline-none focus:border-primary-500 mb-4 font-serif"
+                      placeholder="Paste article text here..."
+                      value={customTextContent}
+                      onChange={(e) => setCustomTextContent(e.target.value)}
+                  />
+                  <div className="flex justify-end gap-3">
+                      <button onClick={() => setShowCustomInput(false)} className="btn-secondary text-xs px-4 py-2">Cancel</button>
+                      <button onClick={handleCustomTextSubmit} className="btn-primary text-xs px-4 py-2">Load Text</button>
+                  </div>
+              </div>
+          </div>
+      )}
+
       {phase === 'intro' && (
         <div className="text-center py-12 animate-in fade-in">
           <BookOpen size={64} className="mx-auto text-zinc-600 mb-6" />
@@ -199,23 +255,34 @@ const ReadingSpeedTest: React.FC = () => {
           </p>
           
           {/* Text Selection */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto mb-12">
-              {TEXT_OPTIONS.map((t) => (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 max-w-3xl mx-auto mb-12">
+              {DEFAULT_TEXTS.map((t) => (
                   <button 
                     key={t.id}
-                    onClick={() => setSelectedTextId(t.id)}
+                    onClick={() => { setSelectedTextId(t.id); setIsUsingCustom(false); }}
                     className={`
-                        flex flex-col items-center p-6 border rounded-xl transition-all
-                        ${selectedTextId === t.id 
+                        flex flex-col items-center p-4 border rounded-xl transition-all
+                        ${selectedTextId === t.id && !isUsingCustom
                             ? 'bg-primary-900/20 border-primary-500 text-white shadow-[0_0_20px_rgba(6,182,212,0.1)]' 
                             : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:bg-zinc-800'}
                     `}
                   >
-                      <t.icon size={24} className={`mb-3 ${selectedTextId === t.id ? 'text-primary-400' : 'text-zinc-600'}`} />
-                      <span className="text-sm font-bold">{t.genre}</span>
-                      <span className="text-[10px] uppercase tracking-wider opacity-70 mt-1">{t.title}</span>
+                      <t.icon size={20} className={`mb-2 ${selectedTextId === t.id && !isUsingCustom ? 'text-primary-400' : 'text-zinc-600'}`} />
+                      <span className="text-xs font-bold">{t.genre}</span>
                   </button>
               ))}
+              <button 
+                  onClick={() => setShowCustomInput(true)}
+                  className={`
+                        flex flex-col items-center p-4 border rounded-xl transition-all
+                        ${isUsingCustom
+                            ? 'bg-primary-900/20 border-primary-500 text-white shadow-[0_0_20px_rgba(6,182,212,0.1)]' 
+                            : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:bg-zinc-800'}
+                    `}
+              >
+                  <Edit3 size={20} className={`mb-2 ${isUsingCustom ? 'text-primary-400' : 'text-zinc-600'}`} />
+                  <span className="text-xs font-bold">Custom</span>
+              </button>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-xl mx-auto">
@@ -244,7 +311,7 @@ const ReadingSpeedTest: React.FC = () => {
 
               {/* RSVP Mode Config */}
               <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-lg hover:border-primary-500 transition-all relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 p-2 bg-primary-600 text-black text-[10px] font-bold">EXPERIMENTAL</div>
+                  <div className="absolute top-0 right-0 p-2 bg-primary-600 text-black text-[10px] font-bold">ORP ALIGNED</div>
                   <Zap className="mx-auto mb-4 text-primary-500 group-hover:animate-pulse" size={32} />
                   <h3 className="font-bold text-white mb-2">RSVP Mode</h3>
                   <p className="text-xs text-zinc-500">Rapid Serial Visual Presentation.</p>
@@ -282,7 +349,7 @@ const ReadingSpeedTest: React.FC = () => {
                    ></div>
                )}
                
-               <p>{activeText.content}</p>
+               <p style={{ whiteSpace: 'pre-wrap' }}>{activeText.content}</p>
            </div>
            <button onClick={handleFinishReading} className="btn-primary w-full shadow-lg">
                I Have Finished Reading
@@ -292,8 +359,8 @@ const ReadingSpeedTest: React.FC = () => {
 
       {phase === 'reading' && mode === 'rsvp' && (
           <div className="flex flex-col items-center justify-center min-h-[400px]">
-              <div className="w-full max-w-md bg-black border border-zinc-700 rounded-lg p-12 text-center relative overflow-hidden">
-                  <div className="relative z-10 flex justify-center">
+              <div className="w-full max-w-2xl bg-black border border-zinc-700 rounded-lg p-12 text-center relative overflow-hidden">
+                  <div className="relative z-10 flex justify-center w-full">
                       {renderRsvpWord()}
                   </div>
                   {/* Progress Bar */}
@@ -316,7 +383,7 @@ const ReadingSpeedTest: React.FC = () => {
               </h3>
               
               <div className="space-y-3">
-                  {activeText.questions[quizAnswers.length].options.map((opt, i) => (
+                  {activeText.questions[quizAnswers.length].options.map((opt: string, i: number) => (
                       <button 
                          key={i}
                          onClick={() => handleAnswer(i)}
@@ -335,7 +402,7 @@ const ReadingSpeedTest: React.FC = () => {
                   <h2 className="text-sm font-mono text-zinc-500 uppercase tracking-widest mb-2">Effective Reading Speed</h2>
                   <div className="text-7xl font-bold text-white mb-2">{wpm} <span className="text-2xl text-zinc-600">WPM</span></div>
                   <div className={`inline-block px-3 py-1 rounded text-xs font-bold ${comprehensionScore === 100 ? 'bg-emerald-900/30 text-emerald-400' : 'bg-yellow-900/30 text-yellow-400'}`}>
-                      {comprehensionScore}% Retention
+                      {isUsingCustom ? 'Comprehension Not Tested' : `${comprehensionScore}% Retention`}
                   </div>
               </div>
 

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Brain, Trophy, RotateCcw, Banana, Volume2, VolumeX, Eye } from 'lucide-react';
+import { Brain, Trophy, RotateCcw, Banana, Volume2, VolumeX, Eye, Heart, HeartCrack } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 import { playUiSound } from '../../lib/sounds';
 import CountdownOverlay from '../CountdownOverlay';
@@ -16,34 +16,34 @@ const ChimpTest: React.FC = () => {
   const [phase, setPhase] = useState<'intro' | 'countdown' | 'play' | 'result'>('intro');
   const [level, setLevel] = useState(4);
   const [nodes, setNodes] = useState<Node[]>([]);
-  // Keep a full copy for reveal phase
   const [allNodes, setAllNodes] = useState<Node[]>([]);
   
   const [nextNum, setNextNum] = useState(1);
   const [isMasked, setIsMasked] = useState(false);
-  const [lives, setLives] = useState(3);
+  const [strikes, setStrikes] = useState(0); // New: 3 Strikes per game (or level logic)
+  const MAX_STRIKES = 3;
   
-  // Audio state
   const [soundEnabled, setSoundEnabled] = useState(true);
   
-  // New state for reveal logic
   const [isRevealing, setIsRevealing] = useState(false);
   const [wrongClickId, setWrongClickId] = useState<number | null>(null);
+  
+  // New: Track user's actual click path for replay
+  const [userPath, setUserPath] = useState<number[]>([]); // Array of node IDs clicked
 
-  // Dynamic Grid State
   const [gridConfig, setGridConfig] = useState({ rows: 5, cols: 8 });
 
   const initiateTest = () => {
-      setLives(3);
+      setStrikes(0);
       setLevel(4);
       prepareLevel(4);
       setPhase('countdown');
   };
 
   const getGridSizeForLevel = (lvl: number) => {
-      if (lvl <= 6) return { rows: 4, cols: 5 }; // Compact for easy
-      if (lvl <= 10) return { rows: 5, cols: 6 }; // Medium
-      return { rows: 6, cols: 8 }; // Large
+      if (lvl <= 6) return { rows: 4, cols: 5 }; 
+      if (lvl <= 10) return { rows: 5, cols: 6 }; 
+      return { rows: 6, cols: 8 }; 
   };
 
   const prepareLevel = (numCount: number) => {
@@ -51,6 +51,7 @@ const ChimpTest: React.FC = () => {
       setIsMasked(false);
       setIsRevealing(false);
       setWrongClickId(null);
+      setUserPath([]);
       
       const dims = getGridSizeForLevel(numCount);
       setGridConfig(dims);
@@ -81,9 +82,10 @@ const ChimpTest: React.FC = () => {
       const nextLvl = level + 1;
       setLevel(nextLvl);
       prepareLevel(nextLvl);
-      setPhase('play'); // No countdown between levels, keeps flow
+      setPhase('play'); 
   };
 
+  // Retry the SAME level (new pattern)
   const retryLevel = () => {
       prepareLevel(level);
       setPhase('play');
@@ -92,20 +94,19 @@ const ChimpTest: React.FC = () => {
   const handleNodeClick = (clickedNode: Node) => {
       if (isRevealing) return;
 
+      setUserPath(prev => [...prev, clickedNode.val]);
+
       // Correct Click
       if (clickedNode.val === nextNum) {
           if (soundEnabled) playUiSound('click');
           
-          // Trigger Masking on first click
           if (clickedNode.val === 1) {
               setIsMasked(true);
           }
 
           setNextNum(n => n + 1);
-          // Just visually hide/remove the node from playable set
           setNodes(prev => prev.filter(n => n.val !== clickedNode.val));
 
-          // Level Complete
           if (nodes.length === 1) {
               if (soundEnabled) playUiSound('success');
               setTimeout(nextLevel, 500);
@@ -114,17 +115,20 @@ const ChimpTest: React.FC = () => {
       // Incorrect Click
       else {
           if (soundEnabled) playUiSound('fail');
-          setLives(l => l - 1);
+          
+          // Non-linear difficulty: Give them another chance at this level if strikes remain
+          const newStrikes = strikes + 1;
+          setStrikes(newStrikes);
           setWrongClickId(clickedNode.val);
-          setIsRevealing(true); // Trigger reveal mode
+          setIsRevealing(true); 
           
           setTimeout(() => {
-              if (lives - 1 <= 0) {
+              if (newStrikes >= MAX_STRIKES) {
                   finish();
               } else {
                   retryLevel();
               }
-          }, 4000); // 4s to review mistakes (Ghost Replay time)
+          }, 4000); 
       }
   };
 
@@ -135,12 +139,10 @@ const ChimpTest: React.FC = () => {
       saveStat('chimp-test', score);
   };
 
-  // Helper to generate SVG path points for the reveal line
-  const getPathPoints = () => {
+  // Correct Path (Green)
+  const getCorrectPathPoints = () => {
       if (!isRevealing) return '';
-      // Sort nodes by val 1..N
       const sorted = [...allNodes].sort((a,b) => a.val - b.val);
-      
       return sorted.map(n => {
           const x = (n.col / gridConfig.cols) * 100 + (1/gridConfig.cols)*50; 
           const y = (n.row / gridConfig.rows) * 100 + (1/gridConfig.rows)*50;
@@ -148,7 +150,21 @@ const ChimpTest: React.FC = () => {
       }).join(' ');
   };
 
-  // Rank Title
+  // User Error Path (Red)
+  const getUserPathPoints = () => {
+      if (!isRevealing || userPath.length === 0) return '';
+      // Map user clicked values back to node positions
+      const points = userPath.map(val => {
+          const n = allNodes.find(node => node.val === val);
+          if(!n) return null;
+          const x = (n.col / gridConfig.cols) * 100 + (1/gridConfig.cols)*50; 
+          const y = (n.row / gridConfig.rows) * 100 + (1/gridConfig.rows)*50;
+          return `${x},${y}`;
+      }).filter(p => p !== null);
+      
+      return points.join(' ');
+  }
+
   const getRank = () => {
       if (level > 15) return "AI Supercomputer";
       if (level > 10) return "Silverback";
@@ -169,9 +185,9 @@ const ChimpTest: React.FC = () => {
                </div>
                <h1 className="text-4xl font-bold text-white mb-4">Are You Smarter Than a Chimp?</h1>
                <p className="text-zinc-400 text-lg max-w-lg mx-auto mb-8 leading-relaxed">
-                   This test is based on the research of Tetsuro Matsuzawa. 
-                   <br/>Click the numbers in order (1, 2, 3...). 
-                   <br/><strong className="text-white">Crucial:</strong> After you click '1', all other numbers will be masked. You must remember their positions.
+                   Based on research by Tetsuro Matsuzawa. 
+                   <br/>Click numbers in order (1, 2, 3...). 
+                   <br/>After clicking '1', numbers are masked.
                </p>
                <button onClick={initiateTest} className="btn-primary">Start Challenge</button>
            </div>
@@ -190,18 +206,16 @@ const ChimpTest: React.FC = () => {
                            {soundEnabled ? <Volume2 size={20}/> : <VolumeX size={20}/>}
                        </button>
                        <div className="flex gap-2">
-                           {[...Array(3)].map((_, i) => (
-                               <Banana 
-                                  key={i} 
-                                  size={24} 
-                                  className={`transition-all ${i < lives ? 'text-yellow-500 fill-yellow-500' : 'text-zinc-800 fill-zinc-800'}`} 
-                               />
+                           {[...Array(MAX_STRIKES)].map((_, i) => (
+                               <div key={i} className="text-red-500 transition-all">
+                                   {i < (MAX_STRIKES - strikes) ? <Heart size={24} fill="currentColor" /> : <HeartCrack size={24} className="opacity-20" />}
+                               </div>
                            ))}
                        </div>
                    </div>
                </div>
 
-               {/* Game Board - Responsive Aspect Ratio */}
+               {/* Game Board */}
                <div 
                   className="relative w-full bg-[#0c0c0e] border border-zinc-800 rounded-xl shadow-2xl mx-auto max-w-[800px] overflow-hidden transition-all duration-500"
                   style={{ aspectRatio: `${gridConfig.cols}/${gridConfig.rows}` }}
@@ -211,17 +225,28 @@ const ChimpTest: React.FC = () => {
                    {/* Reveal Path Overlay */}
                    {isRevealing && (
                        <svg className="absolute inset-0 w-full h-full pointer-events-none z-10 animate-in fade-in duration-1000" preserveAspectRatio="none" viewBox="0 0 100 100">
+                           {/* Correct Path (Green) */}
                            <polyline 
-                               points={getPathPoints()}
+                               points={getCorrectPathPoints()}
+                               fill="none"
+                               stroke="#10b981"
+                               strokeWidth="0.5"
+                               strokeOpacity="0.6"
+                               strokeDasharray="1 1"
+                           />
+                           
+                           {/* User Error Path (Red) */}
+                           <polyline 
+                               points={getUserPathPoints()}
                                fill="none"
                                stroke="#ef4444"
-                               strokeWidth="0.5"
-                               strokeOpacity="0.5"
-                               strokeDasharray="2 1"
+                               strokeWidth="0.8"
+                               strokeOpacity="0.8"
                            />
-                           {/* Ghost Animation Pulse */}
-                           <circle r="1" fill="#ef4444">
-                               <animateMotion dur="2s" repeatCount="indefinite" path={`M ${getPathPoints().replace(/ /g, ' L ')}`} />
+                           
+                           {/* Ghost Animation Pulse along Correct Path */}
+                           <circle r="1" fill="#10b981">
+                               <animateMotion dur="2s" repeatCount="indefinite" path={`M ${getCorrectPathPoints().replace(/ /g, ' L ')}`} />
                            </circle>
                        </svg>
                    )}
@@ -281,8 +306,8 @@ const ChimpTest: React.FC = () => {
                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
                                <div className="bg-black/90 px-6 py-4 rounded-xl border border-red-500/50 text-red-500 font-bold text-xl uppercase tracking-widest animate-in zoom-in flex flex-col items-center gap-2">
                                    <Eye size={24} />
-                                   <span>Ghost Replay</span>
-                                   <span className="text-xs text-zinc-500 font-mono">Memorize pattern for next try...</span>
+                                   <span>Memory Breach</span>
+                                   <span className="text-xs text-zinc-500 font-mono">Retrying level...</span>
                                </div>
                            </div>
                        </>

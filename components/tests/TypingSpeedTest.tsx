@@ -343,7 +343,7 @@ const TypingSpeedTest: React.FC = () => {
                                         fontSize={9} 
                                         tickLine={false} 
                                         axisLine={false} 
-                                        domain={[(dataMin: any) => dataMin - 10, (dataMax: any) => dataMax + 10]} 
+                                        domain={[(dataMin: number) => dataMin - 10, (dataMax: number) => dataMax + 10]} 
                                     />
                                     <Tooltip contentStyle={{ backgroundColor: '#000', borderColor: '#333', fontSize: '12px' }} itemStyle={{ color: '#8b5cf6' }} />
                                     <Area type="monotone" dataKey="score" stroke="#8b5cf6" strokeWidth={2} fill="url(#histGrad)" />
