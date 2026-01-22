@@ -1,6 +1,6 @@
 
-import React, { useRef, useEffect } from 'react';
-import { Download, Share2 } from 'lucide-react';
+import React, { useRef, useEffect, useState } from 'react';
+import { Download, Share2, Copy, Check } from 'lucide-react';
 
 interface ShareCardProps {
   testName: string;
@@ -16,6 +16,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
   color = '#06b6d4' 
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     generateCard();
@@ -147,6 +148,17 @@ const ShareCard: React.FC<ShareCardProps> = ({
     link.click();
   };
 
+  const handleCopyText = async () => {
+    const text = `I just scored ${scoreDisplay} on the ${testName}! 🚀\n${resultLabel}\n\nQuantify yourself at https://myhumanstats.org`;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy', err);
+    }
+  };
+
   return (
     <div className="mt-8 animate-in fade-in slide-in-from-bottom-4">
       <div className="bg-black/50 border border-zinc-800 p-6 rounded-lg clip-corner-lg text-center">
@@ -167,7 +179,17 @@ const ShareCard: React.FC<ShareCardProps> = ({
            </div>
         </div>
 
-        <p className="text-[10px] text-zinc-600 font-mono mb-4">
+        <div className="flex justify-center">
+            <button 
+                onClick={handleCopyText}
+                className={`flex items-center gap-2 px-6 py-3 rounded-full text-xs font-bold uppercase tracking-wide border transition-all ${copied ? 'bg-emerald-900/30 text-emerald-400 border-emerald-500/50' : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-white hover:border-zinc-600'}`}
+            >
+                {copied ? <Check size={14} /> : <Copy size={14} />}
+                {copied ? 'Copied to Clipboard' : 'Copy Text for Discord / X'}
+            </button>
+        </div>
+
+        <p className="text-[10px] text-zinc-600 font-mono mt-4">
            GENERATED_ON_CLIENT // {new Date().toISOString().split('T')[0]}
         </p>
       </div>

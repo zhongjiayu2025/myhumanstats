@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { RefreshCcw, Check, Volume2, ArrowRight, Minus, Plus, AlertTriangle, Info, Mic, Music2 } from 'lucide-react';
+import { RefreshCcw, Check, Volume2, ArrowRight, Minus, Plus, AlertTriangle, Info, Mic, Music2, MessageSquare } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 import ShareCard from '../ShareCard';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
@@ -58,7 +58,6 @@ const HearingAgeTest: React.FC = () => {
 
   // --- Initialization & Cleanup ---
   useEffect(() => {
-    // Just initialize audio context to unlock it if possible
     const tempCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
     tempCtx.close();
 
@@ -102,7 +101,6 @@ const HearingAgeTest: React.FC = () => {
           };
           loop();
       } catch (e) {
-          // If mic denied, skip check
           setPhase('calibration');
       }
   };
@@ -110,6 +108,19 @@ const HearingAgeTest: React.FC = () => {
   const stopEnvCheck = () => {
       if (micRafRef.current) cancelAnimationFrame(micRafRef.current);
       if (micStreamRef.current) micStreamRef.current.getTracks().forEach(t => t.stop());
+  };
+
+  // --- Phase 1: Calibration (New Speech Feature) ---
+  const playSpeechCheck = () => {
+      stopAudio(); // Stop tone if playing
+      if ('speechSynthesis' in window) {
+          const utterance = new SpeechSynthesisUtterance("This is a volume check. Please set your volume to a comfortable conversation level.");
+          utterance.volume = 0.5; // 50%
+          utterance.rate = 1;
+          window.speechSynthesis.speak(utterance);
+      } else {
+          alert("Speech synthesis not supported. Please use the 1kHz tone.");
+      }
   };
 
   // --- Core Audio Engine ---
@@ -224,14 +235,20 @@ const HearingAgeTest: React.FC = () => {
       }
   };
 
+  // Improved calculation
   const getAgeFromFreq = (freq: number) => {
-      if (freq > 19000) return "< 20";
-      if (freq > 17000) return "20 - 24";
-      if (freq > 16000) return "25 - 29";
-      if (freq > 15000) return "30 - 39";
-      if (freq > 12000) return "40 - 49";
-      if (freq > 10000) return "50 - 59";
-      return "60+";
+      // Linear interpolation based on standard curve
+      if (freq >= 19000) return "< 18";
+      if (freq >= 17000) return "18 - 24";
+      if (freq >= 16000) return "25 - 29";
+      if (freq >= 15000) return "30 - 35";
+      if (freq >= 14000) return "36 - 39";
+      if (freq >= 13000) return "40 - 45";
+      if (freq >= 12000) return "46 - 49";
+      if (freq >= 11000) return "50 - 55";
+      if (freq >= 10000) return "56 - 59";
+      if (freq >= 8000) return "60+";
+      return "Elderly";
   };
 
   // --- RENDERERS ---
@@ -281,9 +298,17 @@ const HearingAgeTest: React.FC = () => {
                   <h2 className="text-2xl font-bold text-white mb-4">Volume Safety</h2>
                   <div className="bg-red-900/10 border border-red-500/30 p-4 rounded text-left mb-6 text-sm text-red-200">
                       <AlertTriangle size={16} className="inline mr-2" />
-                      Set your device volume to 50%. Do not exceed this level.
+                      Set your device volume to 50%. High frequencies can damage ears if too loud.
                   </div>
-                  <div className="bg-zinc-900/50 p-6 rounded mb-8">
+                  
+                  <div className="grid grid-cols-1 gap-4 mb-8">
+                      <button 
+                          onClick={playSpeechCheck}
+                          className="w-full py-4 rounded bg-zinc-900 border border-zinc-700 hover:border-white transition-all text-white flex items-center justify-center gap-2"
+                      >
+                          <MessageSquare size={18} /> Test Speech Volume
+                      </button>
+                      
                       <button 
                           onClick={() => isPlaying ? stopAudio() : startTone(1000, 'sine', 'both', 0.1)}
                           className={`w-full py-4 rounded font-bold uppercase tracking-widest ${isPlaying ? 'bg-red-500 text-white' : 'bg-zinc-800 hover:bg-zinc-700 text-white'}`}
@@ -291,6 +316,7 @@ const HearingAgeTest: React.FC = () => {
                           {isPlaying ? "Stop Tone" : "Play 1kHz Reference"}
                       </button>
                   </div>
+                  
                   <button onClick={() => { stopAudio(); setPhase('testing'); }} className="btn-primary w-full">Start Test</button>
               </div>
           </div>
@@ -341,8 +367,6 @@ const HearingAgeTest: React.FC = () => {
                   
                   <div className="flex gap-4 mt-8">
                       <button onClick={() => { setPhase('testing'); setResults({left:null, right:null}); }} className="btn-secondary flex-1 flex items-center justify-center gap-2"><RefreshCcw size={16}/> New Test</button>
-                      
-                      {/* Point 4: Internal Linking Hook */}
                       <Link href="/test/tone-deaf-test" className="btn-primary flex-1 flex items-center justify-center gap-2 text-xs uppercase">
                           <Music2 size={16} /> Test Pitch (Tone Deaf)
                       </Link>
@@ -356,9 +380,8 @@ const HearingAgeTest: React.FC = () => {
   return (
     <div className="max-w-3xl mx-auto select-none">
        <div className="tech-border bg-black relative clip-corner-lg overflow-hidden border-zinc-800">
-           {/* Point 1: Semantic Output for Screen Readers */}
            <output className="sr-only" aria-live="polite">
-               {isPlaying ? `Playing ${frequency} Hertz` : "Generator Stopped"}
+               {isPlaying ? `Playing frequency sweep` : "Generator Stopped"}
            </output>
 
            <div className="flex border-b border-zinc-800">
@@ -373,8 +396,19 @@ const HearingAgeTest: React.FC = () => {
 
            <div className="p-12 text-center min-h-[400px] flex flex-col justify-center">
                <div className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest mb-2">Signal Frequency</div>
-               <div className="text-7xl font-mono font-bold text-white tracking-tighter mb-2 text-glow tabular-nums">{frequency.toLocaleString()}</div>
-               <div className="text-sm font-mono text-primary-500 mb-12">HERTZ</div>
+               
+               {/* BLIND MODE UPDATE: Hide freq during auto sweep */}
+               <div className="text-7xl font-mono font-bold text-white tracking-tighter mb-2 text-glow tabular-nums">
+                   {mode === 'auto' && isPlaying ? (
+                       <span className="animate-pulse text-zinc-600 tracking-normal text-5xl">SCANNING...</span>
+                   ) : (
+                       frequency.toLocaleString()
+                   )}
+               </div>
+               
+               {mode === 'manual' && <div className="text-sm font-mono text-primary-500 mb-12">HERTZ</div>}
+               {mode === 'auto' && isPlaying && <div className="text-sm font-mono text-zinc-600 mb-12">BLIND TEST ACTIVE</div>}
+               {!isPlaying && mode === 'auto' && <div className="text-sm font-mono text-zinc-500 mb-12">READY</div>}
 
                <div className="h-16 flex items-end justify-center gap-[2px] mb-8 px-12 opacity-80" aria-hidden="true">
                     {vizData.map((val, i) => (
@@ -384,8 +418,8 @@ const HearingAgeTest: React.FC = () => {
 
                <div className="max-w-md mx-auto">
                    {mode === 'auto' ? (
-                       <button onClick={isPlaying ? stopAndRecord : startSweep} className={`w-full py-6 rounded text-xl font-bold uppercase tracking-widest transition-all shadow-lg ${isPlaying ? 'bg-emerald-500 text-black animate-pulse' : 'bg-zinc-800 hover:bg-zinc-700 text-white'}`}>
-                          {isPlaying ? "I Hear It (Stop)" : `Start ${activeSide} Sweep`}
+                       <button onClick={isPlaying ? stopAndRecord : startSweep} className={`w-full py-6 rounded-xl text-xl font-bold uppercase tracking-widest transition-all shadow-lg ${isPlaying ? 'bg-emerald-500 hover:bg-emerald-400 text-black scale-105' : 'bg-zinc-800 hover:bg-zinc-700 text-white'}`}>
+                          {isPlaying ? "I HEAR IT (STOP)" : `Start ${activeSide} Sweep`}
                        </button>
                    ) : (
                        <div className="space-y-4 animate-in slide-in-from-bottom-4">

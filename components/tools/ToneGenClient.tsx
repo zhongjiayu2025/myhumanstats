@@ -2,8 +2,9 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Square, Headphones, Sliders, Waves, Radio } from 'lucide-react';
+import { Play, Square, Headphones, Sliders, Waves, Radio, Activity } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
+import { setupHiDPICanvas } from '@/lib/core';
 
 const PRESETS = [
   { name: 'Standard (440Hz)', left: 440, right: 440 },
@@ -33,8 +34,12 @@ export default function ToneGenClient() {
   const oscLRef = useRef<OscillatorNode | null>(null);
   const oscRRef = useRef<OscillatorNode | null>(null);
   const gainRef = useRef<GainNode | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  
   const sweepRafRef = useRef<number | null>(null);
+  const visualizerRafRef = useRef<number | null>(null);
   const sweepStartTimeRef = useRef<number>(0);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const initAudio = () => {
      if (!audioCtxRef.current) {
@@ -52,11 +57,20 @@ export default function ToneGenClient() {
   const start = () => {
      const ctx = initAudio();
      const gain = ctx.createGain();
+     const analyser = ctx.createAnalyser();
+     
      gainRef.current = gain;
+     analyserRef.current = analyser;
+     
+     // Config Analyser
+     analyser.fftSize = 2048;
      
      gain.gain.setValueAtTime(0, ctx.currentTime);
      gain.gain.linearRampToValueAtTime(volume, ctx.currentTime + 0.1);
-     gain.connect(ctx.destination);
+     
+     // Route: Osc -> Gain -> Analyser -> Destination
+     gain.connect(analyser);
+     analyser.connect(ctx.destination);
 
      const oscL = ctx.createOscillator();
      oscL.type = waveType;
@@ -89,6 +103,7 @@ export default function ToneGenClient() {
      }
 
      setIsPlaying(true);
+     drawVisualizer();
 
      if (sweepMode) {
          const now = ctx.currentTime;
@@ -129,6 +144,7 @@ export default function ToneGenClient() {
 
   const stop = () => {
      if (sweepRafRef.current) cancelAnimationFrame(sweepRafRef.current);
+     if (visualizerRafRef.current) cancelAnimationFrame(visualizerRafRef.current);
      
      if (audioCtxRef.current && gainRef.current) {
         const now = audioCtxRef.current.currentTime;
@@ -145,12 +161,67 @@ export default function ToneGenClient() {
            oscLRef.current?.disconnect();
            oscRRef.current?.disconnect();
            gainRef.current?.disconnect();
+           analyserRef.current?.disconnect();
            oscLRef.current = null;
            oscRRef.current = null;
            gainRef.current = null;
+           analyserRef.current = null;
         }, 200);
      }
      setIsPlaying(false);
+  };
+
+  const drawVisualizer = () => {
+      const canvas = canvasRef.current;
+      const analyser = analyserRef.current;
+      if (!canvas || !analyser) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const ctx = setupHiDPICanvas(canvas, rect.width, rect.height);
+      if (!ctx) return;
+
+      const bufferLength = analyser.fftSize;
+      const dataArray = new Uint8Array(bufferLength);
+
+      const draw = () => {
+          analyser.getByteTimeDomainData(dataArray);
+          
+          ctx.fillStyle = '#09090b'; // Match bg-black/zinc-950
+          ctx.fillRect(0, 0, rect.width, rect.height);
+          
+          // Draw Grid
+          ctx.strokeStyle = '#27272a';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(0, rect.height/2);
+          ctx.lineTo(rect.width, rect.height/2);
+          ctx.stroke();
+
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = '#06b6d4'; // Primary-500
+          ctx.beginPath();
+
+          const sliceWidth = rect.width / bufferLength;
+          let x = 0;
+
+          for(let i = 0; i < bufferLength; i++) {
+              const v = dataArray[i] / 128.0;
+              const y = v * (rect.height / 2);
+
+              if(i === 0) ctx.moveTo(x, y);
+              else ctx.lineTo(x, y);
+
+              x += sliceWidth;
+          }
+
+          ctx.lineTo(canvas.width, canvas.height/2);
+          ctx.stroke();
+
+          if (isPlaying) {
+              visualizerRafRef.current = requestAnimationFrame(draw);
+          }
+      };
+      draw();
   };
 
   useEffect(() => {
@@ -190,13 +261,28 @@ export default function ToneGenClient() {
 
        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
           
-          {/* Controls Panel (Keeping existing UI logic) */}
-          <div className="bg-black border border-zinc-800 rounded-xl p-8 shadow-2xl relative overflow-hidden">
+          {/* Controls Panel */}
+          <div className="bg-black border border-zinc-800 rounded-xl p-8 shadow-2xl relative overflow-hidden flex flex-col">
              
+             {/* Oscilloscope Screen */}
+             <div className="relative w-full h-32 bg-zinc-950 border border-zinc-800 rounded-lg mb-6 overflow-hidden shadow-inner">
+                 <canvas ref={canvasRef} className="w-full h-full" />
+                 {!isPlaying && (
+                     <div className="absolute inset-0 flex items-center justify-center text-[10px] text-zinc-600 font-mono tracking-widest pointer-events-none">
+                         SIGNAL_OFFLINE
+                     </div>
+                 )}
+                 {isPlaying && (
+                     <div className="absolute top-2 right-2 flex items-center gap-1">
+                         <Activity size={10} className="text-primary-500 animate-pulse" />
+                         <span className="text-[9px] text-primary-500 font-mono">LIVE_OUTPUT</span>
+                     </div>
+                 )}
+             </div>
+
              <div className="relative z-10 space-y-8">
                 <div className="flex items-center justify-between mb-2">
                    <div className="flex items-center gap-3">
-                       <div className={`w-3 h-3 rounded-full ${isPlaying ? 'bg-emerald-500 animate-pulse' : 'bg-red-500 opacity-20'}`}></div>
                        <h1 className="text-2xl font-bold text-white">Signal Gen</h1>
                    </div>
                    <div className="flex bg-zinc-900 rounded p-1 border border-zinc-800">
@@ -215,8 +301,8 @@ export default function ToneGenClient() {
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 text-center">
-                                <div className="text-xs text-zinc-500 font-mono mb-2">{mode === 'binaural' ? 'LEFT EAR' : 'FREQUENCY'}</div>
+                            <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 text-center group focus-within:border-primary-500 transition-colors">
+                                <div className="text-xs text-zinc-500 font-mono mb-2 group-focus-within:text-primary-400">{mode === 'binaural' ? 'LEFT CH' : 'FREQUENCY'}</div>
                                 <input 
                                     type="number" 
                                     value={freqL}
@@ -227,8 +313,8 @@ export default function ToneGenClient() {
                             </div>
                             
                             {mode === 'binaural' ? (
-                                <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 text-center">
-                                    <div className="text-xs text-zinc-500 font-mono mb-2">RIGHT EAR</div>
+                                <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 text-center group focus-within:border-primary-500 transition-colors">
+                                    <div className="text-xs text-zinc-500 font-mono mb-2 group-focus-within:text-primary-400">RIGHT CH</div>
                                     <input 
                                         type="number" 
                                         value={freqR}
@@ -239,7 +325,7 @@ export default function ToneGenClient() {
                                 </div>
                             ) : (
                                 <div className="bg-zinc-900/30 border border-zinc-800 rounded-lg p-6 flex flex-col justify-center items-center opacity-50">
-                                    <span className="text-xs text-zinc-500">Enable Binaural Mode to split channels</span>
+                                    <span className="text-xs text-zinc-500">Enable Binaural</span>
                                 </div>
                             )}
                         </div>
@@ -287,7 +373,7 @@ export default function ToneGenClient() {
                                     type="number" 
                                     value={startFreq} 
                                     onChange={(e) => setStartFreq(Number(e.target.value))}
-                                    className="w-full bg-zinc-900 border border-zinc-700 rounded p-2 text-white font-mono"
+                                    className="w-full bg-zinc-900 border border-zinc-700 rounded p-2 text-white font-mono focus:border-primary-500 outline-none"
                                 />
                             </div>
                             <div>
@@ -296,7 +382,7 @@ export default function ToneGenClient() {
                                     type="number" 
                                     value={endFreq} 
                                     onChange={(e) => setEndFreq(Number(e.target.value))}
-                                    className="w-full bg-zinc-900 border border-zinc-700 rounded p-2 text-white font-mono"
+                                    className="w-full bg-zinc-900 border border-zinc-700 rounded p-2 text-white font-mono focus:border-primary-500 outline-none"
                                 />
                             </div>
                         </div>
@@ -329,16 +415,16 @@ export default function ToneGenClient() {
                          <button 
                             key={t}
                             onClick={() => setWaveType(t as OscillatorType)}
-                            className={`py-2 text-[10px] font-bold uppercase rounded border ${waveType === t ? 'bg-zinc-800 border-zinc-600 text-white' : 'bg-zinc-950 border-zinc-800 text-zinc-600 hover:text-zinc-400'}`}
+                            className={`py-2 text-[10px] font-bold uppercase rounded border transition-all ${waveType === t ? 'bg-zinc-800 border-primary-500 text-primary-400' : 'bg-zinc-950 border-zinc-800 text-zinc-600 hover:text-zinc-400'}`}
                          >
-                            {t}
+                            {t.slice(0,4)}
                          </button>
                       ))}
                    </div>
 
                    <button 
                       onClick={togglePlay}
-                      className={`w-full py-4 rounded-lg font-bold text-lg uppercase tracking-widest flex items-center justify-center gap-3 transition-all ${isPlaying ? 'bg-red-600 hover:bg-red-500 text-white' : 'bg-white hover:bg-zinc-200 text-black'}`}
+                      className={`w-full py-4 rounded-lg font-bold text-lg uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-[0.98] ${isPlaying ? 'bg-red-600 hover:bg-red-500 text-white shadow-[0_0_20px_#ef4444]' : 'bg-white hover:bg-zinc-200 text-black shadow-[0_0_20px_white]'}`}
                    >
                       {isPlaying ? <><Square size={20} fill="currentColor"/> STOP</> : <><Play size={20} fill="currentColor"/> {sweepMode ? 'START SWEEP' : 'GENERATE'}</>}
                    </button>
@@ -356,7 +442,7 @@ export default function ToneGenClient() {
                              <button 
                                 key={p.name}
                                 onClick={() => loadPreset(p)}
-                                className="text-left p-3 bg-black border border-zinc-800 hover:border-zinc-600 rounded text-xs text-zinc-400 hover:text-white transition-colors"
+                                className="text-left p-3 bg-black border border-zinc-800 hover:border-zinc-600 hover:bg-zinc-900 rounded text-xs text-zinc-400 hover:text-white transition-colors"
                              >
                                  {p.name}
                              </button>

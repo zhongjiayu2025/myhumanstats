@@ -2,22 +2,26 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { RotateCcw, Clock, Music, HeartPulse } from 'lucide-react';
+import { RotateCcw, Clock, Music, HeartPulse, Activity } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
 
 export default function BPMClient() {
   const [taps, setTaps] = useState<number[]>([]);
   const [bpm, setBpm] = useState(0);
+  const [stability, setStability] = useState(0); // Standard Deviation in ms
   const [message, setMessage] = useState('Tap any key or click to start');
+  const [isTapping, setIsTapping] = useState(false);
   
   const handleTap = () => {
      const now = performance.now();
+     setIsTapping(true);
+     setTimeout(() => setIsTapping(false), 100);
      
      setTaps(prev => {
         if (prev.length > 0 && now - prev[prev.length - 1] > 2500) {
-           return [now];
+           return [now]; // Reset if gap > 2.5s
         }
-        const newTaps = [...prev, now].slice(-10);
+        const newTaps = [...prev, now].slice(-16); // Keep last 16 taps for rolling avg
         return newTaps;
      });
   };
@@ -28,12 +32,25 @@ export default function BPMClient() {
         for (let i = 1; i < taps.length; i++) {
            intervals.push(taps[i] - taps[i-1]);
         }
+        
         const avgInterval = intervals.reduce((a,b) => a+b, 0) / intervals.length;
-        const calculatedBpm = Math.round(60000 / avgInterval);
-        setBpm(calculatedBpm);
-        setMessage('Keep tapping to improve accuracy');
+        
+        // Calculate Standard Deviation (Stability)
+        const variance = intervals.reduce((a, b) => a + Math.pow(b - avgInterval, 2), 0) / intervals.length;
+        const stdDev = Math.sqrt(variance);
+        
+        setStability(stdDev);
+        setBpm(Math.round(60000 / avgInterval));
+        
+        if (taps.length < 4) setMessage('Calculating...');
+        else if (stdDev < 10) setMessage('Timing: Metronomic');
+        else if (stdDev < 30) setMessage('Timing: Solid');
+        else setMessage('Timing: Drifting');
+        
      } else if (taps.length === 1) {
         setMessage('First beat registered...');
+        setBpm(0);
+        setStability(0);
      }
   }, [taps]);
 
@@ -52,7 +69,15 @@ export default function BPMClient() {
      e.stopPropagation();
      setTaps([]);
      setBpm(0);
+     setStability(0);
      setMessage('Tap any key or click to start');
+  };
+
+  const getStabilityColor = (sd: number) => {
+      if (taps.length < 4) return 'text-zinc-500';
+      if (sd < 15) return 'text-emerald-500';
+      if (sd < 40) return 'text-yellow-500';
+      return 'text-red-500';
   };
 
   return (
@@ -66,17 +91,28 @@ export default function BPMClient() {
                 onMouseDown={handleTap}
                 className="bg-black border border-zinc-800 rounded-2xl aspect-square md:aspect-video flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500/50 hover:bg-zinc-900 transition-all active:scale-[0.99] select-none shadow-2xl relative overflow-hidden group"
              >
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-active:opacity-20 transition-opacity">
-                   <div className="w-64 h-64 bg-emerald-500 rounded-full filter blur-3xl"></div>
+                {/* Ripple Effect Center */}
+                <div className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${isTapping ? 'opacity-30' : 'opacity-0'}`}>
+                   <div className="w-64 h-64 bg-emerald-500 rounded-full filter blur-3xl animate-ping"></div>
                 </div>
 
                 <div className="relative z-10 text-center">
                    <div className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-4">{message}</div>
-                   <div className="text-9xl font-bold text-white font-mono tracking-tighter mb-4 text-glow">
+                   <div className="text-9xl font-bold text-white font-mono tracking-tighter mb-4 text-glow tabular-nums">
                       {bpm || '--'}
                    </div>
                    <div className="text-xl text-emerald-500 font-bold uppercase tracking-widest">BPM</div>
                 </div>
+                
+                {/* Stats Bar */}
+                {taps.length > 1 && (
+                    <div className="absolute top-6 right-6 flex flex-col items-end">
+                        <div className="text-[10px] text-zinc-600 font-mono uppercase">Jitter (SD)</div>
+                        <div className={`text-lg font-mono font-bold ${getStabilityColor(stability)}`}>
+                            ±{stability.toFixed(1)}ms
+                        </div>
+                    </div>
+                )}
 
                 {taps.length > 0 && (
                    <button 
@@ -112,6 +148,15 @@ export default function BPMClient() {
                        <span className="text-white">60 - 100 BPM</span>
                    </li>
                 </ul>
+                
+                <div className="mt-6 pt-6 border-t border-zinc-800">
+                    <h3 className="text-white font-bold mb-2 flex items-center gap-2 text-sm">
+                       <Activity size={16} className="text-emerald-500" /> Stability Stat
+                    </h3>
+                    <p className="text-[10px] text-zinc-500 leading-relaxed">
+                        The <strong>Jitter</strong> value measures how consistent your taps are. Lower is better. Professional drummers typically score below ±15ms.
+                    </p>
+                </div>
              </div>
           </div>
        </div>

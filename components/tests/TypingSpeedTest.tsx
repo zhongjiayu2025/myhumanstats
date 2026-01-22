@@ -44,12 +44,12 @@ const TypingSpeedTest: React.FC = () => {
   const [streak, setStreak] = useState(0);
   
   const inputRef = useRef<HTMLInputElement>(null);
+  const charRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const lastSampleTime = useRef<number>(0);
 
   useEffect(() => { reset(); }, [mode]);
 
   useEffect(() => {
-      // Load long term history
       const h = getHistory('typing-speed-test');
       setLongTermHistory(h.map(entry => ({ date: new Date(entry.timestamp).toLocaleDateString(), score: entry.score })).slice(-10));
   }, [phase]);
@@ -77,10 +77,10 @@ const TypingSpeedTest: React.FC = () => {
       // Sound & Haptic
       if (val.length > input.length && soundEnabled) {
           playUiSound('click');
-          if (navigator.vibrate) navigator.vibrate(10); // Subtle tick
+          if (navigator.vibrate) navigator.vibrate(10);
       }
 
-      // Check correctness
+      // Check correctness of latest char
       if (val.length > input.length) {
           const expectedChar = text[val.length - 1];
           const typedChar = val[val.length - 1];
@@ -126,7 +126,6 @@ const TypingSpeedTest: React.FC = () => {
       setWpm(netWpm);
       setPhase('result');
       playUiSound('success');
-      // Save raw WPM as the score
       saveStat('typing-speed-test', netWpm);
   };
 
@@ -140,25 +139,46 @@ const TypingSpeedTest: React.FC = () => {
       setStreak(0);
   };
 
+  // Calculate Caret Position
+  const [caretPos, setCaretPos] = useState({ left: 0, top: 0 });
+  useEffect(() => {
+      const idx = input.length;
+      if (charRefs.current[idx]) {
+          const el = charRefs.current[idx];
+          if (el) {
+              setCaretPos({
+                  left: el.offsetLeft,
+                  top: el.offsetTop
+              });
+          }
+      }
+  }, [input, text]);
+
   const renderText = () => {
       return text.split('').map((char, i) => {
           let color = 'text-zinc-600';
           let bg = '';
-          const isCursor = i === input.length;
+          const isCurrent = i === input.length;
+          
           if (i < input.length) {
               const isCorrect = input[i] === char;
               color = isCorrect ? 'text-white' : 'text-red-500';
               bg = isCorrect ? '' : 'bg-red-900/20';
           }
-          // Simple Syntax Highlighting for Code Mode
+          
+          // Code Syntax Highlighting
           if (mode === 'code' && i >= input.length) {
               if (['const', 'let', 'var', 'function', 'return', 'import', 'from'].includes(text.slice(i).split(' ')[0])) color = 'text-pink-500';
               if (['{', '}', '(', ')', '[', ']'].includes(char)) color = 'text-yellow-500';
               if (['=>', '=', '+', '-', '<', '>'].includes(char)) color = 'text-cyan-500';
           }
+
           return (
-            <span key={i} className={`relative ${color} ${bg}`}>
-                {isCursor && <span className="absolute left-0 -top-1 bottom-0 w-0.5 bg-primary-500 animate-pulse shadow-[0_0_8px_#06b6d4]"></span>}
+            <span 
+                key={i} 
+                ref={el => { charRefs.current[i] = el; }}
+                className={`relative ${color} ${bg} transition-colors duration-100`}
+            >
                 {char}
             </span>
           );
@@ -198,7 +218,15 @@ const TypingSpeedTest: React.FC = () => {
        </div>
 
        {/* Typing Area */}
-       <div className="relative font-mono text-xl md:text-2xl leading-relaxed break-words min-h-[180px] bg-black/50 p-8 border border-zinc-800 rounded-lg shadow-inner mb-8">
+       <div className="relative font-mono text-xl md:text-2xl leading-relaxed break-words min-h-[180px] bg-black/50 p-8 border border-zinc-800 rounded-lg shadow-inner mb-8 overflow-hidden">
+           {/* Smooth Caret */}
+           {phase !== 'result' && (
+               <div 
+                  className="absolute w-0.5 h-6 bg-primary-500 shadow-[0_0_10px_#06b6d4] transition-all duration-75 ease-out z-20 pointer-events-none"
+                  style={{ left: caretPos.left + 32, top: caretPos.top + 35 }} // +padding
+               ></div>
+           )}
+           
            <div className="relative z-10">{renderText()}</div>
            <input ref={inputRef} type="text" value={input} onChange={handleInput} className="absolute opacity-0 inset-0 cursor-text" autoFocus disabled={phase === 'result'} />
        </div>

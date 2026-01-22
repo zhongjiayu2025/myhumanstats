@@ -8,6 +8,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = 'https://myhumanstats.org';
 
   // 1. Static Pages
+  // Strategy: Don't set lastModified for static pages unless they actually change.
+  // Google ignores "always fresh" dates if content doesn't change.
   const staticRoutes = [
     '',
     '/about',
@@ -22,7 +24,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const staticEntries = staticRoutes.map((route) => ({
     url: `${baseUrl}${route}`,
-    lastModified: new Date(),
     changeFrequency: 'monthly' as const,
     priority: route === '' ? 1.0 : 0.8,
   }));
@@ -30,12 +31,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // 2. Dynamic Test Pages
   const testEntries = TESTS.map((test) => ({
     url: `${baseUrl}/test/${test.id}`,
-    lastModified: new Date(), // Ideally this would come from a real updated date
-    changeFrequency: 'weekly' as const,
+    changeFrequency: 'monthly' as const, // Tests are stable software
     priority: 0.9,
   }));
 
   // 3. Dynamic Blog Posts
+  // Blog posts MUST have accurate dates
   const blogEntries = BLOG_POSTS.map((post) => ({
     url: `${baseUrl}/blog/${post.slug}`,
     lastModified: new Date(post.date),
@@ -46,7 +47,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // 4. Categories
   const categoryEntries = Object.values(TestCategory).map((cat) => ({
     url: `${baseUrl}/category/${cat.toLowerCase()}`,
-    lastModified: new Date(),
     changeFrequency: 'weekly' as const,
     priority: 0.7,
   }));
@@ -63,7 +63,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
   
   const toolEntries = toolIds.map((id) => ({
     url: `${baseUrl}/tools/${id}`,
-    lastModified: new Date(),
     changeFrequency: 'monthly' as const,
     priority: 0.8,
   }));

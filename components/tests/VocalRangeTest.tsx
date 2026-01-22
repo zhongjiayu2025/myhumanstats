@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, Music, RefreshCw, Volume2, Activity } from 'lucide-react';
+import { Mic, Music, RefreshCw, Volume2, Activity, Lock } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 const NOTES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
@@ -82,6 +82,49 @@ const VisualPiano: React.FC<{ activeMidi: number | null; range?: { min: number, 
     );
 };
 
+// --- New Pitch Stability Graph ---
+const PitchGraph: React.FC<{ history: number[] }> = ({ history }) => {
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        const w = canvas.width;
+        const h = canvas.height;
+        ctx.clearRect(0, 0, w, h);
+
+        if (history.length < 2) return;
+
+        // Auto scale logic
+        const min = Math.min(...history) * 0.95;
+        const max = Math.max(...history) * 1.05;
+        const range = max - min || 1;
+
+        ctx.beginPath();
+        ctx.strokeStyle = '#22d3ee';
+        ctx.lineWidth = 2;
+        
+        history.forEach((val, i) => {
+            const x = (i / (history.length - 1)) * w;
+            const y = h - ((val - min) / range) * h;
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        });
+        
+        ctx.stroke();
+    }, [history]);
+
+    return (
+        <div className="relative w-full h-16 bg-black/40 border border-zinc-800 rounded mb-4 overflow-hidden">
+            <canvas ref={canvasRef} width={300} height={64} className="w-full h-full" />
+            <div className="absolute bottom-1 left-1 text-[9px] text-zinc-600 font-mono">PITCH STABILITY</div>
+        </div>
+    );
+};
+
 const VocalRangeTest: React.FC = () => {
   const [step, setStep] = useState<Step>('intro');
   const [, setIsListening] = useState(false);
@@ -90,6 +133,11 @@ const VocalRangeTest: React.FC = () => {
   const [pitch, setPitch] = useState<{freq: number, note: string, cents: number, midi: number} | null>(null);
   const [volume, setVolume] = useState(0);
   const [confidence, setConfidence] = useState(0);
+  const [pitchHistory, setPitchHistory] = useState<number[]>([]);
+  
+  // Stability Check
+  const [stabilityCounter, setStabilityCounter] = useState(0);
+  const lastPitchMidi = useRef<number>(0);
   
   // Results
   const [lowRecord, setLowRecord] = useState<{freq: number, note: string, midi: number} | null>(null);
@@ -156,6 +204,31 @@ const VocalRangeTest: React.FC = () => {
       gain.connect(ctx.destination);
       osc.start();
       osc.stop(ctx.currentTime + 1);
+  };
+
+  const playNote = (freq: number) => {
+      if (!freq) return;
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.type = 'sawtooth';
+      osc.frequency.value = freq;
+      
+      // Filter for piano-ish timbre
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 1000;
+
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.5);
+      
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 1.5);
   };
 
   // --- Audio Engine ---
@@ -267,14 +340,29 @@ const VocalRangeTest: React.FC = () => {
             const data = getNoteData(median);
             setPitch({ freq: median, note: data.note, cents: data.cents, midi: data.midi });
             
-            // Capture records
-            if (step === 'low-test') {
-                setLowRecord(prev => (!prev || median < prev.freq) ? {freq: median, note: data.note, midi: data.midi} : prev);
+            // Add to pitch history for graph
+            setPitchHistory(prev => [...prev, median].slice(-50)); // Keep last 50 points
+
+            // STABILITY CHECK LOGIC
+            if (data.midi === lastPitchMidi.current) {
+                setStabilityCounter(prev => Math.min(100, prev + 2)); // Increment
+            } else {
+                setStabilityCounter(0);
+                lastPitchMidi.current = data.midi;
             }
-            if (step === 'high-test') {
-                setHighRecord(prev => (!prev || median > prev.freq) ? {freq: median, note: data.note, midi: data.midi} : prev);
+
+            // Capture records ONLY if stable (>60%)
+            if (stabilityCounter > 60) {
+                if (step === 'low-test') {
+                    setLowRecord(prev => (!prev || median < prev.freq) ? {freq: median, note: data.note, midi: data.midi} : prev);
+                }
+                if (step === 'high-test') {
+                    setHighRecord(prev => (!prev || median > prev.freq) ? {freq: median, note: data.note, midi: data.midi} : prev);
+                }
             }
         }
+    } else {
+        setStabilityCounter(prev => Math.max(0, prev - 5)); // Decay if signal lost
     }
     
     rafRef.current = requestAnimationFrame(updateLoop);
@@ -372,13 +460,25 @@ const VocalRangeTest: React.FC = () => {
                       </div>
 
                       <div className="grid grid-cols-2 gap-4 mb-8">
-                          <div className="bg-zinc-900/50 p-4 rounded border border-zinc-800">
+                          <div 
+                             className="bg-zinc-900/50 p-4 rounded border border-zinc-800 cursor-pointer hover:bg-zinc-800 transition-colors"
+                             onClick={() => playNote(lowRecord.freq)}
+                          >
                               <div className="text-xs text-zinc-500 uppercase mb-1">Lowest</div>
-                              <div className="text-2xl font-mono text-white">{lowRecord.note} <span className="text-sm text-zinc-600">({Math.round(lowRecord.freq)}Hz)</span></div>
+                              <div className="text-2xl font-mono text-white flex items-center justify-center gap-2">
+                                  {lowRecord.note} <Volume2 size={16}/>
+                              </div>
+                              <div className="text-xs text-zinc-600">({Math.round(lowRecord.freq)}Hz)</div>
                           </div>
-                          <div className="bg-zinc-900/50 p-4 rounded border border-zinc-800">
+                          <div 
+                             className="bg-zinc-900/50 p-4 rounded border border-zinc-800 cursor-pointer hover:bg-zinc-800 transition-colors"
+                             onClick={() => playNote(highRecord.freq)}
+                          >
                               <div className="text-xs text-zinc-500 uppercase mb-1">Highest</div>
-                              <div className="text-2xl font-mono text-white">{highRecord.note} <span className="text-sm text-zinc-600">({Math.round(highRecord.freq)}Hz)</span></div>
+                              <div className="text-2xl font-mono text-white flex items-center justify-center gap-2">
+                                  {highRecord.note} <Volume2 size={16}/>
+                              </div>
+                              <div className="text-xs text-zinc-600">({Math.round(highRecord.freq)}Hz)</div>
                           </div>
                       </div>
 
@@ -474,10 +574,13 @@ const VocalRangeTest: React.FC = () => {
                    </h2>
                    <p className="text-zinc-400 text-sm mb-6">
                        {step === 'low-test' 
-                           ? "Relax your throat and hum 'Ahhh' as low as you can." 
-                           : "Now go high! Sing 'Eeee' or a siren sound up to your limit."}
+                           ? "Relax your throat and hum 'Ahhh' as low as you can. Hold the note." 
+                           : "Now go high! Sing 'Eeee' or a siren sound up to your limit. Hold it."}
                    </p>
                    
+                   {/* Pitch Stability Graph */}
+                   <PitchGraph history={pitchHistory} />
+
                    {/* Tuner Visualization */}
                    <div className="relative h-24 bg-black/50 border border-zinc-700 rounded-xl overflow-hidden flex flex-col items-center justify-center mb-6 backdrop-blur-sm">
                         {pitch ? (
@@ -485,6 +588,8 @@ const VocalRangeTest: React.FC = () => {
                                 <div className="text-4xl font-bold text-white font-mono flex items-baseline gap-2">
                                     {pitch.note} <span className="text-xs text-zinc-500 font-sans">{pitch.freq.toFixed(0)} Hz</span>
                                 </div>
+                                
+                                {/* Cent bar */}
                                 <div className="w-48 h-1 bg-zinc-700 mt-2 relative rounded-full">
                                     <div 
                                         className={`absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full transition-all duration-100 ${Math.abs(pitch.cents) < 10 ? 'bg-emerald-500' : 'bg-primary-500'}`}
@@ -495,11 +600,25 @@ const VocalRangeTest: React.FC = () => {
                                     <span>FLAT</span>
                                     <span>SHARP</span>
                                 </div>
-                                {/* Confidence Indicator */}
-                                <div className="absolute top-2 right-2 flex items-center gap-1">
-                                    <Activity size={10} className={confidence > 0.95 ? "text-emerald-500" : "text-zinc-600"}/>
-                                    <span className="text-[9px] font-mono text-zinc-600">Signal: {Math.round(confidence * 100)}%</span>
-                                </div>
+
+                                {/* Stability Lock Indicator */}
+                                {stabilityCounter > 0 && (
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col items-center gap-1">
+                                        <div className="relative w-8 h-8">
+                                            <svg className="w-full h-full -rotate-90">
+                                                <circle cx="16" cy="16" r="14" fill="none" stroke="#27272a" strokeWidth="3" />
+                                                <circle 
+                                                    cx="16" cy="16" r="14" fill="none" stroke={stabilityCounter > 60 ? "#10b981" : "#f59e0b"} strokeWidth="3"
+                                                    strokeDasharray="88"
+                                                    strokeDashoffset={88 - (stabilityCounter / 100) * 88}
+                                                    className="transition-all duration-100 ease-linear"
+                                                />
+                                            </svg>
+                                            {stabilityCounter > 60 && <Lock size={12} className="absolute inset-0 m-auto text-emerald-500" />}
+                                        </div>
+                                        <span className="text-[9px] font-mono text-zinc-500">HOLD</span>
+                                    </div>
+                                )}
                             </>
                         ) : (
                             <div className="text-zinc-600 font-mono animate-pulse">LISTENING...</div>

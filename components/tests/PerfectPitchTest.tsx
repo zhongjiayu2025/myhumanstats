@@ -1,5 +1,6 @@
+
 import React, { useState, useRef } from 'react';
-import { Music, Volume2, Trophy, Settings, RefreshCcw, CheckCircle2, XCircle, Ear } from 'lucide-react';
+import { Music, Volume2, Trophy, Settings, RefreshCcw, CheckCircle2, XCircle, Ear, Activity } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 interface NoteDef {
@@ -23,7 +24,8 @@ const OCTAVE: NoteDef[] = [
   { name: "B", type: "white", freq: 493.88 }
 ];
 
-type Difficulty = 'easy' | 'hard'; // Easy = White keys only, Hard = Chromatic
+type Difficulty = 'easy' | 'hard';
+type Timbre = 'piano' | 'sine' | 'square';
 
 // --- UI Components ---
 interface PianoKeyProps {
@@ -52,16 +54,11 @@ const PianoKey: React.FC<PianoKeyProps> = ({
   } else if (isWrongGuess) {
       bgClass = 'bg-red-500 !text-white z-20';
   } else if (!isWhite) {
-      // Default black key
       bgClass = 'bg-zinc-900 border border-zinc-700 text-zinc-600';
   } else {
-      // Default white key
       bgClass = 'bg-zinc-100 hover:bg-zinc-200 text-zinc-400';
   }
 
-  // Disable interaction if not in pool for Easy mode? 
-  // No, usually easy mode hides black keys or makes them unclickable.
-  // Let's dim them in Easy mode if they are black keys.
   const isDisabled = difficulty === 'easy' && !isWhite;
 
   return (
@@ -83,18 +80,20 @@ const PianoKey: React.FC<PianoKeyProps> = ({
 const PerfectPitchTest: React.FC = () => {
   const [phase, setPhase] = useState<'intro' | 'play' | 'result'>('intro');
   const [difficulty, setDifficulty] = useState<Difficulty>('easy');
-  const [useReference, setUseReference] = useState(false); // Relative pitch mode
+  const [useReference, setUseReference] = useState(false);
+  const [timbre, setTimbre] = useState<Timbre>('piano');
   
   // Game State
   const [currentNote, setCurrentNote] = useState<NoteDef | null>(null);
   const [score, setScore] = useState(0);
   const [rounds, setRounds] = useState(0);
   const [maxStreak, setMaxStreak] = useState(0);
+  const [mistakes, setMistakes] = useState<{expected: string, guessed: string}[]>([]);
   
   // Feedback State
   const [lastGuess, setLastGuess] = useState<string | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
-  const [isWaiting, setIsWaiting] = useState(false); // Waiting for next round
+  const [isWaiting, setIsWaiting] = useState(false);
   
   const TOTAL_ROUNDS = 10;
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -112,36 +111,47 @@ const PerfectPitchTest: React.FC = () => {
      const ctx = initAudio();
      const now = ctx.currentTime;
 
-     // Master Gain
      const masterGain = ctx.createGain();
      masterGain.connect(ctx.destination);
      
-     // ADSR Envelope for Piano-like sound
+     // ADSR
      masterGain.gain.setValueAtTime(0, now);
-     masterGain.gain.linearRampToValueAtTime(0.5, now + 0.02); // Attack
-     masterGain.gain.exponentialRampToValueAtTime(0.3, now + 0.1); // Decay
-     masterGain.gain.exponentialRampToValueAtTime(0.001, now + duration); // Release
+     masterGain.gain.linearRampToValueAtTime(0.5, now + 0.02);
+     
+     if (timbre === 'piano') {
+         masterGain.gain.exponentialRampToValueAtTime(0.3, now + 0.1);
+         masterGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+     } else {
+         masterGain.gain.setValueAtTime(0.5, now + duration - 0.05);
+         masterGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+     }
 
-     // Oscillator 1: Fundamental (Triangle for body)
      const osc1 = ctx.createOscillator();
-     osc1.type = 'triangle';
+     const osc2 = ctx.createOscillator();
+
+     if (timbre === 'piano') {
+         osc1.type = 'triangle';
+         osc2.type = 'sine';
+         osc2.frequency.value = freq * 2;
+     } else {
+         osc1.type = timbre as OscillatorType;
+         osc2.type = timbre as OscillatorType;
+         osc2.frequency.value = freq; 
+         // Detune slightly for chorus effect if sine
+         if (timbre === 'sine') osc2.detune.value = 5;
+     }
+
      osc1.frequency.value = freq;
      osc1.connect(masterGain);
-
-     // Oscillator 2: Harmonic (Sine for clarity)
-     const osc2 = ctx.createOscillator();
-     osc2.type = 'sine';
-     osc2.frequency.value = freq * 2; // Octave up
+     
      const gain2 = ctx.createGain();
-     gain2.gain.value = 0.2;
+     gain2.gain.value = timbre === 'piano' ? 0.2 : 0.5;
      osc2.connect(gain2);
      gain2.connect(masterGain);
 
-     // Start
      osc1.start(now);
      osc2.start(now);
      
-     // Stop
      osc1.stop(now + duration);
      osc2.stop(now + duration);
      
@@ -159,15 +169,12 @@ const PerfectPitchTest: React.FC = () => {
      setLastGuess(null);
      setIsCorrect(null);
 
-     // Filter notes based on difficulty
      const pool = difficulty === 'easy' ? OCTAVE.filter(n => n.type === 'white') : OCTAVE;
      const randomNote = pool[Math.floor(Math.random() * pool.length)];
      setCurrentNote(randomNote);
 
      if (useReference) {
-         // Play Middle C (261.63Hz) first
          await playTone(261.63, 0.8);
-         // Small silence
          await new Promise(r => setTimeout(r, 400));
      }
      
@@ -179,6 +186,7 @@ const PerfectPitchTest: React.FC = () => {
      setScore(0);
      setRounds(0);
      setMaxStreak(0);
+     setMistakes([]);
      setPhase('play');
      setTimeout(() => startRound(), 100);
   };
@@ -193,21 +201,26 @@ const PerfectPitchTest: React.FC = () => {
       if (noteName === currentNote.name) {
           setIsCorrect(true);
           setScore(s => s + 1);
-          // Only updating maxStreak, not tracking current streak
           setMaxStreak(m => Math.max(m, score + 1));
-          playTone(currentNote.freq * 2, 0.3); // High ping for correct
+          playTone(currentNote.freq * 2, 0.3);
       } else {
           setIsCorrect(false);
+          setMistakes(prev => [...prev, { expected: currentNote.name, guessed: noteName }]);
+          const guessedNoteDef = OCTAVE.find(n => n.name === noteName);
+          if (guessedNoteDef) {
+              playTone(guessedNoteDef.freq, 0.4).then(() => {
+                  setTimeout(() => playTone(currentNote.freq, 0.6), 500);
+              });
+          }
       }
 
-      // Auto advance
       setTimeout(() => {
           if (rounds + 1 < TOTAL_ROUNDS) {
               startRound();
           } else {
               finish();
           }
-      }, 1500);
+      }, isCorrect ? 1500 : 2500);
   };
 
   const finish = () => {
@@ -226,17 +239,35 @@ const PerfectPitchTest: React.FC = () => {
              </div>
              <h2 className="text-3xl font-bold text-white mb-2">Pitch Recognition</h2>
              <p className="text-zinc-400 mb-8 max-w-md mx-auto leading-relaxed">
-                Identify musical notes by ear. Use <strong>Reference Mode</strong> to train relative pitch, or go without for absolute pitch.
+                Identify musical notes by ear. Configure your test below.
              </p>
              
-             {/* Mode Toggles */}
-             <div className="flex justify-center gap-4 mb-8">
-                 <button 
-                    onClick={() => setUseReference(!useReference)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold uppercase transition-all ${useReference ? 'bg-primary-900/30 border-primary-500 text-primary-400' : 'bg-zinc-900 border-zinc-800 text-zinc-500'}`}
-                 >
-                    <Ear size={14} /> {useReference ? 'Reference Tone: ON' : 'Reference Tone: OFF'}
-                 </button>
+             {/* Config Panel */}
+             <div className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-xl max-w-md mx-auto mb-8">
+                 <div className="flex justify-between items-center mb-4">
+                     <span className="text-xs text-zinc-400 font-bold uppercase">Mode</span>
+                     <button 
+                        onClick={() => setUseReference(!useReference)}
+                        className={`flex items-center gap-2 px-3 py-1 rounded border text-[10px] font-bold uppercase transition-all ${useReference ? 'bg-primary-900/30 border-primary-500 text-primary-400' : 'bg-zinc-800 border-zinc-700 text-zinc-500'}`}
+                     >
+                        <Ear size={12} /> {useReference ? 'Relative (Ref C)' : 'Absolute'}
+                     </button>
+                 </div>
+                 
+                 <div className="flex justify-between items-center">
+                     <span className="text-xs text-zinc-400 font-bold uppercase">Timbre</span>
+                     <div className="flex gap-2">
+                         {['piano', 'sine', 'square'].map(t => (
+                             <button 
+                                key={t}
+                                onClick={() => setTimbre(t as Timbre)}
+                                className={`px-2 py-1 rounded border text-[10px] uppercase font-bold ${timbre === t ? 'bg-zinc-700 border-zinc-500 text-white' : 'border-zinc-800 text-zinc-600'}`}
+                             >
+                                 {t}
+                             </button>
+                         ))}
+                     </div>
+                 </div>
              </div>
 
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-md mx-auto">
@@ -267,15 +298,13 @@ const PerfectPitchTest: React.FC = () => {
 
        {phase === 'play' && (
           <div className="animate-in slide-in-from-bottom-8">
-             {/* HUD */}
              <div className="flex justify-between items-end mb-12 px-4 border-b border-zinc-800 pb-4">
                 <div className="text-left">
                     <div className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest">Progress</div>
-                    <div className="text-white font-mono text-xl">{rounds + 1}<span className="text-zinc-600 text-sm">/{TOTAL_ROUNDS}</span></div>
+                    <div className="text-white font-mono text-xl">{rounds}<span className="text-zinc-600 text-sm">/{TOTAL_ROUNDS}</span></div>
                 </div>
                 
                 <div className="flex flex-col items-center">
-                    {/* Status Message */}
                     <div className={`h-8 flex items-center gap-2 font-bold uppercase tracking-widest transition-all ${isCorrect === true ? 'text-emerald-500 scale-110' : isCorrect === false ? 'text-red-500' : 'text-transparent'}`}>
                         {isCorrect === true ? <><CheckCircle2 size={18}/> Correct</> : isCorrect === false ? <><XCircle size={18}/> Missed</> : '...'}
                     </div>
@@ -287,7 +316,6 @@ const PerfectPitchTest: React.FC = () => {
                 </div>
              </div>
 
-             {/* Replay Button */}
              <div className="mb-12 flex justify-center gap-4">
                  {useReference && (
                      <button 
@@ -305,7 +333,6 @@ const PerfectPitchTest: React.FC = () => {
                  </button>
              </div>
 
-             {/* Piano UI */}
              <div className="relative flex justify-center items-start pt-4 pb-8 select-none overflow-x-auto">
                  <div className="flex relative bg-zinc-800 p-1 rounded-b-lg shadow-2xl">
                      {OCTAVE.map((note) => (
@@ -330,23 +357,32 @@ const PerfectPitchTest: React.FC = () => {
              <Trophy size={64} className={`mx-auto mb-6 ${score === TOTAL_ROUNDS ? 'text-yellow-500' : 'text-zinc-700'}`} />
              
              <div className="text-6xl font-bold text-white mb-2">{score}<span className="text-zinc-600 text-3xl">/{TOTAL_ROUNDS}</span></div>
-             <h2 className="text-sm font-mono text-zinc-500 uppercase tracking-widest mb-8">Identification Score</h2>
+             <h2 className="text-sm font-mono text-zinc-500 uppercase tracking-widest mb-8">Pitch Recognition Score</h2>
              
-             <div className="grid grid-cols-2 gap-4 max-w-xs mx-auto mb-8">
-                 <div className="bg-zinc-900 border border-zinc-800 p-4 rounded text-center">
-                     <div className="text-xs text-zinc-500 uppercase">Best Streak</div>
-                     <div className="text-xl text-white font-mono">{maxStreak}</div>
+             {/* Confusion Analysis */}
+             {mistakes.length > 0 && (
+                 <div className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-xl max-w-md mx-auto mb-8 text-left">
+                     <h4 className="text-white font-bold text-sm mb-4 flex items-center gap-2">
+                         <Activity size={16} className="text-red-500"/> Confusion Matrix
+                     </h4>
+                     <div className="space-y-2">
+                         {mistakes.slice(0, 3).map((m, i) => (
+                             <div key={i} className="text-xs text-zinc-400 flex justify-between border-b border-zinc-800 pb-2">
+                                 <span>Heard <strong>{m.expected}</strong></span>
+                                 <span>Guessed <span className="text-red-400">{m.guessed}</span></span>
+                             </div>
+                         ))}
+                     </div>
+                     <p className="text-[10px] text-zinc-500 mt-4 italic">
+                         Identifying your specific confusion intervals (e.g. confusing 4ths or 5ths) is key to ear training.
+                     </p>
                  </div>
-                 <div className="bg-zinc-900 border border-zinc-800 p-4 rounded text-center">
-                     <div className="text-xs text-zinc-500 uppercase">Mode</div>
-                     <div className="text-xl text-white font-mono capitalize">{useReference ? 'Relative' : 'Absolute'}</div>
-                 </div>
-             </div>
+             )}
 
-             <div className="bg-zinc-900/50 p-4 border border-zinc-800 text-sm text-zinc-400 mb-8 max-w-md mx-auto rounded">
+             <div className="bg-zinc-900/30 p-4 border border-zinc-800 text-sm text-zinc-400 mb-8 max-w-md mx-auto rounded">
                 {score === 10 ? "Flawless Pitch Recognition." : 
                  score >= 7 ? "Excellent ear. Keep training." : 
-                 "Practice makes perfect. Try using the Reference Tone mode to improve your intervals."}
+                 "Practice makes perfect. Use Reference Tone mode to improve."}
              </div>
              
              <div className="flex gap-4 justify-center">
