@@ -4,6 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import { TESTS } from '@/lib/data';
 import { getStats } from '@/lib/core';
+import BadgesModule from './BadgesModule';
 
 export default function DashboardStatsOverview() {
   const [completedCount, setCompletedCount] = useState(0);
@@ -43,6 +44,8 @@ export default function DashboardStatsOverview() {
               <div className="text-lg text-white font-mono">{progressPercent > 80 ? 'ALPHA' : 'BETA'}</div>
            </div>
         </div>
+
+        <BadgesModule />
      </div>
   );
 }
