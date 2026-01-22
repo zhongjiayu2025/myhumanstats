@@ -14,7 +14,8 @@ const OnboardingWizard = () => {
     // 1. Auto-trigger on first visit
     const hasVisited = localStorage.getItem('mhs_onboarded');
     if (!hasVisited) {
-        setTimeout(() => setVisible(true), 500);
+        // LCP Optimization: Removed artificial delay (setTimeout 500ms)
+        setVisible(true);
     }
 
     // 2. Listen for manual trigger (Replay)
