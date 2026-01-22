@@ -16,9 +16,9 @@ const ColorHueTest: React.FC = () => {
   const [gridSize, setGridSize] = useState(2);
   const [colors, setColors] = useState({ base: '', diff: '' });
   const [diffIndex, setDiffIndex] = useState(0);
-  const [currentSpectrum, setCurrentSpectrum] = useState(''); // Red, Green, Blue, etc.
+  const [currentSpectrum, setCurrentSpectrum] = useState(''); 
 
-  // Stats Tracking (Total correct per spectrum)
+  // Stats Tracking
   const [spectrumStats, setSpectrumStats] = useState<Record<string, {hits: number, total: number}>>({
       'Red': {hits: 0, total: 0},
       'Yellow': {hits: 0, total: 0},
@@ -50,25 +50,22 @@ const ColorHueTest: React.FC = () => {
     const size = Math.min(8, Math.floor(Math.sqrt(level + 3)));
     setGridSize(size);
 
-    // Cycle spectrums to ensure balanced data
-    const hues = [0, 60, 120, 180, 240, 300]; // R, Y, G, C, B, M
+    // Cycle spectrums
+    const hues = [0, 60, 120, 180, 240, 300]; 
     const names = ['Red', 'Yellow', 'Green', 'Cyan', 'Blue', 'Magenta'];
     
-    // Pick based on level to cycle through
     const typeIdx = (level - 1) % 6;
-    const baseHue = hues[typeIdx] + (Math.random() * 20 - 10); // Jitter +-10
+    const baseHue = hues[typeIdx] + (Math.random() * 20 - 10); 
     const catName = names[typeIdx];
     setCurrentSpectrum(catName);
 
-    // Difficulty: Hue difference (Degrees)
-    // Starts at 40deg, decays to ~2deg
+    // Difficulty
     const hueDiff = Math.max(2, 40 * Math.pow(0.85, level - 1)); 
     
     const isClockwise = Math.random() > 0.5;
     const targetHue = isClockwise ? baseHue + hueDiff : baseHue - hueDiff;
 
-    // ISO-LUMINANT COLORS: Fixed Saturation and Lightness
-    // Saturation 70-80%, Lightness 50% (Peak chroma)
+    // ISO-LUMINANT COLORS
     const sat = 75;
     const light = 50;
 
@@ -106,7 +103,7 @@ const ColorHueTest: React.FC = () => {
   const endGame = () => {
     setIsPlaying(false);
     setPhase('end');
-    const finalScore = Math.min(100, Math.round((score / 40) * 100)); // ~40 levels is pro
+    const finalScore = Math.min(100, Math.round((score / 40) * 100));
     saveStat('color-hue', finalScore);
   };
 
@@ -127,6 +124,7 @@ const ColorHueTest: React.FC = () => {
   };
 
   const getRadarData = () => {
+      // Explicitly typing the map arguments for robustness
       return Object.entries(spectrumStats).map(([key, val]: [string, { hits: number, total: number }]) => ({
           subject: key,
           A: val.total === 0 ? 100 : Math.round((val.hits / val.total) * 100), // Default 100 if untestable
@@ -160,7 +158,6 @@ const ColorHueTest: React.FC = () => {
                    Score: {score}
                 </div>
                 <div className="relative w-12 h-12 flex items-center justify-center">
-                    {/* SVG Timer Ring */}
                     <svg className="absolute inset-0 w-full h-full -rotate-90">
                         <circle cx="24" cy="24" r="20" fill="none" stroke="#27272a" strokeWidth="4" />
                         <circle 
@@ -184,7 +181,7 @@ const ColorHueTest: React.FC = () => {
                {Array.from({ length: gridSize * gridSize }).map((_, i) => (
                  <button
                    key={i}
-                   onMouseDown={() => handleTileClick(i)} // Faster response than onClick
+                   onMouseDown={() => handleTileClick(i)} 
                    className="rounded-md transition-transform active:scale-95 duration-75 shadow-sm hover:brightness-110"
                    style={{ 
                      backgroundColor: i === diffIndex ? colors.diff : colors.base 
@@ -201,7 +198,6 @@ const ColorHueTest: React.FC = () => {
              <div className="text-6xl font-bold text-white mb-2">{score}</div>
              <p className="text-zinc-500 uppercase font-mono tracking-widest mb-8">Final Score</p>
              
-             {/* Radar Chart */}
              <div className="h-64 w-full relative mb-8">
                  <div className="absolute top-0 right-0 text-[10px] text-zinc-500 flex items-center gap-1 font-mono"><PieChart size={12}/> SPECTRAL_SENSITIVITY</div>
                  <ResponsiveContainer width="100%" height="100%">

@@ -1,6 +1,5 @@
-
 import React, { useState, useRef, useEffect } from 'react';
-import { Eye, Crosshair, MousePointer2, Grid, AlertCircle, RefreshCcw } from 'lucide-react';
+import { Eye, RefreshCcw } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 // 4x3 Grid roughly maps to 16:9 aspect ratio
@@ -28,9 +27,9 @@ const PeripheralVisionTest: React.FC = () => {
   // Foveal Distraction
   const [centralChar, setCentralChar] = useState('');
   
-  const TOTAL_ROUNDS = 24; // 2 hits per zone roughly
+  const TOTAL_ROUNDS = 24; 
   const timeoutRef = useRef<number|null>(null);
-  const charIntervalRef = useRef<number|null>(null);
+  const charTimeoutRef = useRef<number|null>(null);
 
   // Initialize Stats
   useEffect(() => {
@@ -51,21 +50,26 @@ const PeripheralVisionTest: React.FC = () => {
       return () => {
           window.removeEventListener('keydown', handleKey);
           if (timeoutRef.current) clearTimeout(timeoutRef.current);
-          if (charIntervalRef.current) clearInterval(charIntervalRef.current);
+          if (charTimeoutRef.current) clearTimeout(charTimeoutRef.current);
       };
   }, [phase, activeDot]);
 
-  // Central Character Loop
+  // Central Character Loop (Variable Interval for better fixation load)
   useEffect(() => {
+      const loop = () => {
+          const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+          setCentralChar(chars[Math.floor(Math.random() * chars.length)]);
+          // Random interval between 800ms and 2000ms to prevent rhythm prediction
+          const delay = 800 + Math.random() * 1200; 
+          charTimeoutRef.current = window.setTimeout(loop, delay);
+      };
+
       if (phase === 'test') {
-          charIntervalRef.current = window.setInterval(() => {
-              const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-              setCentralChar(chars[Math.floor(Math.random() * chars.length)]);
-          }, 800 + Math.random() * 500); // Variable timing to keep attention
+          loop();
       } else {
-          if (charIntervalRef.current) clearInterval(charIntervalRef.current);
+          if (charTimeoutRef.current) clearTimeout(charTimeoutRef.current);
       }
-      return () => { if (charIntervalRef.current) clearInterval(charIntervalRef.current); };
+      return () => { if (charTimeoutRef.current) clearTimeout(charTimeoutRef.current); };
   }, [phase]);
 
   const startGame = () => {
@@ -94,8 +98,6 @@ const PeripheralVisionTest: React.FC = () => {
       const r = Math.floor(Math.random() * ROWS);
       const c = Math.floor(Math.random() * COLS);
       
-      // Calculate % position within that zone with some padding
-      // Zone width = 100/COLS, Height = 100/ROWS
       const w = 100/COLS;
       const h = 100/ROWS;
       
@@ -111,7 +113,6 @@ const PeripheralVisionTest: React.FC = () => {
       
       setActiveDot(dot);
       
-      // Auto-miss after 1.2s (tighter window)
       timeoutRef.current = window.setTimeout(() => {
           handleMiss(dot);
       }, 1200);
@@ -123,7 +124,6 @@ const PeripheralVisionTest: React.FC = () => {
       const rt = performance.now() - activeDot.born;
       const zoneIdx = activeDot.r * COLS + activeDot.c;
       
-      // Record Hit
       setZoneStats(prev => {
           const z = prev[zoneIdx];
           const newHits = z.hits + 1;
@@ -165,19 +165,18 @@ const PeripheralVisionTest: React.FC = () => {
 
   const finish = () => {
       setPhase('result');
-      const totalHits = Object.values(zoneStats).reduce((acc: number, curr: ZoneStats) => acc + curr.hits, 0);
+      // Explicitly cast Object.values to avoid TS errors about unknown types
+      const totalHits = (Object.values(zoneStats) as ZoneStats[]).reduce((acc, curr) => acc + curr.hits, 0);
       const score = Math.round((totalHits / TOTAL_ROUNDS) * 100);
       saveStat('peripheral-vision', score);
   };
 
-  // Heatmap Color Logic
   const getZoneColor = (stats: ZoneStats) => {
       const total = stats.hits + stats.misses;
-      if (total === 0) return 'bg-zinc-900'; // No data
+      if (total === 0) return 'bg-zinc-900'; 
       
       const accuracy = stats.hits / total;
       if (accuracy === 1) {
-          // Check speed for green intensity
           if (stats.avgRt < 400) return 'bg-emerald-500';
           if (stats.avgRt < 600) return 'bg-emerald-600';
           return 'bg-emerald-700';
@@ -208,7 +207,6 @@ const PeripheralVisionTest: React.FC = () => {
               onTouchStart={(e) => { e.preventDefault(); handleInput(); }}
               onMouseDown={() => { if(window.innerWidth > 768) handleInput(); }}
            >
-               {/* Grid Overlay (Subtle) */}
                <div className="absolute inset-0 z-0 pointer-events-none opacity-10">
                    <div className="w-full h-full grid grid-cols-4 grid-rows-3">
                        {Array.from({length: 12}).map((_, i) => (
@@ -226,7 +224,6 @@ const PeripheralVisionTest: React.FC = () => {
                    {flashFeedback === 'miss' && <div className="absolute top-full mt-2 text-red-500 font-bold text-xs">MISS</div>}
                </div>
                
-               {/* Target */}
                {activeDot && (
                    <div 
                       className="absolute w-4 h-4 bg-white rounded-full shadow-[0_0_20px_white] animate-[ping_0.5s_linear_infinite] z-20"
