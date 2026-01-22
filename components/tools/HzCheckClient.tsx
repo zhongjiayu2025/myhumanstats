@@ -12,7 +12,7 @@ export default function HzCheckClient() {
   const [isRunning, setIsRunning] = useState(false);
   const [ufoSpeed, setUfoSpeed] = useState(960); // Pixels per second
   
-  const requestRef = useRef<number>();
+  const requestRef = useRef<number>(0);
   const prevTimeRef = useRef<number>(0);
   const frameTimesRef = useRef<number[]>([]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
