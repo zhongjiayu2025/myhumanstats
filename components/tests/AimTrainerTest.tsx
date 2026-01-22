@@ -28,6 +28,13 @@ interface TrackingTarget {
     dy: number;
 }
 
+// New: Store hit offsets relative to center of target
+interface HitPoint {
+    x: number; // Relative offset X from center
+    y: number; // Relative offset Y from center
+    time: number;
+}
+
 const AimTrainerTest: React.FC = () => {
   const [mode, setMode] = useState<'gridshot' | 'tracking'>('gridshot');
   const [phase, setPhase] = useState<'intro' | 'countdown' | 'play' | 'result'>('intro');
@@ -37,11 +44,13 @@ const AimTrainerTest: React.FC = () => {
   const [targets, setTargets] = useState<TargetObj[]>([]);
   const [score, setScore] = useState(0);
   const [totalClicks, setTotalClicks] = useState(0);
+  const [hitPoints, setHitPoints] = useState<HitPoint[]>([]); 
   
   // Tracking Stats
-  const [trackingScore, setTrackingScore] = useState(0); // Milliseconds on target
+  const [trackingScore, setTrackingScore] = useState(0); 
   const [trackingTarget, setTrackingTarget] = useState<TrackingTarget>({x: 100, y: 100, dx: 2, dy: 2});
   const [isTracked, setIsTracked] = useState(false);
+  const [lockOnProgress, setLockOnProgress] = useState(0); // New: Visual charge 0-100
 
   // Shared
   const [timeLeft, setTimeLeft] = useState(30);
@@ -51,11 +60,11 @@ const AimTrainerTest: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<number | null>(null);
   const rafRef = useRef<number | null>(null);
+  const heatmapRef = useRef<HTMLCanvasElement>(null);
 
-  const SPAWN_LIMIT = 30; // 30 seconds game
+  const SPAWN_LIMIT = 30; 
   const TARGET_COUNT = 3; 
 
-  // Mobile Detection
   useEffect(() => {
       const checkMobile = () => {
           setIsMobile(window.matchMedia('(max-width: 768px)').matches);
@@ -65,13 +74,56 @@ const AimTrainerTest: React.FC = () => {
       return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Cleanup
   useEffect(() => {
       return () => {
           if (timerRef.current) clearInterval(timerRef.current);
           if (rafRef.current) cancelAnimationFrame(rafRef.current);
       };
   }, []);
+
+  // --- Heatmap Drawing Logic ---
+  useEffect(() => {
+      if (phase === 'result' && mode === 'gridshot' && heatmapRef.current) {
+          const canvas = heatmapRef.current;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return;
+          
+          const w = canvas.width;
+          const h = canvas.height;
+          const cx = w / 2;
+          const cy = h / 2;
+          
+          // Background
+          ctx.fillStyle = '#09090b';
+          ctx.fillRect(0, 0, w, h);
+          
+          // Draw Bullseye Rings
+          ctx.strokeStyle = '#27272a';
+          ctx.lineWidth = 1;
+          for(let r=1; r<=4; r++) {
+              ctx.beginPath();
+              ctx.arc(cx, cy, r * 30, 0, Math.PI * 2);
+              ctx.stroke();
+          }
+          
+          // Plot hits
+          hitPoints.forEach(p => {
+              // p.x/y are offsets in pixels captured from click relative to target center.
+              // We render them relative to the canvas center.
+              ctx.beginPath();
+              ctx.arc(cx + p.x, cy + p.y, 3, 0, Math.PI * 2);
+              ctx.fillStyle = `rgba(6, 182, 212, 0.6)`; // Primary-500
+              ctx.fill();
+          });
+          
+          // Draw Center Cross
+          ctx.beginPath();
+          ctx.moveTo(cx - 10, cy); ctx.lineTo(cx + 10, cy);
+          ctx.moveTo(cx, cy - 10); ctx.lineTo(cx, cy + 10);
+          ctx.strokeStyle = '#ef4444';
+          ctx.stroke();
+      }
+  }, [phase, hitPoints, mode]);
 
   const initiateGame = () => {
       setPhase('countdown');
@@ -82,9 +134,11 @@ const AimTrainerTest: React.FC = () => {
       setTotalClicks(0);
       setTargets([]);
       setHitmarkers([]);
+      setHitPoints([]);
       
       setTrackingScore(0);
       setIsTracked(false);
+      setLockOnProgress(0);
       setTrackingTarget({x: 100, y: 100, dx: 3, dy: 2}); 
 
       setTimeLeft(SPAWN_LIMIT);
@@ -99,9 +153,7 @@ const AimTrainerTest: React.FC = () => {
       }
   };
 
-  // --- Gridshot Logic ---
   const generateTarget = (seedOffset: number = 0): TargetObj => {
-      // Basic overlap prevention could be added here
       return {
           id: performance.now() + seedOffset + Math.random(),
           x: Math.random() * 80 + 10, 
@@ -118,7 +170,7 @@ const AimTrainerTest: React.FC = () => {
 
   const handleTargetClick = (e: React.MouseEvent | React.TouchEvent, tId: number, bornTime: number) => {
       e.stopPropagation();
-      e.preventDefault(); // Prevent double firing and scrolling
+      e.preventDefault(); 
       
       if (phase !== 'play' || mode !== 'gridshot') return;
       
@@ -131,27 +183,38 @@ const AimTrainerTest: React.FC = () => {
       setScore(s => s + 1);
       setTotalClicks(c => c + 1);
       
-      // Spawn hitmarker at mouse position relative to container
-      if (containerRef.current) {
-          const rect = containerRef.current.getBoundingClientRect();
-          let clientX, clientY;
-          
-          if ('touches' in e) {
-              clientX = e.touches[0].clientX;
-              clientY = e.touches[0].clientY;
-          } else {
-              clientX = (e as React.MouseEvent).clientX;
-              clientY = (e as React.MouseEvent).clientY;
-          }
+      // Calculate offset for Heatmap
+      // Need target center relative to viewport/container
+      const targetEl = e.currentTarget as HTMLElement;
+      const rect = targetEl.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      
+      let clientX, clientY;
+      if ('touches' in e) {
+          clientX = e.touches[0].clientX;
+          clientY = e.touches[0].clientY;
+      } else {
+          clientX = (e as React.MouseEvent).clientX;
+          clientY = (e as React.MouseEvent).clientY;
+      }
+      
+      // Store hit location relative to target center
+      const offsetX = clientX - centerX;
+      const offsetY = clientY - centerY;
+      setHitPoints(prev => [...prev, { x: offsetX, y: offsetY, time: reaction }]);
 
-          spawnHitmarker(clientX - rect.left, clientY - rect.top, `${reaction}ms`);
+      // Spawn hitmarker
+      if (containerRef.current) {
+          const containerRect = containerRef.current.getBoundingClientRect();
+          spawnHitmarker(clientX - containerRect.left, clientY - containerRect.top, `${reaction}ms`);
       }
       
       setTargets(prev => prev.map(t => t.id === tId ? generateTarget() : t));
   };
 
   const handleBackgroundClick = (e: React.MouseEvent | React.TouchEvent) => {
-      if (e.cancelable) e.preventDefault(); // Prevent scrolling on background miss
+      if (e.cancelable) e.preventDefault(); 
       if (phase === 'play') {
           playUiSound('snap');
           if (navigator.vibrate) navigator.vibrate(5);
@@ -159,7 +222,7 @@ const AimTrainerTest: React.FC = () => {
       }
   };
 
-  // --- Tracking Logic ---
+  // --- Tracking Logic with Lock-on ---
   const updateTracking = () => {
       if (phase !== 'play' && mode === 'tracking') return;
       
@@ -185,7 +248,6 @@ const AimTrainerTest: React.FC = () => {
 
   const mousePos = useRef({x: 0, y: 0});
   const handleMouseMove = (e: React.MouseEvent | React.TouchEvent) => {
-      // Prevent scrolling while tracking
       if(e.cancelable) e.preventDefault();
 
       if (containerRef.current) {
@@ -216,9 +278,13 @@ const AimTrainerTest: React.FC = () => {
               
               if (dist < radius) {
                   setIsTracked(true);
-                  setTrackingScore(s => s + 16); 
+                  setTrackingScore(s => s + 16);
+                  // Increase Lock-on charge
+                  setLockOnProgress(p => Math.min(100, p + 2));
               } else {
                   setIsTracked(false);
+                  // Decay Lock-on
+                  setLockOnProgress(p => Math.max(0, p - 5));
               }
           }, 16);
           return () => clearInterval(checkTracking);
@@ -254,7 +320,6 @@ const AimTrainerTest: React.FC = () => {
       }
       saveStat('aim-trainer', finalScore);
       
-      // Load History
       const hist = getHistory('aim-trainer');
       setHistoryData(hist.slice(-20).map((h, i) => ({ i, score: h.score })));
   };
@@ -277,15 +342,6 @@ const AimTrainerTest: React.FC = () => {
                <p className="text-zinc-400 mb-8 max-w-md mx-auto">
                    Calibrate your mouse control.
                </p>
-               
-               {isMobile && (
-                   <div className="mb-8 p-4 bg-yellow-900/20 border border-yellow-500/30 rounded-lg text-sm text-yellow-200 flex items-center gap-3 text-left">
-                       <Smartphone size={24} className="shrink-0" />
-                       <div>
-                           <strong>Touch Mode Active:</strong> Tracking mode requires holding your finger on the target. Gridshot requires tapping.
-                       </div>
-                   </div>
-               )}
                
                <div className="flex justify-center gap-4 mb-8">
                    <button 
@@ -314,12 +370,6 @@ const AimTrainerTest: React.FC = () => {
 
        {(phase === 'play' || phase === 'countdown') && (
            <div className="relative">
-               {/* Point 1: Live Status for Screen Readers */}
-               <div className="sr-only" aria-live="assertive">
-                   {phase === 'countdown' ? "Prepare to aim..." : `Game active. Time left: ${timeLeft} seconds.`}
-               </div>
-
-               {/* HUD */}
                <div className="flex justify-between items-center mb-4 bg-black border border-zinc-800 p-4 clip-corner-sm">
                    <div className="flex gap-8">
                        <div>
@@ -335,7 +385,6 @@ const AimTrainerTest: React.FC = () => {
                    </div>
                </div>
 
-               {/* Game Area - Responsive Height */}
                <div 
                   ref={containerRef}
                   onMouseDown={handleBackgroundClick}
@@ -346,7 +395,6 @@ const AimTrainerTest: React.FC = () => {
                >
                    <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:50px_50px] pointer-events-none"></div>
 
-                   {/* Hitmarkers */}
                    {hitmarkers.map(h => (
                        <div 
                           key={h.id}
@@ -357,7 +405,6 @@ const AimTrainerTest: React.FC = () => {
                        </div>
                    ))}
 
-                   {/* Gridshot Targets */}
                    {mode === 'gridshot' && targets.map(t => (
                        <div
                           key={t.id}
@@ -365,17 +412,13 @@ const AimTrainerTest: React.FC = () => {
                           onTouchStart={(e) => handleTargetClick(e, t.id, t.born)}
                           className="absolute w-16 h-16 -translate-x-1/2 -translate-y-1/2 rounded-full bg-zinc-900 border-2 border-primary-500 flex items-center justify-center cursor-pointer active:scale-95 transition-transform duration-75 z-10 animate-in zoom-in-50 duration-100 group touch-manipulation touch-none"
                           style={{ left: `${t.x}%`, top: `${t.y}%` }}
-                          aria-label="Target"
-                          role="button"
                        >
-                           {/* Bullseye inner */}
                            <div className="w-10 h-10 rounded-full bg-primary-500/20 border border-primary-400 flex items-center justify-center group-hover:bg-primary-500/40">
                                <div className="w-2 h-2 bg-white rounded-full shadow-[0_0_10px_white]"></div>
                            </div>
                        </div>
                    ))}
 
-                   {/* Tracking Target */}
                    {mode === 'tracking' && (
                        <div 
                           className={`
@@ -384,12 +427,18 @@ const AimTrainerTest: React.FC = () => {
                           `}
                           style={{ left: trackingTarget.x, top: trackingTarget.y }}
                        >
-                           {/* Health Ring Visual */}
-                           {isTracked && (
-                               <svg className="absolute inset-0 w-full h-full -rotate-90 animate-spin-slow">
-                                   <circle cx="40" cy="40" r="38" fill="none" stroke="#06b6d4" strokeWidth="2" strokeDasharray="10 5" />
-                               </svg>
-                           )}
+                           {/* Lock-on Charging Ring */}
+                           <svg className="absolute inset-0 w-full h-full -rotate-90">
+                               <circle 
+                                  cx="40" cy="40" r="38" 
+                                  fill="none" 
+                                  stroke={isTracked ? "#06b6d4" : "#333"} 
+                                  strokeWidth="3" 
+                                  strokeDasharray="238"
+                                  strokeDashoffset={238 - (lockOnProgress / 100) * 238}
+                                  className="transition-all duration-100 ease-linear"
+                               />
+                           </svg>
                            <div className={`w-4 h-4 rounded-full ${isTracked ? 'bg-white scale-125' : 'bg-zinc-600'} transition-all`}></div>
                        </div>
                    )}
@@ -404,14 +453,22 @@ const AimTrainerTest: React.FC = () => {
                <div className="text-6xl font-bold text-white mb-2">
                    {mode === 'gridshot' ? score : `${(trackingScore/1000).toFixed(1)}s`}
                </div>
-               <div className="text-zinc-500 uppercase font-mono tracking-widest mb-8">
-                   {mode === 'gridshot' ? 'Total Hits' : 'Time Tracked'}
-               </div>
+               
+               {/* Accuracy Heatmap Visualization */}
+               {mode === 'gridshot' && hitPoints.length > 0 && (
+                   <div className="my-8">
+                       <h3 className="text-xs font-mono text-zinc-500 uppercase tracking-widest mb-4">Precision Heatmap</h3>
+                       <div className="inline-block border border-zinc-800 rounded-full bg-black p-4 relative">
+                           <canvas ref={heatmapRef} width={240} height={240} className="w-60 h-60" />
+                           <div className="absolute bottom-2 w-full text-center text-[9px] text-zinc-500">Center = Perfect</div>
+                       </div>
+                   </div>
+               )}
 
                <div className="grid grid-cols-2 gap-4 mb-8">
                    <div className="bg-zinc-900 border border-zinc-800 p-4 rounded">
                        <div className="text-xs text-zinc-500 uppercase mb-1">Accuracy</div>
-                       <div className={`text-2xl font-bold ${mode === 'gridshot' ? (gridAccuracy > 90 ? 'text-emerald-500' : 'text-yellow-500') : (trackingAccuracy > 60 ? 'text-emerald-500' : 'text-yellow-500')}`}>
+                       <div className="text-2xl font-bold text-white">
                            {mode === 'gridshot' ? gridAccuracy : trackingAccuracy}%
                        </div>
                    </div>
@@ -423,22 +480,10 @@ const AimTrainerTest: React.FC = () => {
                    </div>
                </div>
 
-               {/* History Trend */}
-               <div className="h-32 w-full bg-zinc-900/30 border border-zinc-800 rounded p-2 mb-8">
-                   <div className="text-[10px] text-zinc-500 font-mono text-left mb-1">RECENT_PERFORMANCE</div>
-                   <ResponsiveContainer width="100%" height="100%">
-                       <LineChart data={historyData}>
-                           <Line type="monotone" dataKey="score" stroke="#06b6d4" strokeWidth={2} dot={false} />
-                           <YAxis hide domain={[0, 100]} />
-                       </LineChart>
-                   </ResponsiveContainer>
-               </div>
-
                <div className="flex flex-col gap-3">
                    <button onClick={initiateGame} className="btn-secondary w-full flex items-center justify-center gap-2">
                        <RefreshCcw size={16} /> Restart Round
                    </button>
-                   {/* Point 4: Internal Linking Hook */}
                    <Link href="/test/cps-test" className="btn-primary w-full flex items-center justify-center gap-2 text-xs uppercase">
                        <Zap size={14} /> Test Click Speed (CPS)
                    </Link>

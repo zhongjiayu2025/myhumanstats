@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { LayoutGrid, Heart, RotateCcw, Volume2, VolumeX } from 'lucide-react';
+import { LayoutGrid, Heart, RotateCcw, Volume2, VolumeX, FastForward } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 const VisualMemoryTest: React.FC = () => {
@@ -11,7 +11,6 @@ const VisualMemoryTest: React.FC = () => {
   
   // Sequence Logic
   const [sequence, setSequence] = useState<number[]>([]);
-  // playbackIdx removed as it was unused in render
   const [userStep, setUserStep] = useState(0); 
   
   const [phase, setPhase] = useState<'intro' | 'demo' | 'input' | 'result'>('intro');
@@ -19,7 +18,7 @@ const VisualMemoryTest: React.FC = () => {
 
   const audioCtxRef = useRef<AudioContext | null>(null);
 
-  // --- Audio Engine ---
+  // --- Audio Engine (Melodic Mapping) ---
   const initAudio = () => {
       if (!audioCtxRef.current) {
           audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -34,58 +33,70 @@ const VisualMemoryTest: React.FC = () => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       
-      // Frequencies based on index to create melody
-      // Base C4 (261) + pentatonic steps
-      const baseFreq = 261.63;
-      const steps = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24, 26, 28, 31, 33, 36];
-      let freq = baseFreq * Math.pow(2, steps[idx % steps.length] / 12);
+      // Scale Mapping (C Major Pentatonic across the grid)
+      // C, D, E, G, A
+      const notes = [
+          261.63, 293.66, 329.63, // C4 D4 E4
+          392.00, 440.00, 523.25, // G4 A4 C5
+          587.33, 659.25, 783.99, // D5 E5 G5
+          880.00, 1046.50, 1174.66, // A5 C6 D6 ... (for larger grids)
+          1318.51, 1567.98, 1760.00
+      ];
+      
+      // Map grid index to note.
+      let freq = notes[idx % notes.length];
       
       if (type === 'error') {
           osc.type = 'sawtooth';
-          freq = 150; // Low buzz
+          freq = 110; // Low A2 buzz
       } else if (type === 'success') {
           osc.type = 'sine';
           freq = 880; // High ping
+          // Little chord effect
+          const osc2 = ctx.createOscillator();
+          osc2.frequency.value = 1108; // C#6
+          osc2.connect(gain);
+          osc2.start();
+          osc2.stop(ctx.currentTime + 0.4);
       } else {
-          osc.type = 'triangle';
+          osc.type = 'triangle'; // Pleasant tone
       }
 
       osc.frequency.setValueAtTime(freq, ctx.currentTime);
       
       gain.gain.setValueAtTime(0, ctx.currentTime);
       gain.gain.linearRampToValueAtTime(0.1, ctx.currentTime + 0.05);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3); // Short notes
 
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start();
-      osc.stop(ctx.currentTime + 0.4);
+      osc.stop(ctx.currentTime + 0.3);
   };
 
-  // Dynamic config based on level
+  // Dynamic config based on level (Speed Ramp)
   const getConfig = (lvl: number) => {
       const size = lvl <= 3 ? 3 : lvl <= 8 ? 4 : 5;
       const length = lvl + 2;
-      return { size, length };
+      // Speed Ramp: Start at 800ms, decreases by 60ms per level, clamp at 300ms minimum
+      const speed = Math.max(300, 800 - ((lvl - 1) * 60));
+      return { size, length, speed };
   };
 
   // Start Level
   useEffect(() => {
     if (phase === 'demo') {
-       const { size, length } = getConfig(level);
+       const { size, length, speed } = getConfig(level);
        setGridSize(size);
        setUserStep(0);
        setTileStatus({});
        
-       // Generate sequence with explicit type
        const newSeq: number[] = [];
-       // Avoid immediate repeats? No, Simon allows repeats.
        for(let i=0; i<length; i++) {
            newSeq.push(Math.floor(Math.random() * (size * size)));
        }
        setSequence(newSeq);
        
-       // Play sequence
        let i = 0;
        const interval = setInterval(() => {
            if (i >= newSeq.length) {
@@ -99,13 +110,13 @@ const VisualMemoryTest: React.FC = () => {
            setTileStatus(prev => ({ ...prev, [targetTile]: 'active' }));
            playTone(targetTile, 'normal');
            
-           // Flash OFF
+           // Flash OFF faster than the interval to allow gap
            setTimeout(() => {
                setTileStatus(prev => ({ ...prev, [targetTile]: 'idle' }));
-           }, 400);
+           }, speed * 0.7);
 
            i++;
-       }, 800); 
+       }, speed); 
 
        return () => clearInterval(interval);
     }
@@ -114,46 +125,48 @@ const VisualMemoryTest: React.FC = () => {
   const handleTileClick = (index: number) => {
      if (phase !== 'input') return;
      
-     // Animation trigger
-     playTone(index, index === sequence[userStep] ? 'normal' : 'error');
-
      // Correct Step
      if (index === sequence[userStep]) {
+         // Play the melodic note for this tile
+         playTone(index, 'normal');
+         
          const nextStep = userStep + 1;
          setUserStep(nextStep);
          
-         // Flash visual
          setTileStatus(prev => ({...prev, [index]: 'active'}));
-         setTimeout(() => setTileStatus(prev => ({...prev, [index]: 'idle'})), 200);
+         setTimeout(() => setTileStatus(prev => ({...prev, [index]: 'idle'})), 150);
          
          if (nextStep >= sequence.length) {
              // Level Complete
-             playTone(0, 'success');
-             setTileStatus(prev => ({...prev, [index]: 'success'}));
              setTimeout(() => {
-                 setLevel(l => l + 1);
-                 setPhase('demo');
-             }, 800);
+                 playTone(0, 'success');
+                 setTileStatus(prev => ({...prev, [index]: 'success'}));
+                 setTimeout(() => {
+                     setLevel(l => l + 1);
+                     setPhase('demo');
+                 }, 800);
+             }, 200);
          }
      } 
      // Wrong Step
      else {
+         playTone(index, 'error');
          setLives(l => l - 1);
          setTileStatus(prev => ({...prev, [index]: 'error'}));
          
-         // Show correct tile
          const correctTile = sequence[userStep];
          
          setTimeout(() => {
-             // Briefly flash the CORRECT tile so user learns
+             // Show Correct
              setTileStatus(prev => ({...prev, [index]: 'idle', [correctTile]: 'active'}));
              setTimeout(() => {
                  if (lives - 1 <= 0) {
                      finishGame();
                  } else {
+                     // Repeat same level
                      setPhase('demo'); 
                  }
-             }, 800);
+             }, 1000);
          }, 400);
      }
   };
@@ -170,17 +183,11 @@ const VisualMemoryTest: React.FC = () => {
      setPhase('demo');
   };
 
+  const currentSpeed = getConfig(level).speed;
+
   return (
     <div className="max-w-xl mx-auto text-center select-none min-h-[500px] flex flex-col justify-center relative perspective-1000">
       
-      {/* Audio Toggle */}
-      <button 
-         onClick={() => setSoundEnabled(!soundEnabled)}
-         className="absolute top-0 right-0 p-2 text-zinc-600 hover:text-white transition-colors"
-      >
-         {soundEnabled ? <Volume2 size={16}/> : <VolumeX size={16}/>}
-      </button>
-
       {/* HUD */}
       {phase !== 'intro' && phase !== 'result' && (
           <div className="flex justify-between items-end border-b border-zinc-800 pb-4 mb-8">
@@ -189,6 +196,18 @@ const VisualMemoryTest: React.FC = () => {
                 <div className="text-3xl font-bold text-white font-mono">{sequence.length || getConfig(level).length}</div>
              </div>
              
+             <div className="flex flex-col items-center">
+                 <div className="flex items-center gap-1 text-[10px] text-zinc-600 font-mono mb-1">
+                     <FastForward size={10} /> {currentSpeed}ms
+                 </div>
+                 <button 
+                    onClick={() => setSoundEnabled(!soundEnabled)}
+                    className="p-2 text-zinc-600 hover:text-white transition-colors"
+                 >
+                    {soundEnabled ? <Volume2 size={16}/> : <VolumeX size={16}/>}
+                 </button>
+             </div>
+
              <div className="flex gap-1">
                  {[1, 2, 3].map(i => (
                      <Heart 
@@ -207,7 +226,8 @@ const VisualMemoryTest: React.FC = () => {
               <h2 className="text-3xl font-bold text-white mb-2">Sequence Memory</h2>
               <p className="text-zinc-400 text-sm max-w-sm mx-auto mb-8">
                   The <strong>Corsi Block-Tapping Task</strong>.
-                  <br/>Memorize the pattern. Replay it exactly.
+                  <br/>Pattern length and speed increase with every level. 
+                  <br/>Use auditory cues to help memorize the melody.
               </p>
               <button onClick={() => setPhase('demo')} className="btn-primary">Start Memory Test</button>
           </div>
@@ -254,6 +274,7 @@ const VisualMemoryTest: React.FC = () => {
                       <div 
                          key={i}
                          onMouseDown={() => handleTileClick(i)}
+                         onTouchStart={(e) => { e.preventDefault(); handleTileClick(i); }}
                          className={`rounded-lg border-2 transition-all duration-150 ${bg} ${shadow}`}
                          style={{ transform }}
                       ></div>
@@ -269,9 +290,7 @@ const VisualMemoryTest: React.FC = () => {
               <div className="text-6xl font-bold text-white mb-6">{level + 1} <span className="text-xl text-zinc-600">Steps</span></div>
               
               <div className="bg-zinc-900/50 p-4 border border-zinc-800 text-sm text-zinc-400 max-w-xs mx-auto mb-8 rounded">
-                  Average human working memory (Miller's Law) is around 7 items.
-                  <br/>
-                  {level + 1 > 9 ? "You have exceptional serial memory." : "You are within the normal range."}
+                  Max Speed Reached: {getConfig(level).speed}ms / note.
               </div>
 
               <button onClick={restart} className="btn-secondary flex items-center gap-2 mx-auto">

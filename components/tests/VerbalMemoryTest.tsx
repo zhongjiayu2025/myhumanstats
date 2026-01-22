@@ -1,16 +1,20 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
-import { Book, RotateCcw, Brain, Zap, ArrowLeft, ArrowRight, Heart, HeartCrack } from 'lucide-react';
+import { Book, RotateCcw, Brain, Zap, ArrowLeft, ArrowRight, Heart, HeartCrack, Info } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
-const WORD_BANK = [
-  "House", "Time", "Person", "Year", "Way", "Day", "Thing", "Man", "World", "Life",
-  "Hand", "Part", "Child", "Eye", "Woman", "Place", "Work", "Week", "Case", "Point",
-  "Government", "Company", "Number", "Group", "Problem", "Fact", "Idea", "Water", "Money",
-  "Month", "Book", "Level", "Side", "Feet", "System", "Story", "Power", "City", "Line",
-  "Game", "Law", "Car", "End", "Member", "Name", "House", "School", "Body", "Food",
-  "Family", "Light", "President", "History", "Result", "Morning", "Evening", "Girl", "Boy",
-  "Door", "Word", "Sense", "Policy", "Changes", "Table", "Room", "Force", "Service",
-  "Market", "Art", "Father", "Mother", "Party", "Information", "Office", "Tree", "Power"
+// Categorized Word Banks for Dynamic Difficulty
+const EASY_WORDS = [
+  "House", "Time", "Way", "Day", "Man", "Life", "Hand", "Eye", "Place", "Work", 
+  "Week", "Case", "Point", "Group", "Fact", "Idea", "Water", "Book", "Side", "Feet", 
+  "Game", "Car", "Door", "Word", "Room", "Art", "Tree", "Fish", "Bird", "Road",
+  "Sun", "Moon", "Star", "Fire", "Ice", "Wind", "Rain", "Snow", "Love", "Hope"
+];
+
+const HARD_WORDS = [
+  "Government", "Information", "Development", "Relationship", "Environment", "University", "Management", "Organization", "Technology", "Individual",
+  "Opportunity", "Performance", "Population", "Structure", "Conclusion", "Definition", "Difference", "Everything", "Literature", "Philosophy",
+  "Psychology", "Revolution", "Significant", "Traditional", "Understanding", "Communication", "Discussion", "Experience", "Generation", "Investment"
 ];
 
 const VerbalMemoryTest: React.FC = () => {
@@ -18,11 +22,15 @@ const VerbalMemoryTest: React.FC = () => {
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
   const [currentWord, setCurrentWord] = useState('');
-  const [seenWords, setSeenWords] = useState<Set<string>>(new Set());
+  
+  // Refactor seenWords to Map for turn tracking: Word -> Turn Index
+  const [seenWords, setSeenWords] = useState<Map<string, number>>(new Map());
+  const [turn, setTurn] = useState(0);
   
   // UX State
   const [combo, setCombo] = useState(0);
-  const [animClass, setAnimClass] = useState(''); // Control swipe animations
+  const [animClass, setAnimClass] = useState(''); 
+  const [failureReason, setFailureReason] = useState<string | null>(null);
 
   useEffect(() => {
     if (phase === 'play') {
@@ -31,24 +39,27 @@ const VerbalMemoryTest: React.FC = () => {
   }, [phase]);
 
   const nextTurn = () => {
+      setTurn(t => t + 1);
+      
+      // Dynamic Difficulty: >20 score mixes in Hard Words
+      const pool = score > 20 ? [...EASY_WORDS, ...HARD_WORDS] : EASY_WORDS;
+      
       // 40% chance to show seen word IF we have seen words
       const showSeen = seenWords.size > 0 && Math.random() > 0.6;
       
       if (showSeen) {
-          const words = Array.from(seenWords);
-          // Try to avoid the very last word to make it slightly harder? Or just random.
+          const words = Array.from(seenWords.keys());
           const randomSeen = words[Math.floor(Math.random() * words.length)];
           setCurrentWord(randomSeen);
       } else {
-          let newWord = WORD_BANK[Math.floor(Math.random() * WORD_BANK.length)];
+          let newWord = pool[Math.floor(Math.random() * pool.length)];
           let safety = 0;
           while (seenWords.has(newWord) && safety < 50) {
-             newWord = WORD_BANK[Math.floor(Math.random() * WORD_BANK.length)];
+             newWord = pool[Math.floor(Math.random() * pool.length)];
              safety++;
           }
           setCurrentWord(newWord);
       }
-      // Reset anim
       setAnimClass('animate-in zoom-in duration-300'); 
   };
 
@@ -69,23 +80,35 @@ const VerbalMemoryTest: React.FC = () => {
               setScore(s => s + 1);
               setCombo(c => c + 1);
               if (!isActuallySeen) {
-                  setSeenWords(prev => new Set(prev).add(currentWord));
+                  setSeenWords(prev => new Map(prev).set(currentWord, turn));
               }
               nextTurn();
           } else {
               setCombo(0);
+              
+              // Generate Failure Context
+              let reason = "";
+              if (guess === 'seen' && !isActuallySeen) {
+                  reason = `"${currentWord}" was NEW. You haven't seen it yet.`;
+              } else if (guess === 'new' && isActuallySeen) {
+                  const seenTurn = seenWords.get(currentWord);
+                  const turnsAgo = turn - (seenTurn || 0);
+                  reason = `"${currentWord}" was SEEN. It appeared ${turnsAgo} turns ago.`;
+              }
+              setFailureReason(reason);
+
               const newLives = lives - 1;
               setLives(newLives);
               
               if (newLives <= 0) {
                   finish();
               } else {
-                  if (!isActuallySeen) setSeenWords(prev => new Set(prev).add(currentWord));
+                  if (!isActuallySeen) setSeenWords(prev => new Map(prev).set(currentWord, turn));
                   nextTurn();
               }
           }
-      }, 200); // Wait for animation
-  }, [phase, currentWord, seenWords, lives]);
+      }, 200); 
+  }, [phase, currentWord, seenWords, lives, turn]);
 
   // Keyboard Shortcuts
   useEffect(() => {
@@ -114,7 +137,9 @@ const VerbalMemoryTest: React.FC = () => {
       setScore(0);
       setLives(3);
       setCombo(0);
-      setSeenWords(new Set());
+      setSeenWords(new Map());
+      setTurn(0);
+      setFailureReason(null);
       setPhase('play');
   };
 
@@ -167,6 +192,15 @@ const VerbalMemoryTest: React.FC = () => {
                    </div>
                </div>
 
+               {/* Failure Feedback Toast */}
+               {failureReason && (
+                   <div className="absolute top-24 left-0 right-0 flex justify-center pointer-events-none z-20">
+                       <div className="bg-red-900/90 text-white px-4 py-2 rounded-full text-xs font-bold shadow-xl animate-in slide-in-from-top-4 fade-out duration-2000">
+                           {failureReason}
+                       </div>
+                   </div>
+               )}
+
                <div className="relative mb-16 min-h-[140px] flex items-center justify-center">
                    <div className={`
                         text-4xl md:text-6xl font-bold py-12 px-8 rounded-xl border-2 bg-black border-zinc-800 shadow-2xl
@@ -201,11 +235,21 @@ const VerbalMemoryTest: React.FC = () => {
                <h2 className="text-xl text-zinc-500 font-mono uppercase tracking-widest mb-2">Word Retention</h2>
                <div className="text-6xl font-bold text-white mb-6">{score} <span className="text-2xl text-zinc-600">words</span></div>
                
-               <p className="text-zinc-400 mb-8 max-w-sm mx-auto">
-                   {score > 50 ? "Superior verbal memory. You can hold complex lists easily." :
-                    score > 25 ? "Above average. Good short-term retention." :
-                    "Average. Keep practicing to improve working memory."}
-               </p>
+               {/* Final Analysis */}
+               <div className="bg-zinc-900/50 p-6 border border-zinc-800 rounded-xl mb-8 max-w-sm mx-auto text-left">
+                   <div className="flex items-start gap-3">
+                       <Info size={18} className="text-zinc-500 mt-1 shrink-0" />
+                       <div>
+                           <h4 className="text-white font-bold text-sm mb-1">Performance Analysis</h4>
+                           <p className="text-zinc-400 text-xs leading-relaxed">
+                               {score > 50 ? "Superior verbal memory. You successfully encoded complex vocabulary into working memory." :
+                                score > 25 ? "Above average. You have good short-term retention for varying word lengths." :
+                                "Average. Try connecting the words into a story to improve retention (Mnemonic linking)."}
+                           </p>
+                       </div>
+                   </div>
+               </div>
+
                <button onClick={restart} className="btn-secondary flex items-center gap-2 mx-auto">
                    <RotateCcw size={16} /> Try Again
                </button>

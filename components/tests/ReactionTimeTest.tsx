@@ -1,20 +1,24 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Zap, AlertTriangle, RotateCcw, Clock, BarChart3, Medal, Volume2, Eye, ScatterChart as ScatterIcon, History, Settings2, Crosshair } from 'lucide-react';
+import { Zap, AlertTriangle, RotateCcw, Clock, BarChart3, Medal, Volume2, Eye, ScatterChart as ScatterIcon, History, Settings2, Crosshair, Lock } from 'lucide-react';
 import { saveStat, getHistory } from '../../lib/core';
 import { playUiSound } from '../../lib/sounds';
 import { ScatterChart, Scatter, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, ZAxis, LineChart, Line } from 'recharts';
 import Link from 'next/link';
 
-enum GameState { IDLE, WAITING, READY, RESULT, EARLY, CHEAT }
+enum GameState { IDLE, WAITING, READY, RESULT, EARLY, CHEAT, PENALTY }
 
 const ReactionTimeTest: React.FC = () => {
   const [mode, setMode] = useState<'visual' | 'audio'>('visual');
   const [gameState, setGameState] = useState<GameState>(GameState.IDLE);
   const [history, setHistory] = useState<number[]>([]);
   const [average, setAverage] = useState(0);
+  const [stdDev, setStdDev] = useState(0); // New: Stability Metric
   const [lastTime, setLastTime] = useState(0);
   const [shake, setShake] = useState(false);
+  
+  // Visuals
+  const [clickPos, setClickPos] = useState<{x: number, y: number} | null>(null);
   
   // Settings
   const [inputLag, setInputLag] = useState(0);
@@ -89,6 +93,7 @@ const ReactionTimeTest: React.FC = () => {
   const prepareRound = () => {
     setGameState(GameState.WAITING);
     setShake(false);
+    setClickPos(null);
     playUiSound('hover'); // Subtle start sound
     
     // Random delay between 2s and 5s
@@ -106,17 +111,38 @@ const ReactionTimeTest: React.FC = () => {
     // Prevent default to stop scrolling or zooming on rapid taps
     if (e.cancelable && e.type !== 'mousedown') e.preventDefault(); 
     
+    // Calculate click pos for ripple
+    let clientX, clientY;
+    if ('touches' in e) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+    } else {
+        clientX = (e as React.MouseEvent).clientX;
+        clientY = (e as React.MouseEvent).clientY;
+    }
+    // Relative to container logic would be better, but for full screen effect:
+    const target = e.currentTarget as HTMLElement;
+    const rect = target.getBoundingClientRect();
+    setClickPos({ x: clientX - rect.left, y: clientY - rect.top });
+
     if (gameState === GameState.IDLE || gameState === GameState.RESULT || gameState === GameState.CHEAT) {
         if (!showSettings) resetTest();
         return;
     }
 
+    if (gameState === GameState.PENALTY) return; // Locked
+
     if (gameState === GameState.WAITING) {
-        setGameState(GameState.EARLY);
+        setGameState(GameState.PENALTY);
         setShake(true); 
         playUiSound('fail');
         if (navigator.vibrate) navigator.vibrate(200);
         clearExistingTimeout();
+        
+        // Enforce 1s cooldown penalty
+        setTimeout(() => {
+            setGameState(GameState.EARLY);
+        }, 1000);
         return;
     }
 
@@ -142,7 +168,12 @@ const ReactionTimeTest: React.FC = () => {
         if (newHistory.length >= 5) {
             // Finish Set
             const avg = Math.round(newHistory.reduce((a, b) => a + b, 0) / newHistory.length);
+            // Calculate Standard Deviation (Jitter)
+            const variance = newHistory.reduce((a, b) => a + Math.pow(b - avg, 2), 0) / newHistory.length;
+            const sd = Math.round(Math.sqrt(variance));
+            
             setAverage(avg);
+            setStdDev(sd);
             setGameState(GameState.RESULT);
             playUiSound('success');
             
@@ -166,6 +197,7 @@ const ReactionTimeTest: React.FC = () => {
   const resetTest = () => {
       setHistory([]);
       setAverage(0);
+      setStdDev(0);
       prepareRound();
   };
 
@@ -205,6 +237,14 @@ const ReactionTimeTest: React.FC = () => {
             title: 'CLICK!', 
             sub: '', 
             color: 'text-white' 
+        };
+      case GameState.PENALTY:
+        return {
+            bg: 'bg-zinc-950',
+            icon: Lock,
+            title: 'LOCKED',
+            sub: 'Penalty Cooldown...',
+            color: 'text-red-500'
         };
       case GameState.EARLY: 
         return { 
@@ -336,6 +376,14 @@ const ReactionTimeTest: React.FC = () => {
              {/* Background pattern */}
              <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 pointer-events-none"></div>
              
+             {/* Click Ripple */}
+             {clickPos && (
+                 <div 
+                    className="absolute w-20 h-20 bg-white rounded-full animate-ping pointer-events-none z-0 opacity-50"
+                    style={{ left: clickPos.x - 40, top: clickPos.y - 40 }}
+                 ></div>
+             )}
+             
              <div className="relative z-10 flex flex-col items-center animate-in fade-in zoom-in duration-200 pointer-events-none">
                  <Icon size={64} className={`mb-6 ${ui.color} ${gameState === GameState.WAITING ? 'animate-pulse' : ''}`} />
                  <h1 className={`text-5xl font-black tracking-tight mb-2 ${ui.color}`}>{ui.title}</h1>
@@ -352,6 +400,17 @@ const ReactionTimeTest: React.FC = () => {
                   {mode === 'audio' ? 'Auditory' : 'Visual'} Reaction Time
                   {inputLag > 0 && <span className="block text-[10px] text-zinc-600 mt-1">(Adjusted -{inputLag}ms)</span>}
               </p>
+
+              <div className="grid grid-cols-2 gap-4 mb-8">
+                  <div className="bg-zinc-900 border border-zinc-800 p-3 rounded">
+                      <div className="text-[10px] text-zinc-500 uppercase font-mono">Best</div>
+                      <div className="text-xl text-white font-bold">{minTime} ms</div>
+                  </div>
+                  <div className="bg-zinc-900 border border-zinc-800 p-3 rounded">
+                      <div className="text-[10px] text-zinc-500 uppercase font-mono">Stability (Jitter)</div>
+                      <div className={`text-xl font-bold ${stdDev < 30 ? 'text-emerald-500' : 'text-yellow-500'}`}>±{stdDev} ms</div>
+                  </div>
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                   {/* Consistency Scatter Plot */}
@@ -394,7 +453,6 @@ const ReactionTimeTest: React.FC = () => {
                       <RotateCcw size={16} /> Press [R] to Restart
                   </button>
                   
-                  {/* Point 4: Internal Linking Hook */}
                   <Link 
                     href="/test/aim-trainer-test"
                     className="btn-secondary w-full flex items-center justify-center gap-2 text-xs uppercase"
