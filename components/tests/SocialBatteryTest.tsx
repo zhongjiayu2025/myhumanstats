@@ -1,6 +1,8 @@
+
 import React, { useState } from 'react';
-import { BatteryCharging, BatteryWarning, Users, BookOpen, Music, Mic2, RefreshCcw } from 'lucide-react';
+import { BatteryCharging, BatteryWarning, Users, BookOpen, Music, Mic2, RefreshCcw, Activity, XCircle, CheckCircle } from 'lucide-react';
 import { saveStat } from '../../lib/core';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts';
 
 interface Scenario {
     id: number;
@@ -21,10 +23,19 @@ const SocialBatteryTest: React.FC = () => {
   const [phase, setPhase] = useState<'intro' | 'sim' | 'result'>('intro');
   const [batteryLevel, setBatteryLevel] = useState(50); // Start at 50%
   const [currentScenario, setCurrentScenario] = useState(0);
+  
+  // Data for Graph
+  const [energyHistory, setEnergyHistory] = useState<{step: string, level: number}[]>([
+      { step: 'Start', level: 50 }
+  ]);
+
+  // Rejection Simulator Stats
+  const [hesitationTime, setHesitationTime] = useState(0);
 
   const handleChoice = (change: number) => {
       const newLevel = Math.max(0, Math.min(100, batteryLevel + change));
       setBatteryLevel(newLevel);
+      setEnergyHistory(prev => [...prev, { step: `Evt ${currentScenario+1}`, level: newLevel }]);
       
       if (currentScenario < SCENARIOS.length - 1) {
           setCurrentScenario(c => c + 1);
@@ -34,31 +45,6 @@ const SocialBatteryTest: React.FC = () => {
   };
 
   const finishTest = (finalLevel: number) => {
-      // Analyze profile based on what drained vs charged them.
-      // But for simple score, let's map Introversion/Extroversion.
-      // We need to track the "direction" of specific scenarios.
-      // Party (ID 1) drain = Introvert. Party charge = Extrovert.
-      // Let's rely on the final battery level? No, that depends on the mix of Qs.
-      
-      // Simplified: We calculate "Extroversion Score" based on choices.
-      // +Charge on Party/Group = Extrovert points.
-      // +Charge on Library = Introvert points.
-      // We'll approximate using the final battery level is tricky without knowing user intent.
-      // REFACTOR: Let's track a hidden "Extroversion Score" separately.
-      
-      // Actually, let's just save the final battery as a fun "Social Battery Status" 
-      // but calculate the Personality Score based on specific triggers.
-      
-      // Let's re-calculate score based on history delta.
-      // Scenarios: 1(Party), 3(Group), 4(Public) are Extrovert stimuli.
-      // 2(Library) is Introvert stimuli. 5 is Neutral/Deep.
-      
-      // Let's assume standard behavior:
-      // P1 (Party): +20 (Extrovert), -20 (Introvert)
-      // P2 (Library): -20 (Extrovert), +20 (Introvert)
-      
-      // We can infer: if they Chose +Charge on Party, they are Extrovert.
-      // Let's just save a generic "Social Energy" stat for now.
       saveStat('social-battery', finalLevel);
       setPhase('result');
   };
@@ -74,7 +60,7 @@ const SocialBatteryTest: React.FC = () => {
                <h2 className="text-3xl font-bold text-white mb-2">Social Battery Simulator</h2>
                <p className="text-zinc-400 mb-8 max-w-md mx-auto">
                    Simulate a week of social activities.
-                   <br/>Decide whether each event <strong>Charges</strong> or <strong>Drains</strong> your social battery.
+                   <br/>We will track your <strong>Energy Flux</strong> to determine your social recharge rate.
                </p>
                <button onClick={() => setPhase('sim')} className="btn-primary">Start Simulation</button>
            </div>
@@ -82,45 +68,50 @@ const SocialBatteryTest: React.FC = () => {
 
        {phase === 'sim' && (
            <div className="py-8 animate-in slide-in-from-right">
-               {/* Battery Visual */}
-               <div className="mb-12 relative flex justify-center">
-                   <div className="w-32 h-64 border-4 border-zinc-700 rounded-2xl p-2 relative bg-zinc-900">
-                       <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-12 h-4 bg-zinc-700 rounded-t-sm"></div>
-                       <div 
-                          className={`w-full absolute bottom-2 left-2 right-2 rounded transition-all duration-500 ease-out flex items-center justify-center
-                             ${batteryLevel > 60 ? 'bg-emerald-500 shadow-[0_0_30px_#10b981]' : batteryLevel > 30 ? 'bg-yellow-500' : 'bg-red-500 shadow-[0_0_30px_#ef4444]'}
-                          `}
-                          style={{ height: `${batteryLevel}%`, width: 'calc(100% - 16px)' }}
-                       >
-                           <span className="font-bold text-black mix-blend-overlay">{batteryLevel}%</span>
-                       </div>
-                   </div>
+               {/* Live Energy Graph */}
+               <div className="mb-8 h-32 w-full bg-zinc-900/30 border border-zinc-800 rounded-lg p-2">
+                   <ResponsiveContainer width="100%" height="100%">
+                       <AreaChart data={energyHistory}>
+                           <defs>
+                               <linearGradient id="colorLevel" x1="0" y1="0" x2="0" y2="1">
+                                   <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                                   <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                               </linearGradient>
+                           </defs>
+                           <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                           <XAxis dataKey="step" hide />
+                           <YAxis domain={[0, 100]} hide />
+                           <Tooltip contentStyle={{ backgroundColor: '#000', borderColor: '#333', fontSize: '12px' }} />
+                           <Area type="monotone" dataKey="level" stroke="#10b981" strokeWidth={2} fill="url(#colorLevel)" animationDuration={300} />
+                           <ReferenceLine y={50} stroke="#555" strokeDasharray="3 3" />
+                       </AreaChart>
+                   </ResponsiveContainer>
                </div>
 
                {/* Scenario Card */}
-               <div className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-xl mb-8 max-w-md mx-auto">
-                   <div className="flex items-center justify-center gap-2 mb-2 text-zinc-500 text-xs font-mono uppercase tracking-widest">
-                       Scenario {currentScenario + 1}/{SCENARIOS.length}
+               <div className="bg-zinc-900/50 border border-zinc-800 p-8 rounded-xl mb-8 max-w-md mx-auto min-h-[220px] flex flex-col justify-center">
+                   <div className="flex items-center justify-center gap-2 mb-4 text-zinc-500 text-xs font-mono uppercase tracking-widest">
+                       Event {currentScenario + 1}/{SCENARIOS.length}
                    </div>
-                   <activeScenario.icon size={32} className="mx-auto text-white mb-4" />
-                   <h3 className="text-xl font-bold text-white mb-2">{activeScenario.title}</h3>
+                   <activeScenario.icon size={48} className="mx-auto text-white mb-6" />
+                   <h3 className="text-2xl font-bold text-white mb-2">{activeScenario.title}</h3>
                    <p className="text-sm text-zinc-400">{activeScenario.description}</p>
                </div>
 
-               <div className="flex justify-center gap-4">
+               <div className="flex justify-center gap-6">
                    <button 
                       onClick={() => handleChoice(-20)}
-                      className="w-32 py-4 bg-red-900/20 border border-red-500/50 hover:bg-red-900/40 text-red-400 font-bold rounded-lg flex flex-col items-center gap-1 transition-all"
+                      className="flex-1 max-w-[140px] py-4 bg-red-900/20 border border-red-500/30 hover:bg-red-900/40 hover:border-red-500 text-red-400 font-bold rounded-xl flex flex-col items-center gap-2 transition-all active:scale-95"
                    >
-                       <BatteryWarning size={20} />
-                       DRAINS ME
+                       <BatteryWarning size={24} />
+                       <span>DRAIN (-20)</span>
                    </button>
                    <button 
                       onClick={() => handleChoice(20)}
-                      className="w-32 py-4 bg-emerald-900/20 border border-emerald-500/50 hover:bg-emerald-900/40 text-emerald-400 font-bold rounded-lg flex flex-col items-center gap-1 transition-all"
+                      className="flex-1 max-w-[140px] py-4 bg-emerald-900/20 border border-emerald-500/30 hover:bg-emerald-900/40 hover:border-emerald-500 text-emerald-400 font-bold rounded-xl flex flex-col items-center gap-2 transition-all active:scale-95"
                    >
-                       <BatteryCharging size={20} />
-                       CHARGES ME
+                       <BatteryCharging size={24} />
+                       <span>CHARGE (+20)</span>
                    </button>
                </div>
            </div>
@@ -135,24 +126,37 @@ const SocialBatteryTest: React.FC = () => {
                    </div>
                </div>
 
+               {/* Full Graph Recap */}
+               <div className="h-48 w-full bg-zinc-900/30 border border-zinc-800 rounded-lg p-4 mb-8">
+                   <div className="text-[10px] text-zinc-500 font-mono text-left mb-2 flex items-center gap-2"><Activity size={12}/> SOCIAL_FLUX_TIMELINE</div>
+                   <ResponsiveContainer width="100%" height="100%">
+                       <AreaChart data={energyHistory}>
+                           <defs>
+                               <linearGradient id="resGrad" x1="0" y1="0" x2="0" y2="1">
+                                   <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
+                                   <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                               </linearGradient>
+                           </defs>
+                           <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                           <XAxis dataKey="step" stroke="#555" fontSize={10} tickLine={false} axisLine={false} />
+                           <YAxis stroke="#555" fontSize={10} tickLine={false} axisLine={false} domain={[0, 100]} />
+                           <Tooltip contentStyle={{ backgroundColor: '#000', borderColor: '#333' }} />
+                           <Area type="monotone" dataKey="level" stroke="#8b5cf6" strokeWidth={2} fill="url(#resGrad)" />
+                       </AreaChart>
+                   </ResponsiveContainer>
+               </div>
+
                {/* Analysis Logic */}
                <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl max-w-md mx-auto text-left">
                    <h3 className="text-white font-bold mb-2">Personality Insight</h3>
                    <p className="text-sm text-zinc-400 leading-relaxed">
-                       {/* This is a simple heuristic based on the final battery. 
-                           A robust one would track the specific answers. 
-                           For now, we assume user started at 50%. 
-                           If they gained energy (ended > 50%), they likely charged from social events -> Extrovert. 
-                           If they lost energy -> Introvert. 
-                           (Assuming scenarios were mostly social) 
-                       */}
                        {batteryLevel > 70 ? "Social Dynamo. You gain significant energy from interaction. Likely Extrovert." :
                         batteryLevel < 30 ? "Solitary Recharger. Social interaction costs you energy. Likely Introvert." :
                         "Ambivert. Your social battery fluctuates based on the context."}
                    </p>
                </div>
 
-               <button onClick={() => { setPhase('intro'); setBatteryLevel(50); setCurrentScenario(0); }} className="btn-secondary mt-8 flex items-center justify-center gap-2 mx-auto">
+               <button onClick={() => { setPhase('intro'); setBatteryLevel(50); setCurrentScenario(0); setEnergyHistory([{step:'Start', level:50}]); }} className="btn-secondary mt-8 flex items-center justify-center gap-2 mx-auto">
                    <RefreshCcw size={16} /> Restart Simulator
                </button>
            </div>

@@ -1,31 +1,59 @@
+
 import React, { useState } from 'react';
-import { UserX, RefreshCcw } from 'lucide-react';
+import { UserX, RefreshCcw, Skull, ShieldAlert, HeartHandshake } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 
 // Traits based on IDRlabs Difficult Person Test model
 const TRAITS = ['Callousness', 'Grandiosity', 'Aggression', 'Suspicion', 'Risk'];
 
-const QUESTIONS = [
-  // Callousness
-  { id: 1, trait: 'Callousness', text: "I find it hard to feel sympathy for people who make mistakes.", options: [{label: "Strongly Agree", value: 5}, {label: "Neutral", value: 3}, {label: "Disagree", value: 1}] },
-  // Grandiosity
-  { id: 2, trait: 'Grandiosity', text: "I am more talented than most people I know.", options: [{label: "True", value: 5}, {label: "Neutral", value: 3}, {label: "False", value: 1}] },
-  // Aggression
-  { id: 3, trait: 'Aggression', text: "It is easy to make me angry.", options: [{label: "Yes", value: 5}, {label: "Sometimes", value: 3}, {label: "No", value: 1}] },
-  // Suspicion
-  { id: 4, trait: 'Suspicion', text: "I often suspect that others have hidden motives.", options: [{label: "Strongly Agree", value: 5}, {label: "Neutral", value: 3}, {label: "Disagree", value: 1}] },
-  // Risk
-  { id: 5, trait: 'Risk', text: "I act on impulse without thinking of the consequences.", options: [{label: "Often", value: 5}, {label: "Sometimes", value: 3}, {label: "Never", value: 1}] },
-  
-  // Round 2
-  { id: 6, trait: 'Callousness', text: "Others' feelings are their own problem.", options: [{label: "Agree", value: 5}, {label: "Neutral", value: 3}, {label: "Disagree", value: 1}] },
-  { id: 7, trait: 'Grandiosity', text: "I deserve special treatment.", options: [{label: "Agree", value: 5}, {label: "Neutral", value: 3}, {label: "Disagree", value: 1}] },
+const SCENARIOS = [
+  { 
+      id: 1, 
+      trait: 'Callousness', 
+      text: "A waiter accidentally spills water on your table.", 
+      leftLabel: "Demand a manager", 
+      rightLabel: "Help clean it up",
+      icon: <Skull size={24} className="text-zinc-500"/>
+  },
+  { 
+      id: 2, 
+      trait: 'Grandiosity', 
+      text: "You are working on a group project.", 
+      leftLabel: "I should lead everything", 
+      rightLabel: "We share tasks equally",
+      icon: <UserX size={24} className="text-zinc-500"/>
+  },
+  { 
+      id: 3, 
+      trait: 'Aggression', 
+      text: "Someone cuts you off in traffic.", 
+      leftLabel: "Road rage / Honk", 
+      rightLabel: "Let it go calmly",
+      icon: <ShieldAlert size={24} className="text-zinc-500"/>
+  },
+  { 
+      id: 4, 
+      trait: 'Suspicion', 
+      text: "A colleague offers you unexpected help.", 
+      leftLabel: "What do they want?", 
+      rightLabel: "How kind of them",
+      icon: <ShieldAlert size={24} className="text-zinc-500"/>
+  },
+  { 
+      id: 5, 
+      trait: 'Risk', 
+      text: "You see a shortcut that trespasses private property.", 
+      leftLabel: "Take it immediately", 
+      rightLabel: "Stick to the path",
+      icon: <Skull size={24} className="text-zinc-500"/>
+  },
 ];
 
 const DifficultPersonTest: React.FC = () => {
   const [phase, setPhase] = useState<'intro' | 'quiz' | 'result'>('intro');
   const [currentQ, setCurrentQ] = useState(0);
+  const [sliderValue, setSliderValue] = useState(50);
   const [scores, setScores] = useState<Record<string, number>>({
       Callousness: 0,
       Grandiosity: 0,
@@ -34,49 +62,47 @@ const DifficultPersonTest: React.FC = () => {
       Risk: 0
   });
 
-  const handleAnswer = (val: number) => {
-      const trait = QUESTIONS[currentQ].trait;
-      setScores(prev => ({ ...prev, [trait]: prev[trait] + val }));
+  const handleNext = () => {
+      // Slider 0 (Left/Dark) to 100 (Right/Light)
+      // We want high score = Difficult.
+      // So if slider is 0 (Left), score add 100. If 100 (Right), score add 0.
+      const difficultyPoints = 100 - sliderValue;
       
-      if (currentQ < QUESTIONS.length - 1) {
+      const trait = SCENARIOS[currentQ].trait;
+      setScores(prev => ({ ...prev, [trait]: difficultyPoints })); // One Q per trait in this mini version
+      
+      if (currentQ < SCENARIOS.length - 1) {
           setCurrentQ(q => q + 1);
+          setSliderValue(50); // Reset center
       } else {
-          finishTest({ ...scores, [trait]: scores[trait] + val });
+          finishTest({ ...scores, [trait]: difficultyPoints });
       }
   };
 
   const finishTest = (finalScores: Record<string, number>) => {
-      // Normalize scores. 
-      // Most traits have 1-2 questions in this mini version.
-      // Let's normalize to 0-100% for radar
-      
-      // Calculate total "Difficulty" score (Average of percentages)
-      // Max possible per trait varies in this short version, let's normalize roughly.
-      // For demo, assumes 2 Qs per trait roughly, or dynamic.
-      
-      // Just sum raw for total score (approx)
       const totalRaw = Object.values(finalScores).reduce((a: number, b: number) => a + b, 0);
-      const maxPossible = QUESTIONS.length * 5;
-      const normalizedTotal = Math.round((totalRaw / maxPossible) * 100);
+      const avg = Math.round(totalRaw / SCENARIOS.length);
       
-      saveStat('difficult-person-test', normalizedTotal);
+      saveStat('difficult-person-test', avg);
       setPhase('result');
   };
 
   const getRadarData = () => {
-      // Normalize each trait to 100
-      // Find max per trait
-      const traitCounts: Record<string, number> = {};
-      QUESTIONS.forEach(q => traitCounts[q.trait] = (traitCounts[q.trait] || 0) + 5);
-      
       return TRAITS.map(trait => ({
           subject: trait,
-          A: Math.round((scores[trait] / (traitCounts[trait] || 5)) * 100),
+          A: scores[trait] || 0,
           fullMark: 100
       }));
   };
 
-  const totalScore = Math.round(((Object.values(scores) as number[]).reduce((a, b) => a + b, 0) / (QUESTIONS.length * 5)) * 100);
+  const totalScore = Math.round(Object.values(scores).reduce((a: number, b: number) => a + b, 0) / SCENARIOS.length);
+
+  // Dynamic "Dark Core" color based on slider
+  const getCoreColor = () => {
+      const val = 100 - sliderValue; // 0 (Good) to 100 (Bad)
+      // Green (0) -> Red (100)
+      return `rgb(${val * 2.55}, ${(100-val)*2}, 50)`;
+  };
 
   return (
     <div className="max-w-3xl mx-auto text-center select-none">
@@ -86,8 +112,8 @@ const DifficultPersonTest: React.FC = () => {
                <UserX size={64} className="mx-auto text-zinc-600 mb-6" />
                <h2 className="text-3xl font-bold text-white mb-2">Difficult Person Test</h2>
                <p className="text-zinc-400 mb-8 max-w-md mx-auto">
-                   Based on the Five-Factor Model of personality (FFM) and research on the "Dark Triad".
-                   <br/>Measure traits like <strong>Callousness</strong>, <strong>Grandiosity</strong>, and <strong>Suspicion</strong>.
+                   Based on the Five-Factor Model and Dark Triad research.
+                   <br/>Use the <strong>Moral Slider</strong> to respond to conflict scenarios.
                </p>
                <button onClick={() => setPhase('quiz')} className="btn-primary">Start Profiling</button>
            </div>
@@ -95,25 +121,42 @@ const DifficultPersonTest: React.FC = () => {
 
        {phase === 'quiz' && (
            <div className="py-12 animate-in slide-in-from-right">
-               <div className="flex justify-between items-center px-8 mb-8">
-                   <span className="text-xs font-mono text-zinc-500 uppercase tracking-widest">{QUESTIONS[currentQ].trait}</span>
-                   <span className="text-xs font-mono text-primary-500">Q.{currentQ + 1} / {QUESTIONS.length}</span>
+               <div className="flex justify-between items-center px-8 mb-12">
+                   <span className="text-xs font-mono text-zinc-500 uppercase tracking-widest">{SCENARIOS[currentQ].trait}</span>
+                   <span className="text-xs font-mono text-primary-500">SCENARIO {currentQ + 1} / {SCENARIOS.length}</span>
                </div>
 
-               <div className="tech-border bg-surface p-8 min-h-[300px] flex flex-col justify-center">
-                   <h3 className="text-xl text-white font-medium mb-8">{QUESTIONS[currentQ].text}</h3>
-                   <div className="space-y-2">
-                       {QUESTIONS[currentQ].options.map((opt, i) => (
-                           <button 
-                              key={i}
-                              onClick={() => handleAnswer(opt.value)}
-                              className="w-full text-left p-4 border border-zinc-800 bg-black/50 hover:bg-zinc-900 hover:border-red-500/30 text-zinc-400 hover:text-white transition-all rounded"
-                           >
-                               {opt.label}
-                           </button>
-                       ))}
+               <div className="mb-12 min-h-[100px] flex items-center justify-center flex-col">
+                   {SCENARIOS[currentQ].icon}
+                   <h3 className="text-2xl text-white font-medium mt-4 max-w-lg leading-relaxed">{SCENARIOS[currentQ].text}</h3>
+               </div>
+
+               {/* Moral Slider */}
+               <div className="max-w-xl mx-auto bg-zinc-900/50 p-8 rounded-2xl border border-zinc-800 relative overflow-hidden">
+                   
+                   {/* Background Gradient Visualization */}
+                   <div className="absolute inset-0 opacity-20 pointer-events-none" 
+                        style={{ background: `linear-gradient(to right, #ef4444 0%, transparent 50%, #10b981 100%)` }}>
+                   </div>
+
+                   <input 
+                      type="range" 
+                      min="0" 
+                      max="100" 
+                      value={sliderValue}
+                      onChange={(e) => setSliderValue(parseInt(e.target.value))}
+                      className="w-full h-4 bg-zinc-800 rounded-full appearance-none cursor-pointer accent-white relative z-10"
+                   />
+                   
+                   <div className="flex justify-between mt-6 text-sm font-bold">
+                       <span className="text-red-500 w-1/3 text-left leading-tight">{SCENARIOS[currentQ].leftLabel}</span>
+                       <span className="text-emerald-500 w-1/3 text-right leading-tight">{SCENARIOS[currentQ].rightLabel}</span>
                    </div>
                </div>
+
+               <button onClick={handleNext} className="mt-12 btn-primary w-48">
+                   Next Scenario
+               </button>
            </div>
        )}
 
@@ -136,7 +179,7 @@ const DifficultPersonTest: React.FC = () => {
                             <PolarGrid stroke="#333" />
                             <PolarAngleAxis dataKey="subject" tick={{ fill: '#71717a', fontSize: 10 }} />
                             <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-                            <Radar name="Traits" dataKey="A" stroke="#ef4444" strokeWidth={2} fill="#ef4444" fillOpacity={0.3} />
+                            <Radar name="Traits" dataKey="A" stroke="#ef4444" strokeWidth={2} fill="#ef4444" fillOpacity={0.5} />
                         </RadarChart>
                     </ResponsiveContainer>
                </div>
