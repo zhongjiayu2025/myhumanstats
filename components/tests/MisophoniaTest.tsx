@@ -1,5 +1,6 @@
+
 import React, { useState, useRef, useEffect } from 'react';
-import { Volume2, Activity, AlertTriangle, ShieldAlert, Play, Square, Headphones, Wind, Radar } from 'lucide-react';
+import { Volume2, Activity, AlertTriangle, ShieldAlert, Play, Square, Headphones, Wind, Radar, VolumeX, Volume1 } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar as RechartRadar, ResponsiveContainer } from 'recharts';
 
@@ -22,7 +23,7 @@ const MisophoniaTest: React.FC = () => {
   const [currentTrigger, setCurrentTrigger] = useState<TriggerType>('repetitive');
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMasking, setIsMasking] = useState(false); // Brown noise masking
-  const [discomfortLevel, setDiscomfortLevel] = useState(0); 
+  const [volumeLevel, setVolumeLevel] = useState(0); // 0-100 threshold
   const [step, setStep] = useState(1);
   const TOTAL_STEPS = 3;
 
@@ -33,6 +34,7 @@ const MisophoniaTest: React.FC = () => {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const mainGainRef = useRef<GainNode | null>(null);
   const maskGainRef = useRef<GainNode | null>(null);
+  const triggerGainRef = useRef<GainNode | null>(null);
   
   const oscRef = useRef<OscillatorNode | null>(null);
   const noiseNodeRef = useRef<AudioBufferSourceNode | null>(null);
@@ -126,27 +128,31 @@ const MisophoniaTest: React.FC = () => {
       const ctx = initAudio();
       stopTriggerAudio(); // Stop previous trigger, keep masking if active
       setIsPlaying(true);
+      setVolumeLevel(0); // Reset volume
 
       const masterGain = ctx.createGain();
       masterGain.connect(ctx.destination);
       mainGainRef.current = masterGain;
+      
+      const volumeNode = ctx.createGain();
+      volumeNode.gain.setValueAtTime(0, ctx.currentTime);
+      volumeNode.connect(masterGain);
+      triggerGainRef.current = volumeNode;
 
       if (type === 'repetitive') {
           // MECHANICAL: Pen clicking / Tapping
-          // Sharp square wave bursts
           const playClick = () => {
               const osc = ctx.createOscillator();
               const clickGain = ctx.createGain();
               osc.frequency.value = 800; 
               osc.type = 'square';
               
-              // Filter to make it sound "plastic"
               const filter = ctx.createBiquadFilter();
               filter.type = 'bandpass';
               filter.frequency.value = 1200;
 
               clickGain.connect(filter);
-              filter.connect(masterGain);
+              filter.connect(volumeNode);
               osc.connect(clickGain);
               
               const now = ctx.currentTime;
@@ -159,14 +165,13 @@ const MisophoniaTest: React.FC = () => {
           };
           
           playClick();
-          intervalRef.current = window.setInterval(playClick, 1200); // Irregular-ish feel? No, keep it rhythmic for "repetitive" stress
+          intervalRef.current = window.setInterval(playClick, 1200);
           
       } else if (type === 'high-freq') {
-          // ELECTRONIC: Coil whine / Tinnitus
+          // ELECTRONIC: Coil whine
           const osc = ctx.createOscillator();
           osc.type = 'sawtooth';
           osc.frequency.setValueAtTime(9000, ctx.currentTime);
-          // Modulate pitch slightly to make it "scratchy"
           osc.frequency.linearRampToValueAtTime(9500, ctx.currentTime + 10);
           
           const filter = ctx.createBiquadFilter();
@@ -174,16 +179,16 @@ const MisophoniaTest: React.FC = () => {
           filter.frequency.value = 4000;
 
           osc.connect(filter);
-          filter.connect(masterGain);
+          filter.connect(volumeNode);
           
-          masterGain.gain.setValueAtTime(0.03, ctx.currentTime); // Very quiet but piercing
+          // Base level for high freq needs to be lower as it's piercing
+          // We will control actual volume via volumeNode
           
           osc.start();
           oscRef.current = osc;
 
       } else if (type === 'organic') {
-          // ORGANIC: Improved "Chewing" Sound
-          // Wet filter sweeps + amplitude modulation
+          // ORGANIC: Wet breathing/chewing simulation
           const buffer = createNoiseBuffer(ctx);
 
           const playChew = () => {
@@ -192,19 +197,17 @@ const MisophoniaTest: React.FC = () => {
              
              const gain = ctx.createGain();
              
-             // Dynamic Lowpass filter for "squishy" sound
              const filter = ctx.createBiquadFilter();
              filter.type = 'lowpass';
-             filter.Q.value = 8; // High resonance for wetness
+             filter.Q.value = 8; 
 
              source.connect(filter);
              filter.connect(gain);
-             gain.connect(masterGain);
+             gain.connect(volumeNode);
 
              const now = ctx.currentTime;
-             const duration = 0.3 + Math.random() * 0.3; // 300-600ms
+             const duration = 0.3 + Math.random() * 0.3; 
 
-             // Filter Sweep (Wah-wah effect)
              filter.frequency.setValueAtTime(200, now);
              filter.frequency.linearRampToValueAtTime(800 + Math.random() * 400, now + (duration * 0.5));
              filter.frequency.linearRampToValueAtTime(200, now + duration);
@@ -212,9 +215,8 @@ const MisophoniaTest: React.FC = () => {
              source.start(now);
              source.stop(now + duration + 0.1);
 
-             // Amplitude Envelope
              gain.gain.setValueAtTime(0, now);
-             gain.gain.linearRampToValueAtTime(0.6, now + 0.1); // Slower attack
+             gain.gain.linearRampToValueAtTime(0.6, now + 0.1); 
              gain.gain.exponentialRampToValueAtTime(0.01, now + duration);
           };
 
@@ -233,6 +235,14 @@ const MisophoniaTest: React.FC = () => {
       drawVisualizer();
   };
 
+  // Live Volume Adjustment
+  useEffect(() => {
+      if (triggerGainRef.current && audioCtxRef.current) {
+          const gain = volumeLevel / 100;
+          triggerGainRef.current.gain.setTargetAtTime(gain, audioCtxRef.current.currentTime, 0.1);
+      }
+  }, [volumeLevel]);
+
   const stopTriggerAudio = () => {
       if (oscRef.current) {
           try { oscRef.current.stop(); oscRef.current.disconnect(); } catch (e) {}
@@ -244,7 +254,7 @@ const MisophoniaTest: React.FC = () => {
       }
       if (intervalRef.current) {
           clearInterval(intervalRef.current);
-          clearTimeout(intervalRef.current); // Handle both setIntervall/setTimeout
+          clearTimeout(intervalRef.current);
           intervalRef.current = null;
       }
       if (mainGainRef.current) {
@@ -302,22 +312,21 @@ const MisophoniaTest: React.FC = () => {
           return;
       }
 
-      // Trigger Waveform (Red/Chaos)
+      // Trigger Waveform (Red/Chaos) scaled by volume
       ctx.beginPath();
       ctx.strokeStyle = currentTrigger === 'organic' ? '#eab308' : '#ef4444'; // Yellow for chew, Red for others
       ctx.lineWidth = 2;
+      const amp = (volumeLevel / 100) * 50;
 
       for (let x = 0; x < w; x++) {
           let noise = 0;
           if (currentTrigger === 'high-freq') {
-              noise = Math.sin(x * 0.5 + time * 10) * 5;
+              noise = Math.sin(x * 0.5 + time * 10) * amp * 0.2;
           } else if (currentTrigger === 'organic') {
-               // Burst visuals
-               const burst = (Math.sin(time) > 0.5) ? Math.random() * 30 : 2;
+               const burst = (Math.sin(time) > 0.5) ? Math.random() * amp : amp * 0.1;
                noise = burst * (Math.random() - 0.5);
           } else {
-               // Repetitive spikes
-               const spike = (x + (time * 100)) % 100 < 10 ? 30 : 2;
+               const spike = (x + (time * 100)) % 100 < 10 ? amp : amp * 0.1;
                noise = spike * (Math.random() - 0.5);
           }
 
@@ -332,13 +341,17 @@ const MisophoniaTest: React.FC = () => {
 
   // --- LOGIC FLOW ---
 
-  const submitAudioRating = () => {
+  const handleStopAndRate = () => {
       stopTriggerAudio();
       
-      // Save score for current trigger (0-10 scale)
-      const newScores = { ...triggerScores, [currentTrigger]: discomfortLevel };
+      // Calculate score based on threshold.
+      // If user stopped at 10% vol, they are very sensitive (Score 90).
+      // If user stopped at 100% vol, they are not sensitive (Score 0).
+      const sensitivityScore = Math.max(0, 100 - volumeLevel);
+      
+      const newScores = { ...triggerScores, [currentTrigger]: sensitivityScore };
       setTriggerScores(newScores);
-      setDiscomfortLevel(0);
+      setVolumeLevel(0);
       
       if (step < TOTAL_STEPS) {
           setStep(s => s + 1);
@@ -359,7 +372,7 @@ const MisophoniaTest: React.FC = () => {
   ];
 
   const handleSurveyAnswer = (val: number) => {
-      setSurveyScore(s => s + (val * 10)); // Max 50 points (5 Q * 2 max val * 5 scale factor = 50)
+      setSurveyScore(s => s + (val * 10)); // Max 50 points
       
       if (currentQ < QUESTIONS.length - 1) {
           setCurrentQ(currentQ + 1);
@@ -374,11 +387,17 @@ const MisophoniaTest: React.FC = () => {
 
   useEffect(() => {
       if (phase === 'result') {
-          // Calc total audio score (0-50)
-          // Avg discomfort * 5
-          const avgDiscomfort = (triggerScores.repetitive + triggerScores['high-freq'] + triggerScores.organic) / 3;
-          const audioTotal = avgDiscomfort * 5;
-          const finalScore = Math.min(100, Math.round(audioTotal + surveyScore));
+          // Calc total score (0-100)
+          // Threshold Score (50%) + Survey Score (50%)
+          const avgThresholdScore = (triggerScores.repetitive + triggerScores['high-freq'] + triggerScores.organic) / 3;
+          
+          // Survey score is already 0-50 max. Threshold score is 0-100.
+          // Weighting: 60% physical threshold, 40% psychological survey
+          // Wait, survey max is 50. Let's normalize survey to 100 first?
+          // No, survey score logic: val (0-2) * 10 * 5 questions = 100 max.
+          
+          // Composite = (Threshold + Survey) / 2
+          const finalScore = Math.min(100, Math.round((avgThresholdScore + surveyScore) / 2));
           
           saveStat('misophonia-test', finalScore);
       }
@@ -396,12 +415,11 @@ const MisophoniaTest: React.FC = () => {
                   </div>
                   <h2 className="text-2xl font-bold text-white mb-4 uppercase tracking-wider">Misophonia Test Safety</h2>
                   <p className="text-zinc-400 text-sm leading-relaxed mb-6">
-                      This online <strong>Misophonia Test</strong> involves playback of potentially distressing audio triggers, including repetitive tapping and high frequencies.
+                      This test involves potentially distressing audio triggers.
                   </p>
                   <ul className="text-left text-xs text-zinc-500 font-mono space-y-2 bg-zinc-900 p-4 rounded mb-8 border border-zinc-800">
-                      <li className="flex gap-2"><AlertTriangle size={12} className="text-yellow-500"/> DO NOT take this <strong>Misophonia Test</strong> if you are currently distressed.</li>
-                      <li className="flex gap-2"><Volume2 size={12} className="text-primary-500"/> Please ensure volume is set to a moderate level.</li>
-                      <li className="flex gap-2"><Activity size={12} className="text-red-500"/> Panic Stop is available to immediately halt the <strong>Misophonia Test</strong>.</li>
+                      <li className="flex gap-2"><AlertTriangle size={12} className="text-yellow-500"/> DO NOT take this if currently distressed.</li>
+                      <li className="flex gap-2"><Volume2 size={12} className="text-primary-500"/> Start with system volume at moderate level.</li>
                   </ul>
                   <button onClick={() => setPhase('intro')} className="btn-primary w-full border-red-500 hover:bg-red-950 text-black hover:text-red-500">
                       I Understand & Proceed
@@ -415,12 +433,14 @@ const MisophoniaTest: React.FC = () => {
       return (
           <div className="max-w-2xl mx-auto text-center animate-in fade-in zoom-in">
               <Headphones size={48} className="mx-auto text-zinc-600 mb-6" />
-              <h1 className="text-3xl font-bold text-white mb-2">Misophonia Test & Sensitivity Assessment</h1>
+              <h1 className="text-3xl font-bold text-white mb-2">Misophonia Sensitivity Test</h1>
               <p className="text-zinc-400 max-w-lg mx-auto mb-8">
-                  Quantify your Selective Sound Sensitivity Syndrome. This professional <strong>Misophonia Test</strong> combines a clinical questionnaire with a real-time psychoacoustic tolerance challenge using synthetic triggers.
+                  Determine your <strong>Tolerance Threshold</strong>. 
+                  <br/>We will play common triggers starting at silence. 
+                  <br/>Increase volume until the sound becomes <strong>irritating</strong>.
               </p>
               <button onClick={() => setPhase('audio-test')} className="btn-primary">
-                  Start Misophonia Test Calibration
+                  Start Calibration
               </button>
           </div>
       );
@@ -428,85 +448,64 @@ const MisophoniaTest: React.FC = () => {
 
   if (phase === 'audio-test') {
       const getTriggerName = (t: TriggerType) => {
-          if (t === 'repetitive') return "Pattern A: Mechanical Repetition";
-          if (t === 'high-freq') return "Pattern B: High Frequency";
-          return "Pattern C: Organic / Mouth Sounds";
+          if (t === 'repetitive') return "Trigger A: Repetitive Tapping";
+          if (t === 'high-freq') return "Trigger B: Electronic Whine";
+          return "Trigger C: Mouth Sounds";
       };
 
       return (
-          <div className="max-w-xl mx-auto animate-in slide-in-from-right">
+          <div className="max-w-xl mx-auto animate-in slide-in-from-right select-none">
               <div className="flex justify-between items-center mb-6">
-                  <span className="text-xs font-mono text-zinc-500">MISOPHONIA TEST: PHASE 1</span>
+                  <span className="text-xs font-mono text-zinc-500">THRESHOLD CHECK</span>
                   <span className="text-xs font-mono text-primary-500">STEP {step} / {TOTAL_STEPS}</span>
               </div>
 
               <div className="tech-border bg-black p-6 mb-8 relative overflow-hidden">
                   <div className="absolute top-2 left-2 flex gap-4">
                       <div className="text-[9px] text-red-500 font-mono animate-pulse">
-                         {isPlaying ? '• STIMULUS ACTIVE' : '• STANDBY'}
+                         {isPlaying ? '• SIGNAL ACTIVE' : '• STANDBY'}
                       </div>
-                      {isMasking && <div className="text-[9px] text-cyan-500 font-mono"> + MASKING ACTIVE</div>}
                   </div>
                   
                   {/* Canvas Visualizer */}
                   <canvas ref={canvasRef} width={500} height={150} className="w-full h-32 bg-zinc-900 border border-zinc-800 rounded mb-6 opacity-80" />
 
-                  <h3 className="text-lg font-bold text-white mb-1 text-center">
+                  <h3 className="text-lg font-bold text-white mb-4 text-center">
                       {getTriggerName(currentTrigger)}
                   </h3>
-                  <p className="text-zinc-500 text-xs text-center mb-6">
-                      Click play to continue the <strong>Misophonia Test</strong>. Listen for at least 5 seconds.
-                  </p>
 
-                  <div className="flex justify-center gap-4 mb-8">
+                  <div className="flex flex-col items-center gap-6">
                       {!isPlaying ? (
                           <button onClick={() => playTrigger(currentTrigger)} className="w-16 h-16 rounded-full bg-primary-600 hover:bg-primary-500 flex items-center justify-center text-black shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all hover:scale-105">
                               <Play size={32} fill="black" />
                           </button>
                       ) : (
-                          <div className="flex gap-4">
-                              {/* Masking Tool */}
-                              <button 
-                                onClick={toggleMasking} 
-                                className={`h-16 px-6 rounded-full border border-cyan-500/30 flex flex-col items-center justify-center gap-1 transition-all ${isMasking ? 'bg-cyan-900/30 text-cyan-400' : 'bg-black text-zinc-500 hover:text-cyan-400'}`}
-                              >
-                                  <Wind size={20} />
-                                  <span className="text-[9px] font-bold uppercase">{isMasking ? 'Masking On' : 'Try Masking'}</span>
-                              </button>
+                          <div className="w-full space-y-6">
+                              <div className="flex items-center gap-4">
+                                  <VolumeX size={20} className="text-zinc-500" />
+                                  <input 
+                                      type="range" 
+                                      min="0" 
+                                      max="100" 
+                                      step="1"
+                                      value={volumeLevel}
+                                      onChange={(e) => setVolumeLevel(parseInt(e.target.value))}
+                                      className="flex-1 h-8 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-red-500"
+                                  />
+                                  <Volume1 size={20} className="text-white" />
+                              </div>
                               
-                              {/* Panic Stop */}
-                              <button onClick={stopAllAudio} className="w-16 h-16 rounded-full bg-red-600 hover:bg-red-500 flex items-center justify-center text-black shadow-[0_0_20px_rgba(239,68,68,0.4)] transition-all hover:scale-105 animate-pulse">
-                                  <Square size={24} fill="black" />
+                              <p className="text-xs text-zinc-400 text-center">
+                                  Slowly drag slider right. <br/>Stop when sound triggers annoyance.
+                              </p>
+
+                              <button onClick={handleStopAndRate} className="w-full py-4 bg-red-600 hover:bg-red-500 text-white font-bold rounded shadow-[0_0_20px_#ef4444] animate-pulse">
+                                  STOP / TRIGGERED
                               </button>
                           </div>
                       )}
                   </div>
-
-                  {/* Rating Scale */}
-                  <div className="space-y-4 bg-zinc-900/50 p-4 rounded border border-zinc-800">
-                      <div className="flex justify-between text-xs font-mono text-zinc-400">
-                          <span>No Reaction</span>
-                          <span>Annoying</span>
-                          <span>Unbearable</span>
-                      </div>
-                      <input 
-                          type="range" 
-                          min="0" 
-                          max="10" 
-                          step="1"
-                          value={discomfortLevel}
-                          onChange={(e) => setDiscomfortLevel(parseInt(e.target.value))}
-                          className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
-                      />
-                      <div className="text-center font-mono font-bold text-white text-lg">
-                          Discomfort Level: <span className="text-primary-400">{discomfortLevel}</span>/10
-                      </div>
-                  </div>
               </div>
-
-              <button onClick={submitAudioRating} className="btn-secondary w-full">
-                  Confirm Rating & Next
-              </button>
           </div>
       );
   }
@@ -515,7 +514,7 @@ const MisophoniaTest: React.FC = () => {
       return (
           <div className="max-w-xl mx-auto animate-in slide-in-from-right">
              <div className="flex justify-between items-center mb-6">
-                  <span className="text-xs font-mono text-zinc-500">MISOPHONIA TEST: PHASE 2</span>
+                  <span className="text-xs font-mono text-zinc-500">BEHAVIORAL CHECK</span>
                   <span className="text-xs font-mono text-primary-500">Q.{currentQ + 1}</span>
              </div>
              
@@ -541,15 +540,14 @@ const MisophoniaTest: React.FC = () => {
   }
 
   // Result Phase
-  // Recalculate total for display
-  const avgDiscomfort = (triggerScores.repetitive + triggerScores['high-freq'] + triggerScores.organic) / 3;
-  const totalScore = Math.min(100, Math.round((avgDiscomfort * 5) + surveyScore));
+  const avgThresholdScore = (triggerScores.repetitive + triggerScores['high-freq'] + triggerScores.organic) / 3;
+  const totalScore = Math.min(100, Math.round((avgThresholdScore + surveyScore) / 2));
   
   const radarData = [
-      { subject: 'Mechanical', A: triggerScores.repetitive * 10, fullMark: 100 },
-      { subject: 'High Freq', A: triggerScores['high-freq'] * 10, fullMark: 100 },
-      { subject: 'Organic', A: triggerScores.organic * 10, fullMark: 100 },
-      { subject: 'Survey', A: surveyScore * 2, fullMark: 100 }, // Approximate scale
+      { subject: 'Mechanical', A: triggerScores.repetitive, fullMark: 100 },
+      { subject: 'High Freq', A: triggerScores['high-freq'], fullMark: 100 },
+      { subject: 'Organic', A: triggerScores.organic, fullMark: 100 },
+      { subject: 'Behavioral', A: surveyScore, fullMark: 100 },
   ];
 
   return (
@@ -557,14 +555,14 @@ const MisophoniaTest: React.FC = () => {
         <div className="tech-border bg-black p-10 clip-corner-lg relative overflow-hidden">
             <div className="absolute inset-0 bg-grid opacity-20"></div>
             
-            <h2 className="text-sm font-mono text-zinc-500 uppercase tracking-widest mb-4">Misophonia Test Report</h2>
+            <h2 className="text-sm font-mono text-zinc-500 uppercase tracking-widest mb-4">Misophonia Scale</h2>
             
             <div className="mb-8">
                 <div className={`text-5xl font-bold mb-2 text-glow ${totalScore > 70 ? 'text-red-500' : totalScore > 40 ? 'text-yellow-500' : 'text-emerald-500'}`}>
                     {totalScore > 70 ? "High Sensitivity" : totalScore > 40 ? "Moderate" : "Low Sensitivity"}
                 </div>
                 <div className="text-xs font-mono text-zinc-600">
-                    COMPOSITE_SCORE: {totalScore}/100
+                    INDEX: {totalScore}/100
                 </div>
             </div>
 
@@ -585,29 +583,19 @@ const MisophoniaTest: React.FC = () => {
                 <div className="flex gap-2 items-start">
                     <ShieldAlert className="text-primary-500 shrink-0 mt-0.5" size={16}/>
                     <div>
-                        <h4 className="text-white text-sm font-bold mb-1">Misophonia Test Insights</h4>
+                        <h4 className="text-white text-sm font-bold mb-1">Threshold Analysis</h4>
                         <p className="text-xs text-zinc-400">
-                           Based on your <strong>Misophonia Test</strong> score, {totalScore > 60 
-                             ? "your high sensitivity to organic/repetitive triggers suggests that 'Brown Noise' masking (which you tested) or active noise-cancelling headphones are essential coping tools."
-                             : "you have manageable sensitivity. Background masking may help during periods of high stress, but is not critically required."}
+                           {totalScore > 60 
+                             ? "You demonstrated low volume tolerance for trigger sounds, combined with high behavioral avoidance. Consider using Brown Noise masking."
+                             : "You showed high volume tolerance for most triggers. Your auditory sensory gating appears to be functioning normally."}
                         </p>
                     </div>
                 </div>
             </div>
 
-            <button onClick={() => { setPhase('intro'); setTriggerScores({repetitive:0,'high-freq':0,organic:0}); setSurveyScore(0); setStep(1); setCurrentQ(0); }} className="btn-secondary w-full">
+            <button onClick={() => { setPhase('intro'); setTriggerScores({repetitive:0,'high-freq':0,organic:0}); setSurveyScore(0); setStep(1); setCurrentQ(0); setVolumeLevel(0); }} className="btn-secondary w-full">
                 Re-Calibrate
             </button>
-        </div>
-
-        {/* SEO Context */}
-        <div className="mt-12 border-t border-zinc-800 pt-6 text-left">
-            <h4 className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest mb-2 flex items-center gap-2">
-                <Activity size={12} /> Clinical Context: Understanding Your Misophonia Test
-            </h4>
-            <p className="text-xs text-zinc-500 leading-relaxed">
-                This <strong>Misophonia Test</strong> evaluates Selective Sound Sensitivity Syndrome. Unlike general annoyance, the triggers identified in this <strong>Misophonia Test</strong> (like chewing, tapping, or breathing) bypass the logical brain and activate the amygdala, causing an instant physiological stress response. Taking a <strong>Misophonia Test</strong> is the first step toward effective management and desensitization therapies.
-            </p>
         </div>
     </div>
   );

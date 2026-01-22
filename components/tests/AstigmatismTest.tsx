@@ -1,17 +1,49 @@
+
 import React, { useRef, useEffect, useState } from 'react';
-import { Eye, Check, MousePointer2, RefreshCcw } from 'lucide-react';
+import { Eye, Check, MousePointer2, RefreshCcw, RotateCw, ArrowRight, CreditCard, Scaling } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 const AstigmatismTest: React.FC = () => {
-  const [phase, setPhase] = useState<'intro' | 'test' | 'result'>('intro');
-  const [selectedAxis, setSelectedAxis] = useState<number | null>(null); // 0-180 degrees
+  const [phase, setPhase] = useState<'intro' | 'calibrate' | 'setup-left' | 'test-left' | 'setup-right' | 'test-right' | 'result'>('intro');
+  const [activeEye, setActiveEye] = useState<'left'|'right'>('left');
+  
+  // Calibration State
+  const [ppi, setPpi] = useState(96); // Default PPI
+  const [sliderVal, setSliderVal] = useState(50); // Slider 0-100
+  
+  // Results
+  const [results, setResults] = useState<{left: number | null, right: number | null}>({ left: null, right: null });
+  const [knobAngle, setKnobAngle] = useState(0);
+  
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  // --- Calibration Logic ---
+  // Standard Credit Card width is 85.6mm
+  const CARD_MM = 85.6;
+  
+  // Base width in pixels at default 96 PPI approx 323px.
+  // Slider adjusts this pixel width.
+  const calculatePPI = (pxWidth: number) => {
+      // PPI = Pixels / Inches
+      // Inches = mm / 25.4
+      const inches = CARD_MM / 25.4;
+      return pxWidth / inches;
+  };
+
+  const handleCalibration = () => {
+      // Map slider 0-100 to range 250px - 450px approx
+      const pxWidth = 250 + (sliderVal * 2.5); 
+      const newPpi = calculatePPI(pxWidth);
+      setPpi(newPpi);
+      setPhase('setup-left');
+      setActiveEye('left');
+  };
+
   useEffect(() => {
-    if (phase === 'test') {
+    if (phase === 'test-left' || phase === 'test-right') {
       drawFanChart();
     }
-  }, [phase, selectedAxis]);
+  }, [phase, knobAngle, ppi]);
 
   const drawFanChart = () => {
       const canvas = canvasRef.current;
@@ -23,25 +55,24 @@ const AstigmatismTest: React.FC = () => {
       const h = canvas.height;
       const cx = w / 2;
       const cy = h / 2;
+      
+      // Use PPI to size the chart physically correct (approx 10cm diameter?)
+      // Let's say 300px is decent fallback, but we can scale.
       const radius = Math.min(w, h) * 0.4;
 
       // Background
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, w, h);
 
-      // Draw Lines
+      // Draw Static Lines (The Fan)
       ctx.lineCap = 'round';
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 2; // Maybe scale line width with PPI too?
 
-      for (let i = 0; i < 12; i++) {
-        const angleDeg = i * 30; // 0, 30, 60...
+      for (let i = 0; i < 36; i++) { 
+        const angleDeg = i * 10; 
         const angleRad = angleDeg * (Math.PI / 180);
         
-        // Highlight logic
-        const isSelected = selectedAxis !== null && (angleDeg === selectedAxis || angleDeg === (selectedAxis + 180) % 360);
-        
-        ctx.strokeStyle = isSelected ? '#ef4444' : '#000000';
-        ctx.lineWidth = isSelected ? 6 : 3;
-
         const startX = cx + Math.cos(angleRad) * (radius * 0.1);
         const startY = cy + Math.sin(angleRad) * (radius * 0.1);
         const endX = cx + Math.cos(angleRad) * radius;
@@ -51,48 +82,49 @@ const AstigmatismTest: React.FC = () => {
         ctx.moveTo(startX, startY);
         ctx.lineTo(endX, endY);
         ctx.stroke();
-        
-        // Labels
-        const labelX = cx + Math.cos(angleRad) * (radius * 1.15);
-        const labelY = cy + Math.sin(angleRad) * (radius * 1.15);
-        ctx.fillStyle = isSelected ? '#ef4444' : '#000000';
-        ctx.font = isSelected ? 'bold 24px Arial' : 'bold 18px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        
-        // Clock numbers
-        let num = (i + 3) % 12;
-        if (num === 0) num = 12;
-        ctx.fillText(num.toString(), labelX, labelY);
+      }
+      
+      if (knobAngle !== 0) {
+          const rad = (knobAngle - 90) * (Math.PI / 180); 
+          ctx.strokeStyle = 'rgba(239, 68, 68, 0.5)';
+          ctx.lineWidth = 12;
+          
+          const x1 = cx + Math.cos(rad) * radius * 1.1;
+          const y1 = cy + Math.sin(rad) * radius * 1.1;
+          const x2 = cx - Math.cos(rad) * radius * 1.1;
+          const y2 = cy - Math.sin(rad) * radius * 1.1;
+          
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.stroke();
+          
+          ctx.fillStyle = '#ef4444';
+          ctx.font = 'bold 24px Arial';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(`${Math.round(knobAngle)}°`, cx, cy);
       }
   };
 
-  const handleCanvasClick = (e: React.MouseEvent) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left - (rect.width/2);
-      const y = e.clientY - rect.top - (rect.height/2);
+  const confirmEyeResult = (hasIssue: boolean) => {
+      const axis = hasIssue ? knobAngle : null;
+      setResults(prev => ({ ...prev, [activeEye]: axis }));
       
-      // Calculate angle
-      let angle = Math.atan2(y, x) * (180 / Math.PI);
-      if (angle < 0) angle += 360;
-      
-      // Snap to nearest 30 deg
-      const snapped = Math.round(angle / 30) * 30;
-      
-      // Map back to 0-360 for drawing (just select one of the lines, e.g. 30 deg implies 30 and 210)
-      // Visual feedback handles drawing both sides. We store the "Clock" angle basically.
-      // Actually let's store 0-330 for exact clock line.
-      const visualSnap = snapped % 360;
-      
-      setSelectedAxis(visualSnap);
+      if (activeEye === 'left') {
+          setActiveEye('right');
+          setPhase('setup-right');
+          setKnobAngle(0); 
+      } else {
+          finishTest();
+      }
   };
-
-  const confirmResult = (hasIssue: boolean) => {
-      if (!hasIssue) setSelectedAxis(null);
+  
+  const finishTest = () => {
       setPhase('result');
-      saveStat('astigmatism-test', hasIssue ? 60 : 100); 
+      let score = 100;
+      if (results.left !== null || results.right !== null) score = 60;
+      saveStat('astigmatism-test', score);
   };
 
   return (
@@ -102,82 +134,134 @@ const AstigmatismTest: React.FC = () => {
              <Eye size={64} className="mx-auto text-zinc-600 mb-6" />
              <h2 className="text-3xl font-bold text-white mb-2">Astigmatism Axis Finder</h2>
              <p className="text-zinc-400 mb-8 max-w-md mx-auto">
-                Screen for refractive errors.
-                <br/>Cover one eye. If some lines appear <strong>darker</strong> or <strong>sharper</strong> than others, click them on the chart.
+                A digital version of the "Clock Dial" test used by optometrists.
+                <br/>We will test each eye individually to find your axis of distortion.
              </p>
-             <button onClick={() => setPhase('test')} className="btn-primary">Start Screening</button>
+             <button onClick={() => setPhase('calibrate')} className="btn-primary">Start</button>
           </div>
        )}
 
-       {phase === 'test' && (
+       {phase === 'calibrate' && (
+           <div className="py-12 animate-in slide-in-from-right">
+               <Scaling size={48} className="mx-auto text-primary-500 mb-4" />
+               <h2 className="text-xl font-bold text-white mb-2">Screen Calibration</h2>
+               <p className="text-zinc-400 text-sm mb-8">
+                   For accurate results, we need to know your screen size.
+                   <br/>Hold a standard card (Credit/ID) against the screen.
+               </p>
+               
+               <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-xl mb-8 flex flex-col items-center">
+                   {/* Interactive Card Box */}
+                   <div 
+                      className="bg-emerald-500/20 border-2 border-emerald-500 rounded-lg flex items-center justify-center mb-6 relative transition-all"
+                      style={{ width: `${250 + (sliderVal * 2.5)}px`, height: `${(250 + (sliderVal * 2.5)) / 1.586}px` }}
+                   >
+                       <div className="absolute inset-0 flex flex-col items-center justify-center text-emerald-500 font-bold text-sm pointer-events-none">
+                           <CreditCard size={32} className="mb-2" />
+                           Match Card Size
+                       </div>
+                   </div>
+                   
+                   <input 
+                      type="range" min="0" max="100" value={sliderVal} 
+                      onChange={(e) => setSliderVal(parseInt(e.target.value))}
+                      className="w-full max-w-sm h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                   />
+                   <div className="flex justify-between w-full max-w-sm text-[10px] text-zinc-500 font-mono mt-2">
+                       <span>SMALLER</span>
+                       <span>LARGER</span>
+                   </div>
+               </div>
+               
+               <button onClick={handleCalibration} className="btn-primary">
+                   Calibration Complete
+               </button>
+           </div>
+       )}
+
+       {(phase === 'setup-left' || phase === 'setup-right') && (
+           <div className="py-20 animate-in slide-in-from-right">
+               <h3 className="text-2xl font-bold text-white mb-6 uppercase tracking-widest">
+                   {phase === 'setup-left' ? 'Left Eye' : 'Right Eye'}
+               </h3>
+               <div className="bg-black border border-zinc-800 p-8 rounded-xl max-w-sm mx-auto mb-8">
+                   <div className="flex justify-center gap-4 mb-4">
+                       <div className={`w-16 h-10 border-2 rounded-full ${phase === 'setup-left' ? 'bg-zinc-800 border-zinc-600' : 'bg-black border-zinc-800'}`}></div>
+                       <div className={`w-16 h-10 border-2 rounded-full ${phase === 'setup-right' ? 'bg-zinc-800 border-zinc-600' : 'bg-black border-zinc-800'}`}></div>
+                   </div>
+                   <p className="text-lg text-white font-bold mb-2">
+                       Cover your {phase === 'setup-left' ? 'RIGHT' : 'LEFT'} eye.
+                   </p>
+               </div>
+               <button onClick={() => setPhase(phase === 'setup-left' ? 'test-left' : 'test-right')} className="btn-primary">
+                   Ready <ArrowRight size={16} className="inline ml-1"/>
+               </button>
+           </div>
+       )}
+
+       {(phase === 'test-left' || phase === 'test-right') && (
           <div className="animate-in fade-in">
-             <div className="relative w-[350px] h-[350px] mx-auto mb-8 cursor-crosshair group">
+             <div className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest mb-4">Testing: {activeEye} Eye</div>
+             
+             <div className="relative w-[350px] h-[350px] mx-auto mb-8">
                 <canvas 
                     ref={canvasRef} 
                     width={350} height={350} 
-                    onClick={handleCanvasClick}
                     className="rounded-full bg-white shadow-2xl"
                 />
-                {!selectedAxis && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span className="bg-black/80 text-white px-3 py-1 rounded text-xs">Click boldest line</span>
-                    </div>
-                )}
              </div>
              
              <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl">
-                 <h3 className="text-lg text-white font-bold mb-4">What do you see?</h3>
+                 <h3 className="text-sm text-zinc-400 font-bold mb-6">Are any lines darker/bolder?</h3>
                  
-                 {selectedAxis !== null ? (
-                     <div className="animate-in slide-in-from-bottom-2">
-                         <div className="text-sm text-zinc-400 mb-4">
-                             You selected the axis at <strong>{selectedAxis}°</strong>. 
-                             <br/>This line appears darker/sharper to you?
-                         </div>
-                         <div className="flex gap-4 justify-center">
-                             <button onClick={() => setSelectedAxis(null)} className="btn-secondary text-xs px-4 py-2">Reset</button>
-                             <button onClick={() => confirmResult(true)} className="btn-primary text-xs px-6 py-2 border-red-500 bg-red-600 hover:bg-red-500 text-white">Yes, Confirm Issue</button>
-                         </div>
+                 <div className="flex flex-col gap-6">
+                     <div className="flex items-center gap-4 bg-black p-4 rounded-lg border border-zinc-800">
+                         <RotateCw size={20} className="text-zinc-500" />
+                         <input 
+                            type="range" min="0" max="180" step="1"
+                            value={knobAngle}
+                            onChange={(e) => setKnobAngle(Number(e.target.value))}
+                            className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-red-500"
+                         />
+                         <span className="font-mono text-white w-12 text-right">{knobAngle}°</span>
                      </div>
-                 ) : (
-                     <div className="flex flex-col gap-3">
-                         <button onClick={() => confirmResult(false)} className="p-4 bg-zinc-800 hover:bg-emerald-900/20 border border-zinc-700 hover:border-emerald-500 rounded transition-all flex items-center justify-center gap-2 group">
-                             <Check className="text-zinc-500 group-hover:text-emerald-500" size={18}/>
-                             <span className="text-zinc-300 group-hover:text-white">All lines look equal</span>
+
+                     <div className="grid grid-cols-2 gap-4">
+                         <button onClick={() => confirmEyeResult(false)} className="p-4 bg-zinc-800 hover:bg-emerald-900/20 border border-zinc-700 hover:border-emerald-500 rounded transition-all text-xs text-zinc-300 hover:text-emerald-400">
+                             No, all uniform
                          </button>
-                         <div className="text-xs text-zinc-500 mt-2 flex items-center justify-center gap-2">
-                             <MousePointer2 size={12}/>
-                             <span>Click the chart if lines look uneven</span>
-                         </div>
+                         <button onClick={() => confirmEyeResult(true)} className="p-4 bg-zinc-800 hover:bg-red-900/20 border border-zinc-700 hover:border-red-500 rounded transition-all text-xs text-zinc-300 hover:text-red-400">
+                             Yes, confirmed at {knobAngle}°
+                         </button>
                      </div>
-                 )}
+                 </div>
              </div>
           </div>
        )}
 
        {phase === 'result' && (
           <div className="py-12 animate-in zoom-in">
-             <h2 className="text-3xl font-bold text-white mb-4">{selectedAxis !== null ? "Astigmatism Detected" : "Normal Vision"}</h2>
+             <h2 className="text-3xl font-bold text-white mb-8">Refractive Analysis</h2>
              
-             {selectedAxis !== null && (
-                 <div className="mb-8">
-                     <div className="text-6xl font-bold text-red-500 mb-2">{selectedAxis}°</div>
-                     <span className="text-xs font-mono text-zinc-500 uppercase tracking-widest">Estimated Axis</span>
+             <div className="flex justify-center gap-8 mb-12">
+                 <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl w-40">
+                     <div className="text-xs text-zinc-500 uppercase mb-2">Left Eye</div>
+                     <div className={`text-3xl font-bold ${results.left !== null ? 'text-red-500' : 'text-emerald-500'}`}>
+                         {results.left !== null ? `${results.left}°` : 'Normal'}
+                     </div>
+                     {results.left !== null && <div className="text-[10px] text-zinc-600 mt-1">AXIS DETECTED</div>}
                  </div>
-             )}
 
-             <p className="text-zinc-400 mb-8 max-w-md mx-auto leading-relaxed">
-                {selectedAxis !== null
-                   ? "You identified a specific axis where lines appear sharper or darker. This directional blur is the hallmark of astigmatism."
-                   : "If all radiating lines appeared equally black and sharp, your cornea is likely spherical (no astigmatism)."
-                }
-             </p>
-             
-             <div className="bg-zinc-900/50 border border-zinc-800 p-4 rounded text-xs text-zinc-500 mb-8 text-left">
-                <strong>Note:</strong> Repeat this test with your other eye. If you wear glasses, test with them ON to check your prescription accuracy.
+                 <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl w-40">
+                     <div className="text-xs text-zinc-500 uppercase mb-2">Right Eye</div>
+                     <div className={`text-3xl font-bold ${results.right !== null ? 'text-red-500' : 'text-emerald-500'}`}>
+                         {results.right !== null ? `${results.right}°` : 'Normal'}
+                     </div>
+                     {results.right !== null && <div className="text-[10px] text-zinc-600 mt-1">AXIS DETECTED</div>}
+                 </div>
              </div>
              
-             <button onClick={() => { setPhase('intro'); setSelectedAxis(null); }} className="btn-secondary flex items-center justify-center gap-2 mx-auto">
+             <button onClick={() => { setPhase('intro'); setResults({left:null, right:null}); setKnobAngle(0); }} className="btn-secondary flex items-center justify-center gap-2 mx-auto">
                 <RefreshCcw size={16}/> Restart
              </button>
           </div>

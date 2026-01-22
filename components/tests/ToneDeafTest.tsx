@@ -1,7 +1,9 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ArrowUp, ArrowDown, Play, Check, X, RotateCcw, Volume2, Ear, BarChart3, Info, GitMerge } from 'lucide-react';
+import { ArrowUp, ArrowDown, Play, Check, X, RotateCcw, Volume2, Ear, BarChart3, Info, GitMerge, Music } from 'lucide-react';
 import { saveStat } from '../../lib/core';
+
+type Instrument = 'sine' | 'piano' | 'strings';
 
 const ToneDeafTest: React.FC = () => {
   const [stage, setStage] = useState<'intro' | 'playing' | 'guessing' | 'feedback' | 'result'>('intro');
@@ -12,6 +14,9 @@ const ToneDeafTest: React.FC = () => {
   const [correctAnswer, setCorrectAnswer] = useState<'higher' | 'lower'>('higher');
   const [userGuess, setUserGuess] = useState<'higher' | 'lower' | null>(null);
   const [replaysLeft, setReplaysLeft] = useState(3);
+  
+  // Settings
+  const [instrument, setInstrument] = useState<Instrument>('piano');
   
   // Audio Refs
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -167,16 +172,40 @@ const ToneDeafTest: React.FC = () => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         
-        osc.type = 'sine'; 
-        osc.frequency.value = freq;
-        
+        // --- Timbre Synthesis ---
         const now = ctx.currentTime;
-        gain.gain.setValueAtTime(0.0001, now);
-        gain.gain.exponentialRampToValueAtTime(0.3, now + 0.04);
-        gain.gain.setValueAtTime(0.3, now + duration - 0.04);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+        
+        if (instrument === 'piano') {
+            osc.type = 'triangle'; // Piano-ish base
+            // Envelope: Percussive
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.3, now + 0.02); // Fast attack
+            gain.gain.exponentialRampToValueAtTime(0.01, now + duration); // Long decay
+        } else if (instrument === 'strings') {
+            osc.type = 'sawtooth'; // String-ish base
+            // Envelope: Swell
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.15, now + 0.2); // Slow attack
+            gain.gain.setValueAtTime(0.15, now + duration - 0.1); // Sustain
+            gain.gain.linearRampToValueAtTime(0, now + duration); // Release
+            
+            // Filter to soften the saw
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.value = 1500;
+            osc.disconnect();
+            osc.connect(filter);
+            filter.connect(gain);
+        } else {
+            // Sine / Pure
+            osc.type = 'sine';
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.2, now + 0.05);
+            gain.gain.setValueAtTime(0.2, now + duration - 0.05);
+            gain.gain.linearRampToValueAtTime(0, now + duration);
+        }
 
-        osc.connect(gain);
+        if (instrument !== 'strings') osc.connect(gain); // Strings connected via filter
         gain.connect(ctx.destination);
         
         oscRef.current = osc;
@@ -184,7 +213,7 @@ const ToneDeafTest: React.FC = () => {
         
         drawVisualizer(true, freq);
         osc.start(now);
-        osc.stop(now + duration + 0.05);
+        osc.stop(now + duration + 0.1);
         
         setTimeout(() => {
             stopAudio();
@@ -197,7 +226,7 @@ const ToneDeafTest: React.FC = () => {
     await playSingleTone(freq2, 0.6);
     
     setStage('guessing');
-  }, [level, stage]);
+  }, [level, stage, instrument]);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -295,9 +324,25 @@ const ToneDeafTest: React.FC = () => {
                         Assess your <strong>relative pitch</strong> capabilities.
                         <br/>
                         You will hear two tones. Determine if the <strong>second tone</strong> is higher or lower. 
-                        Testing range: 50Hz down to {getDiffForLevel(10)}Hz difference.
                     </p>
                 </div>
+
+                {/* Instrument Selection */}
+                <div className="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 max-w-sm mx-auto">
+                    <div className="text-[10px] text-zinc-500 uppercase font-mono mb-3 tracking-widest">Select Timbre</div>
+                    <div className="grid grid-cols-3 gap-2">
+                        {['piano', 'sine', 'strings'].map((inst) => (
+                            <button
+                                key={inst}
+                                onClick={() => setInstrument(inst as Instrument)}
+                                className={`py-2 px-1 text-xs font-bold rounded border transition-all ${instrument === inst ? 'bg-primary-900/30 border-primary-500 text-primary-400' : 'bg-zinc-900 border-zinc-700 text-zinc-500 hover:text-white'}`}
+                            >
+                                {inst.toUpperCase()}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
                 <button onClick={playToneSequence} className="btn-primary flex items-center gap-2 mx-auto">
                     <Play size={18} /> Begin Calibration
                 </button>
@@ -321,7 +366,7 @@ const ToneDeafTest: React.FC = () => {
                     {stage === 'playing' && (
                         <div className="absolute top-2 right-2 flex items-center gap-1.5 px-2 py-1 bg-primary-900/50 rounded-sm">
                             <div className="w-1.5 h-1.5 rounded-full bg-primary-400 animate-pulse"></div>
-                            <span className="text-[9px] text-primary-200 font-mono uppercase">Signal Active</span>
+                            <span className="text-[9px] text-primary-200 font-mono uppercase">Signal Active ({instrument})</span>
                         </div>
                     )}
 

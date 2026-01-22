@@ -4,12 +4,14 @@ import { Eye, RefreshCcw, Layers } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
 // --- Types ---
-type DefectType = 'demo' | 'red-green' | 'blue-yellow';
+type DefectType = 'demo' | 'red-green' | 'blue-yellow' | 'total';
 
 interface PlateConfig {
+  id: number;
   number: string;
   type: DefectType;
-  complexity: number; // 1-5
+  subtype?: 'protan' | 'deutan'; 
+  complexity: number;
   colors: {
     bg: string[]; 
     fg: string[]; 
@@ -18,109 +20,55 @@ interface PlateConfig {
 
 const PLATES: PlateConfig[] = [
   { 
-    number: '12', 
-    type: 'demo', 
-    complexity: 1,
+    id: 1, number: '12', type: 'demo', complexity: 1,
     colors: { bg: ['#a1a1aa', '#71717a'], fg: ['#f97316', '#ea580c'] } 
   },
   { 
-    number: '8', 
-    type: 'red-green', 
-    complexity: 2,
+    id: 2, number: '8', type: 'red-green', subtype: 'deutan', complexity: 2,
     colors: { bg: ['#4d7c0f', '#65a30d'], fg: ['#b91c1c', '#dc2626'] } 
   },
   { 
-    number: '29', 
-    type: 'red-green', 
-    complexity: 3,
+    id: 3, number: '29', type: 'red-green', subtype: 'protan', complexity: 3,
     colors: { bg: ['#047857', '#059669'], fg: ['#ea580c', '#c2410c'] } 
   },
   { 
-    number: '5', 
-    type: 'red-green', 
-    complexity: 3,
+    id: 4, number: '5', type: 'red-green', subtype: 'deutan', complexity: 3,
     colors: { bg: ['#3f6212', '#4d7c0f'], fg: ['#be123c', '#e11d48'] } 
   },
   { 
-    number: '6', 
-    type: 'blue-yellow', 
-    complexity: 2,
-    colors: { bg: ['#a16207', '#ca8a04'], fg: ['#0891b2', '#06b6d4'] } 
+    id: 5, number: '3', type: 'red-green', subtype: 'protan', complexity: 2,
+    colors: { bg: ['#15803d', '#166534'], fg: ['#b91c1c', '#991b1b'] } 
   },
   { 
-    number: '74', 
-    type: 'red-green', 
-    complexity: 4, 
-    colors: { bg: ['#15803d', '#166534'], fg: ['#b91c1c', '#991b1b'] } 
-  }
+    id: 6, number: '7', type: 'blue-yellow', complexity: 2,
+    colors: { bg: ['#a16207', '#ca8a04'], fg: ['#0891b2', '#06b6d4'] } 
+  },
 ];
-
-// SVG Filters for CVD Simulation
-const CVDFilters = () => (
-  <svg className="hidden">
-    <defs>
-      <filter id="protanopia">
-        <feColorMatrix
-          type="matrix"
-          values="0.567, 0.433, 0, 0, 0
-                  0.558, 0.442, 0, 0, 0
-                  0, 0.242, 0.758, 0, 0
-                  0, 0, 0, 1, 0"
-        />
-      </filter>
-      <filter id="deuteranopia">
-        <feColorMatrix
-          type="matrix"
-          values="0.625, 0.375, 0, 0, 0
-                  0.7, 0.3, 0, 0, 0
-                  0, 0.3, 0.7, 0, 0
-                  0, 0, 0, 1, 0"
-        />
-      </filter>
-      <filter id="tritanopia">
-        <feColorMatrix
-          type="matrix"
-          values="0.95, 0.05, 0, 0, 0
-                  0, 0.433, 0.567, 0, 0
-                  0, 0.475, 0.525, 0, 0
-                  0, 0, 0, 1, 0"
-        />
-      </filter>
-    </defs>
-  </svg>
-);
 
 const ColorBlindTest: React.FC = () => {
   const [phase, setPhase] = useState<'intro' | 'test' | 'result'>('intro');
   const [currentPlateIndex, setCurrentPlateIndex] = useState(0);
-  const [answers, setAnswers] = useState<{expected: string, actual: string, type: DefectType, plateIdx: number}[]>([]);
+  const [answers, setAnswers] = useState<{expected: string, actual: string, plate: PlateConfig, timeTaken: number}[]>([]);
   const [inputBuffer, setInputBuffer] = useState('');
-  const [simMode, setSimMode] = useState<string | null>(null); 
   
+  // Simulation State
+  const [simMode, setSimMode] = useState<'normal' | 'protan' | 'deutan'>('normal');
+  
+  // Timer State
+  const [plateStartTime, setPlateStartTime] = useState(0);
+  const [timerBar, setTimerBar] = useState(100);
+  const timerRef = useRef<number | null>(null);
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const resultCanvasRef = useRef<HTMLCanvasElement>(null); 
   const animationRef = useRef<number>(0);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (phase !== 'test') return;
-
-      if (e.key >= '0' && e.key <= '9') handleInput(e.key);
-      else if (e.key === 'Backspace') handleInput('clear');
-      else if (e.key === 'Enter') handleInput('submit');
-      else if (e.key.toLowerCase() === 'n') handleInput('nothing');
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [phase, inputBuffer]); 
-
-  const drawPlateToCanvas = (ctx: CanvasRenderingContext2D, width: number, height: number, plateIndex: number, animate = false) => {
-    const plate = PLATES[plateIndex];
+  // --- Drawing Logic ---
+  const drawPlateToCanvas = (ctx: CanvasRenderingContext2D, width: number, height: number, plate: PlateConfig, animate = false) => {
     const centerX = width / 2;
     const centerY = height / 2;
     const radius = width / 2 - 10;
 
+    // 1. Create Mask for Number
     const maskCanvas = document.createElement('canvas');
     maskCanvas.width = width;
     maskCanvas.height = height;
@@ -131,17 +79,18 @@ const ColorBlindTest: React.FC = () => {
     maskCtx.textAlign = 'center';
     maskCtx.textBaseline = 'middle';
     maskCtx.fillStyle = '#FFFFFF';
-    const jX = (Math.sin(plateIndex) * 20); 
-    const jY = (Math.cos(plateIndex) * 20);
+    const jX = (Math.sin(plate.id) * 15); 
+    const jY = (Math.cos(plate.id) * 15);
     maskCtx.fillText(plate.number, centerX + jX, centerY + jY);
     const maskData = maskCtx.getImageData(0, 0, width, height).data;
 
+    // 2. Generate Dots
     const dots: {x: number, y: number, r: number, color: string}[] = [];
     const minR = 4;
     const maxR = 14 - (plate.complexity * 1.5); 
     const gridSize = maxR; 
     
-    let seed = plateIndex * 100;
+    let seed = plate.id * 1000;
     const random = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
 
     for(let y = 0; y < height; y += gridSize) {
@@ -202,7 +151,16 @@ const ColorBlindTest: React.FC = () => {
   useEffect(() => {
      if (phase === 'test' && canvasRef.current) {
          const ctx = canvasRef.current.getContext('2d', { willReadFrequently: true });
-         if (ctx) drawPlateToCanvas(ctx, canvasRef.current.width, canvasRef.current.height, currentPlateIndex, true);
+         if (ctx) drawPlateToCanvas(ctx, canvasRef.current.width, canvasRef.current.height, PLATES[currentPlateIndex], true);
+         
+         setPlateStartTime(Date.now());
+         let t = 100;
+         const interval = setInterval(() => {
+             t -= 1; 
+             setTimerBar(prev => Math.max(0, prev - 0.5)); 
+         }, 100);
+         timerRef.current = window.setInterval(() => {}, 1000); 
+         return () => clearInterval(interval);
      }
      return () => { if (animationRef.current) cancelAnimationFrame(animationRef.current); };
   }, [phase, currentPlateIndex]);
@@ -215,74 +173,76 @@ const ColorBlindTest: React.FC = () => {
   };
 
   const processAnswer = (answer: string) => {
-      const plate = PLATES[currentPlateIndex];
+      const timeTaken = (Date.now() - plateStartTime) / 1000;
       setAnswers(prev => [...prev, {
-          expected: plate.number,
+          expected: PLATES[currentPlateIndex].number,
           actual: answer === 'nothing' ? '' : answer,
-          type: plate.type,
-          plateIdx: currentPlateIndex
+          plate: PLATES[currentPlateIndex],
+          timeTaken
       }]);
 
       if (currentPlateIndex < PLATES.length - 1) {
           setInputBuffer('');
+          setTimerBar(100);
           setCurrentPlateIndex(i => i + 1);
       } else {
           setPhase('result');
       }
   };
 
-  const restart = () => {
-      setAnswers([]);
-      setCurrentPlateIndex(0);
-      setInputBuffer('');
-      setPhase('intro');
-  };
-
-  const { score, rgCorrect, rgTotal, byCorrect, byTotal } = (() => {
+  const calculateResult = () => {
       const total = answers.length;
       const correct = answers.filter(a => a.expected === a.actual).length;
-      const rgTotal = answers.filter(a => a.type === 'red-green').length;
-      const rgCorrect = answers.filter(a => a.type === 'red-green' && a.expected === a.actual).length;
-      const byTotal = answers.filter(a => a.type === 'blue-yellow').length;
-      const byCorrect = answers.filter(a => a.type === 'blue-yellow' && a.expected === a.actual).length;
-      const score = total > 0 ? Math.round((correct / total) * 100) : 0;
-      if (phase === 'result') saveStat('color-blind-test', score);
-      return { score, rgCorrect, rgTotal, byCorrect, byTotal };
-  })();
+      const score = Math.round((correct / total) * 100);
+      saveStat('color-blind-test', score);
 
-  const [previewMistake, setPreviewMistake] = useState<typeof answers[0] | null>(null);
-  
-  useEffect(() => {
-      if (phase === 'result' && previewMistake && resultCanvasRef.current) {
-          const ctx = resultCanvasRef.current.getContext('2d');
-          if (ctx) drawPlateToCanvas(ctx, 300, 300, previewMistake.plateIdx, false);
+      const errors = answers.filter(a => a.expected !== a.actual);
+      const protanErrors = errors.filter(a => a.plate.subtype === 'protan').length;
+      const deutanErrors = errors.filter(a => a.plate.subtype === 'deutan').length;
+      
+      let diagnosis = "Normal Color Vision";
+      if (score < 90) {
+          if (protanErrors > deutanErrors) diagnosis = "Protanopia (Red-Blind) Tendency";
+          else if (deutanErrors > protanErrors) diagnosis = "Deuteranopia (Green-Blind) Tendency";
+          else diagnosis = "General Color Vision Deficiency";
       }
-  }, [previewMistake, phase]);
+      return { score, diagnosis, errors };
+  };
 
-  if (phase === 'intro') {
-      return (
-          <div className="max-w-xl mx-auto text-center animate-in fade-in zoom-in">
+  return (
+    <div className="max-w-xl mx-auto text-center select-none">
+       {/* SVG Filters for Simulation */}
+       <svg style={{ display: 'none' }}>
+           <defs>
+               <filter id="protanopia">
+                   <feColorMatrix type="matrix" values="0.567, 0.433, 0, 0, 0  0.558, 0.442, 0, 0, 0  0, 0.242, 0.758, 0, 0  0, 0, 0, 1, 0" />
+               </filter>
+               <filter id="deuteranopia">
+                   <feColorMatrix type="matrix" values="0.625, 0.375, 0, 0, 0  0.7, 0.3, 0, 0, 0  0, 0.3, 0.7, 0, 0  0, 0, 0, 1, 0" />
+               </filter>
+           </defs>
+       </svg>
+
+       {phase === 'intro' && (
+          <div className="animate-in fade-in zoom-in">
               <div className="w-20 h-20 bg-zinc-900 rounded-full flex items-center justify-center mx-auto mb-6 border border-zinc-800 shadow-inner">
                   <Eye size={32} className="text-primary-500" />
               </div>
               <h1 className="text-3xl font-bold text-white mb-2">Color Blind Test (Ishihara)</h1>
               <p className="text-zinc-400 text-sm max-w-md mx-auto mb-8 leading-relaxed">
-                  Screen for <strong>Red-Green</strong> and <strong>Blue-Yellow</strong> deficiencies using digital pseudoisochromatic plates.
+                  Advanced screening for Red-Green deficiencies. 
+                  <br/>Identify the numbers hidden in the dot patterns.
               </p>
               <button onClick={() => setPhase('test')} className="btn-primary w-full max-w-xs">Start Vision Test</button>
           </div>
-      );
-  }
+       )}
 
-  if (phase === 'test') {
-      return (
-          <div className="max-w-lg mx-auto select-none">
+       {phase === 'test' && (
+          <div className="max-w-lg mx-auto">
               <div className="flex justify-between items-center mb-4 px-2">
                   <span className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest">Plate {currentPlateIndex + 1} / {PLATES.length}</span>
-                  <div className="flex gap-1">
-                      {PLATES.map((_, i) => (
-                          <div key={i} className={`w-1.5 h-1.5 rounded-full ${i === currentPlateIndex ? 'bg-primary-500 animate-pulse' : i < currentPlateIndex ? 'bg-zinc-600' : 'bg-zinc-800'}`}></div>
-                      ))}
+                  <div className="w-32 h-1 bg-zinc-800 rounded-full overflow-hidden">
+                      <div className="h-full bg-primary-500 transition-all ease-linear duration-100" style={{ width: `${timerBar}%` }}></div>
                   </div>
               </div>
 
@@ -292,11 +252,7 @@ const ColorBlindTest: React.FC = () => {
                     width={640} 
                     height={640} 
                     className="w-full h-full object-cover"
-                    aria-label={`Color vision test plate #${currentPlateIndex + 1}. Contains a hidden number formed by colored dots.`}
-                    role="img"
-                  >
-                    Your browser does not support the HTML5 canvas tag.
-                  </canvas>
+                  />
                   <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none mix-blend-overlay"></div>
               </div>
 
@@ -319,98 +275,50 @@ const ColorBlindTest: React.FC = () => {
                   <button onClick={() => handleInput('nothing')} className="text-xs text-zinc-500 hover:text-primary-400 underline decoration-zinc-700 underline-offset-4 transition-colors font-mono">I don't see anything (Press N)</button>
               </div>
           </div>
-      );
-  }
+      )}
 
-  // RESULT PHASE
-  return (
-      <div className="max-w-4xl mx-auto animate-in slide-in-from-bottom-4 fade-in duration-500">
-          <CVDFilters />
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Score Card */}
-              <div className="tech-border bg-black p-8 clip-corner-lg text-center relative overflow-hidden">
-                  <div className="absolute inset-0 bg-grid opacity-10"></div>
-                  <h2 className="text-zinc-500 font-mono text-xs uppercase tracking-widest mb-4">Color Vision Analysis</h2>
-                  <div className={`text-6xl font-bold mb-2 ${score === 100 ? 'text-emerald-500' : score > 80 ? 'text-primary-400' : 'text-yellow-500'}`}>
-                      {score}%
+      {phase === 'result' && (
+          <div className="animate-in slide-in-from-bottom-4">
+              <div className="mb-8">
+                  <h2 className="text-xs font-mono text-zinc-500 uppercase tracking-widest mb-2">Diagnosis Report</h2>
+                  <div className={`text-2xl font-bold text-white mb-2`}>{calculateResult().diagnosis}</div>
+                  <div className={`text-6xl font-bold mb-4 ${calculateResult().score > 80 ? 'text-emerald-500' : 'text-yellow-500'}`}>
+                      {calculateResult().score}%
                   </div>
-                  <p className="text-zinc-400 text-sm mb-8">Accuracy</p>
-                  
-                  <div className="space-y-3 mb-8">
-                      <div className="flex justify-between p-3 bg-zinc-900/50 rounded border border-zinc-800">
-                          <span className="text-xs text-zinc-400">Red-Green</span>
-                          <span className={`text-sm font-mono font-bold ${rgCorrect === rgTotal ? 'text-emerald-500' : 'text-red-500'}`}>{rgCorrect}/{rgTotal}</span>
-                      </div>
-                      <div className="flex justify-between p-3 bg-zinc-900/50 rounded border border-zinc-800">
-                          <span className="text-xs text-zinc-400">Blue-Yellow</span>
-                          <span className={`text-sm font-mono font-bold ${byCorrect === byTotal ? 'text-emerald-500' : 'text-red-500'}`}>{byCorrect}/{byTotal}</span>
-                      </div>
-                  </div>
-                  <button onClick={restart} className="btn-secondary w-full flex items-center justify-center gap-2"><RefreshCcw size={16} /> Retake</button>
               </div>
 
-              {/* Analysis & Simulator */}
-              <div>
-                  <h3 className="text-white font-bold mb-4 flex items-center gap-2"><Layers size={18} className="text-primary-500"/> Plate Analysis</h3>
+              {/* Vision Simulator Feature */}
+              <div className="mb-8 bg-zinc-900/50 border border-zinc-800 p-6 rounded-xl">
+                  <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2 justify-center">
+                      <Layers size={16} className="text-primary-500" /> Vision Simulator
+                  </h3>
                   
-                  {score === 100 ? (
-                      <div className="p-6 bg-emerald-900/20 border border-emerald-500/30 rounded text-emerald-200 text-sm">
-                          Perfect score. No color vision deficiency detected.
+                  {/* Sample Image */}
+                  <div className="relative w-full h-48 rounded-lg overflow-hidden mb-4 bg-black">
+                      <img 
+                          src="https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&q=80&w=600" 
+                          alt="Colorful scene" 
+                          className="w-full h-full object-cover"
+                          style={{ filter: simMode === 'protan' ? 'url(#protanopia)' : simMode === 'deutan' ? 'url(#deuteranopia)' : 'none' }}
+                      />
+                      <div className="absolute bottom-2 right-2 bg-black/70 px-2 py-1 text-[10px] text-white rounded">
+                          {simMode.toUpperCase()} VIEW
                       </div>
-                  ) : (
-                      <div className="space-y-6">
-                          <div className="bg-zinc-900 border border-zinc-800 p-4 rounded text-xs text-zinc-400">
-                              <p className="mb-4">Click a missed plate below to launch the <strong>CVD Simulator</strong>.</p>
-                              <div className="grid grid-cols-5 gap-2">
-                                  {answers.map((ans, idx) => (
-                                      <button 
-                                          key={idx} 
-                                          onClick={() => setPreviewMistake(ans)}
-                                          className={`aspect-square rounded flex items-center justify-center border font-bold text-sm transition-all ${ans.expected === ans.actual ? 'bg-emerald-900/20 border-emerald-500/30 text-emerald-500' : 'bg-red-900/20 border-red-500/50 text-red-500 hover:scale-110 cursor-pointer ring-2 ring-transparent hover:ring-red-500'}`}
-                                      >
-                                          {idx + 1}
-                                      </button>
-                                  ))}
-                              </div>
-                          </div>
+                  </div>
 
-                          {previewMistake && (
-                              <div className="bg-black border border-zinc-700 rounded-xl p-4 animate-in zoom-in">
-                                  <div className="flex justify-between items-center mb-4">
-                                      <span className="text-xs font-bold text-white">Plate #{previewMistake.plateIdx + 1} Simulation</span>
-                                      <div className="flex gap-1">
-                                          {['Normal', 'Protan', 'Deutan'].map(mode => (
-                                              <button 
-                                                  key={mode}
-                                                  onClick={() => setSimMode(mode === 'Normal' ? null : mode === 'Protan' ? 'protanopia' : 'deuteranopia')}
-                                                  className={`px-2 py-1 text-[10px] uppercase rounded border ${(!simMode && mode === 'Normal') || (simMode?.includes(mode.toLowerCase())) ? 'bg-primary-600 text-white border-primary-500' : 'bg-zinc-800 text-zinc-500 border-zinc-700'}`}
-                                              >
-                                                  {mode}
-                                              </button>
-                                          ))}
-                                      </div>
-                                  </div>
-                                  <div className="flex justify-center bg-zinc-900 rounded-lg p-4">
-                                      <canvas 
-                                          ref={resultCanvasRef} 
-                                          width={300} 
-                                          height={300} 
-                                          className="w-48 h-48 object-contain rounded-full border-4 border-zinc-800"
-                                          style={{ filter: simMode ? `url(#${simMode})` : 'none' }}
-                                          aria-hidden="true"
-                                      />
-                                  </div>
-                                  <div className="mt-4 text-center text-xs text-zinc-500">
-                                      Correct: <span className="text-white font-bold">{previewMistake.expected}</span> &nbsp;|&nbsp; You Saw: <span className="text-red-400 font-bold">{previewMistake.actual || 'None'}</span>
-                                  </div>
-                              </div>
-                          )}
-                      </div>
-                  )}
+                  <div className="flex justify-center gap-2">
+                      <button onClick={() => setSimMode('normal')} className={`px-3 py-1 rounded text-xs border ${simMode === 'normal' ? 'bg-zinc-700 text-white border-zinc-500' : 'bg-black border-zinc-800 text-zinc-500'}`}>Normal</button>
+                      <button onClick={() => setSimMode('protan')} className={`px-3 py-1 rounded text-xs border ${simMode === 'protan' ? 'bg-red-900/50 text-red-200 border-red-500' : 'bg-black border-zinc-800 text-zinc-500'}`}>Protan (Red)</button>
+                      <button onClick={() => setSimMode('deutan')} className={`px-3 py-1 rounded text-xs border ${simMode === 'deutan' ? 'bg-green-900/50 text-green-200 border-green-500' : 'bg-black border-zinc-800 text-zinc-500'}`}>Deutan (Green)</button>
+                  </div>
               </div>
+
+              <button onClick={() => { setPhase('intro'); setAnswers([]); setCurrentPlateIndex(0); setInputBuffer(''); setSimMode('normal'); }} className="btn-secondary flex items-center justify-center gap-2 mx-auto">
+                  <RefreshCcw size={16} /> Retake Test
+              </button>
           </div>
-      </div>
+      )}
+    </div>
   );
 };
 

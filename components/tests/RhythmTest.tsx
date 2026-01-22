@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Activity, Play, MousePointer2, RefreshCcw, Music2, TrendingUp, BarChart3, Wrench, Settings } from 'lucide-react';
+import { Activity, Play, MousePointer2, RefreshCcw, Music2, TrendingUp, BarChart3, Wrench, Settings, Volume2, VolumeX } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 import Link from 'next/link';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Cell, LineChart, Line, CartesianGrid } from 'recharts';
@@ -13,6 +13,9 @@ const RhythmTest: React.FC = () => {
   const [taps, setTaps] = useState<{timestamp: number, interval: number, deviation: number}[]>([]);
   const [score, setScore] = useState(0);
   const [activeBeat, setActiveBeat] = useState(-1); // For visual metronome
+  
+  // New Settings
+  const [audioFeedback, setAudioFeedback] = useState(false);
   
   // Calibration
   const [inputLatency, setInputLatency] = useState(0);
@@ -32,10 +35,15 @@ const RhythmTest: React.FC = () => {
   const LISTENING_BEATS = 4;
   const TARGET_TAPS = 20; 
 
-  const playClick = (time: number, type: 'strong' | 'weak' = 'strong') => {
-    const ctx = audioCtxRef.current;
-    if (!ctx) return;
+  const initAudio = () => {
+      if (!audioCtxRef.current) audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const ctx = audioCtxRef.current;
+      if (ctx.state === 'suspended') ctx.resume();
+      return ctx;
+  };
 
+  const playClick = (time: number, type: 'strong' | 'weak' = 'strong') => {
+    const ctx = initAudio();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     const filter = ctx.createBiquadFilter();
@@ -59,15 +67,33 @@ const RhythmTest: React.FC = () => {
     osc.stop(time + 0.1);
   };
 
+  const playFeedbackTone = () => {
+      if (!audioFeedback) return;
+      const ctx = initAudio();
+      
+      // Short woodblock sound
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.frequency.setValueAtTime(2000, ctx.currentTime);
+      osc.type = 'sine';
+      
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.1, ctx.currentTime + 0.005);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.06);
+  };
+
   const startCalibration = () => {
       setPhase('calibrate');
       setCalibrationTaps([]);
       setCount(0);
       
-      audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const ctx = audioCtxRef.current;
-      if (ctx.state === 'suspended') ctx.resume();
-      
+      const ctx = initAudio();
       const startTime = ctx.currentTime + 0.5;
       startTimeRef.current = performance.now() + 500;
       
@@ -80,6 +106,9 @@ const RhythmTest: React.FC = () => {
 
   const handleCalibrationTap = () => {
       if (count >= 10) return;
+      
+      playFeedbackTone();
+      
       const now = performance.now();
       const expected = startTimeRef.current + (count * INTERVAL_MS);
       const diff = now - expected;
@@ -104,10 +133,7 @@ const RhythmTest: React.FC = () => {
     setPhase('listening');
     setActiveBeat(-1);
     
-    if (!audioCtxRef.current) audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const ctx = audioCtxRef.current;
-    if (ctx.state === 'suspended') ctx.resume();
-
+    const ctx = initAudio();
     const audioStartTime = ctx.currentTime + 0.5;
     
     // Establishing the Time Grid based on performance.now()
@@ -129,8 +155,6 @@ const RhythmTest: React.FC = () => {
 
   const handleInput = useCallback((e?: React.MouseEvent | React.TouchEvent | KeyboardEvent) => {
     if (e) {
-        // Prevent default only if checking phase to allow scrolling when not active?
-        // Actually for rhythm games, we want to prevent scrolling/zooming during the tapping phase
         if (phase === 'tapping' || phase === 'calibrate') {
             if(e.cancelable && e.type !== 'mousedown') e.preventDefault(); 
         }
@@ -142,6 +166,8 @@ const RhythmTest: React.FC = () => {
     }
     
     if (phase !== 'tapping') return;
+
+    playFeedbackTone();
 
     const now = performance.now();
     
@@ -172,7 +198,7 @@ const RhythmTest: React.FC = () => {
     if (count + 1 >= TARGET_TAPS) {
         finishTest([...taps, newTap]);
     }
-  }, [phase, count, taps, inputLatency]);
+  }, [phase, count, taps, inputLatency, audioFeedback]);
 
   // Keyboard Support (Spacebar)
   useEffect(() => {
@@ -245,7 +271,7 @@ const RhythmTest: React.FC = () => {
     <div className="max-w-2xl mx-auto select-none touch-none" onMouseDown={(e) => handleInput(e)} onTouchStart={(e) => handleInput(e)}>
       
       {/* HUD Header */}
-      {(phase === 'tapping' || phase === 'result' || phase === 'calibrate') && (
+      {(phase === 'tapping' || phase === 'result' || phase === 'calibrate' || phase === 'listening') && (
         <div className="flex justify-between items-end border-b border-zinc-800 pb-4 mb-8">
            <div className="text-left">
               <div className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest">Tempo</div>
@@ -275,6 +301,14 @@ const RhythmTest: React.FC = () => {
                     <strong>Synchronization-Continuation Task</strong><br/>
                     Listen to 4 beats, then continue tapping blindly to the grid. Measures your internal clock stability and drift.
                 </p>
+                <div className="flex justify-center gap-4 mb-6">
+                    <button 
+                       onClick={(e) => { e.stopPropagation(); setAudioFeedback(!audioFeedback); }}
+                       className={`flex items-center gap-2 px-3 py-1.5 rounded border text-xs font-bold uppercase transition-all ${audioFeedback ? 'bg-primary-900/30 border-primary-500 text-primary-400' : 'bg-zinc-900 border-zinc-800 text-zinc-500'}`}
+                    >
+                        {audioFeedback ? <Volume2 size={14}/> : <VolumeX size={14}/>} Sound Feedback
+                    </button>
+                </div>
                 <div className="inline-flex items-center gap-2 px-3 py-1 bg-zinc-900 border border-zinc-800 rounded text-[10px] text-zinc-500 font-mono">
                     <span>TIP: USE SPACEBAR OR TAP SCREEN</span>
                 </div>
@@ -297,15 +331,30 @@ const RhythmTest: React.FC = () => {
 
         {phase === 'listening' && (
             <div className="flex flex-col items-center gap-8">
-                <div className="relative w-32 h-32 flex items-center justify-center">
-                    <div className="absolute inset-0 border-4 border-zinc-800 rounded-full"></div>
-                    {/* Visual Metronome */}
+                <div className="relative w-48 h-48 flex items-center justify-center">
+                    {/* Shrinking Ring Metronome */}
                     <div 
-                        className={`absolute inset-0 border-4 border-primary-500 rounded-full transition-all duration-100 ${activeBeat >= 0 ? 'scale-110 opacity-100' : 'scale-100 opacity-20'}`}
+                        key={activeBeat}
+                        className={`absolute inset-0 border-4 border-primary-500 rounded-full box-border ${activeBeat >= 0 ? 'animate-[shrink_0.5s_linear]' : 'opacity-0'}`}
+                        style={{
+                            animationName: activeBeat >= 0 ? 'shrink' : 'none',
+                            animationDuration: '500ms',
+                            animationTimingFunction: 'linear'
+                        }}
                     ></div>
-                    <Music2 size={48} className={`text-primary-500 transition-transform ${activeBeat >= 0 ? 'scale-125' : 'scale-100'}`} />
+                    <style>{`
+                        @keyframes shrink {
+                            0% { transform: scale(1.5); opacity: 0; }
+                            20% { opacity: 1; }
+                            100% { transform: scale(1); opacity: 1; }
+                        }
+                    `}</style>
+                    
+                    <div className="w-48 h-48 rounded-full border-4 border-zinc-800 flex items-center justify-center relative bg-black z-10">
+                        <Music2 size={64} className={`text-primary-500 transition-transform duration-75 ${activeBeat >= 0 ? 'scale-110' : 'scale-100'}`} />
+                    </div>
                 </div>
-                <div className="text-sm font-mono text-primary-400 uppercase tracking-widest">
+                <div className="text-sm font-mono text-primary-400 uppercase tracking-widest animate-pulse">
                     Listen & Sync... {activeBeat >= 0 ? activeBeat + 1 : ''}
                 </div>
             </div>

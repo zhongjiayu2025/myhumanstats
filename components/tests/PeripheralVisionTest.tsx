@@ -1,12 +1,13 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Eye, Crosshair, MousePointer2 } from 'lucide-react';
+import { Eye, Crosshair, MousePointer2, Grid, AlertCircle, RefreshCcw } from 'lucide-react';
 import { saveStat } from '../../lib/core';
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 
-type Quadrant = 'TL' | 'TR' | 'BL' | 'BR';
+// 4x3 Grid roughly maps to 16:9 aspect ratio
+const ROWS = 3;
+const COLS = 4;
 
-interface QuadrantStats {
+interface ZoneStats {
     hits: number;
     misses: number;
     avgRt: number;
@@ -16,19 +17,27 @@ const PeripheralVisionTest: React.FC = () => {
   const [phase, setPhase] = useState<'intro' | 'test' | 'result'>('intro');
   
   // Game State
-  const [activeDot, setActiveDot] = useState<{id: number, x: number, y: number, quad: Quadrant, born: number} | null>(null);
-  const [stats, setStats] = useState<Record<Quadrant, QuadrantStats>>({
-      TL: {hits:0, misses:0, avgRt:0},
-      TR: {hits:0, misses:0, avgRt:0},
-      BL: {hits:0, misses:0, avgRt:0},
-      BR: {hits:0, misses:0, avgRt:0},
-  });
+  const [activeDot, setActiveDot] = useState<{id: number, r: number, c: number, x: number, y: number, born: number} | null>(null);
+  
+  // 12 Zones (0-11)
+  const [zoneStats, setZoneStats] = useState<Record<number, ZoneStats>>({});
   
   const [flashFeedback, setFlashFeedback] = useState<'hit'|'miss'|null>(null);
   const [round, setRound] = useState(0);
   
-  const TOTAL_ROUNDS = 20;
+  // Foveal Distraction
+  const [centralChar, setCentralChar] = useState('');
+  
+  const TOTAL_ROUNDS = 24; // 2 hits per zone roughly
   const timeoutRef = useRef<number|null>(null);
+  const charIntervalRef = useRef<number|null>(null);
+
+  // Initialize Stats
+  useEffect(() => {
+      const initial: Record<number, ZoneStats> = {};
+      for(let i=0; i<ROWS*COLS; i++) initial[i] = {hits:0, misses:0, avgRt:0};
+      setZoneStats(initial);
+  }, []);
 
   // Keyboard Listener
   useEffect(() => {
@@ -42,16 +51,28 @@ const PeripheralVisionTest: React.FC = () => {
       return () => {
           window.removeEventListener('keydown', handleKey);
           if (timeoutRef.current) clearTimeout(timeoutRef.current);
+          if (charIntervalRef.current) clearInterval(charIntervalRef.current);
       };
   }, [phase, activeDot]);
 
+  // Central Character Loop
+  useEffect(() => {
+      if (phase === 'test') {
+          charIntervalRef.current = window.setInterval(() => {
+              const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+              setCentralChar(chars[Math.floor(Math.random() * chars.length)]);
+          }, 800 + Math.random() * 500); // Variable timing to keep attention
+      } else {
+          if (charIntervalRef.current) clearInterval(charIntervalRef.current);
+      }
+      return () => { if (charIntervalRef.current) clearInterval(charIntervalRef.current); };
+  }, [phase]);
+
   const startGame = () => {
-      setStats({
-          TL: {hits:0, misses:0, avgRt:0},
-          TR: {hits:0, misses:0, avgRt:0},
-          BL: {hits:0, misses:0, avgRt:0},
-          BR: {hits:0, misses:0, avgRt:0},
-      });
+      const initial: Record<number, ZoneStats> = {};
+      for(let i=0; i<ROWS*COLS; i++) initial[i] = {hits:0, misses:0, avgRt:0};
+      setZoneStats(initial);
+      
       setRound(0);
       setPhase('test');
       scheduleNext();
@@ -59,8 +80,7 @@ const PeripheralVisionTest: React.FC = () => {
 
   const scheduleNext = () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      // Random delay 1s - 3s
-      const delay = 1000 + Math.random() * 2000;
+      const delay = 800 + Math.random() * 1500;
       timeoutRef.current = window.setTimeout(spawnDot, delay);
   };
 
@@ -70,57 +90,52 @@ const PeripheralVisionTest: React.FC = () => {
           return;
       }
 
-      // 1. Pick Quadrant
-      const quads: Quadrant[] = ['TL', 'TR', 'BL', 'BR'];
-      const q = quads[Math.floor(Math.random() * 4)];
+      // Pick random zone
+      const r = Math.floor(Math.random() * ROWS);
+      const c = Math.floor(Math.random() * COLS);
       
-      // 2. Coords based on Quadrant (0-100%)
-      // Center is 50, 50.
-      // TL: x < 40, y < 40
-      let x, y;
-      const margin = 10; // edge margin
-      const centerSafe = 15; // dist from center
+      // Calculate % position within that zone with some padding
+      // Zone width = 100/COLS, Height = 100/ROWS
+      const w = 100/COLS;
+      const h = 100/ROWS;
       
-      switch(q) {
-          case 'TL': x = margin + Math.random() * (50 - centerSafe - margin); y = margin + Math.random() * (50 - centerSafe - margin); break;
-          case 'TR': x = 50 + centerSafe + Math.random() * (50 - centerSafe - margin); y = margin + Math.random() * (50 - centerSafe - margin); break;
-          case 'BL': x = margin + Math.random() * (50 - centerSafe - margin); y = 50 + centerSafe + Math.random() * (50 - centerSafe - margin); break;
-          case 'BR': x = 50 + centerSafe + Math.random() * (50 - centerSafe - margin); y = 50 + centerSafe + Math.random() * (50 - centerSafe - margin); break;
-      }
+      const padding = 5;
+      const x = (c * w) + padding + Math.random() * (w - padding*2);
+      const y = (r * h) + padding + Math.random() * (h - padding*2);
 
       const dot = {
           id: Date.now(),
-          x, y,
-          quad: q,
+          r, c, x, y,
           born: performance.now()
       };
       
       setActiveDot(dot);
       
-      // Auto-miss after 1.5s
+      // Auto-miss after 1.2s (tighter window)
       timeoutRef.current = window.setTimeout(() => {
           handleMiss(dot);
-      }, 1500);
+      }, 1200);
   };
 
   const handleInput = () => {
-      if (!activeDot) return; // False alarm ignored for now (or penalize?)
+      if (!activeDot) return; 
       
       const rt = performance.now() - activeDot.born;
+      const zoneIdx = activeDot.r * COLS + activeDot.c;
       
       // Record Hit
-      setStats(prev => {
-          const q = prev[activeDot.quad];
-          const newHits = q.hits + 1;
-          const newAvg = ((q.avgRt * q.hits) + rt) / newHits;
+      setZoneStats(prev => {
+          const z = prev[zoneIdx];
+          const newHits = z.hits + 1;
+          const newAvg = ((z.avgRt * z.hits) + rt) / newHits;
           return {
               ...prev,
-              [activeDot.quad]: { ...q, hits: newHits, avgRt: newAvg }
+              [zoneIdx]: { ...z, hits: newHits, avgRt: newAvg }
           };
       });
 
       setFlashFeedback('hit');
-      setTimeout(() => setFlashFeedback(null), 300);
+      setTimeout(() => setFlashFeedback(null), 200);
       
       setActiveDot(null);
       setRound(r => r + 1);
@@ -132,13 +147,14 @@ const PeripheralVisionTest: React.FC = () => {
   const handleMiss = (dot: typeof activeDot) => {
       if (!dot) return;
       
-      setStats(prev => ({
+      const zoneIdx = dot.r * COLS + dot.c;
+      setZoneStats(prev => ({
           ...prev,
-          [dot.quad]: { ...prev[dot.quad], misses: prev[dot.quad].misses + 1 }
+          [zoneIdx]: { ...prev[zoneIdx], misses: prev[zoneIdx].misses + 1 }
       }));
       
       setFlashFeedback('miss');
-      setTimeout(() => setFlashFeedback(null), 300);
+      setTimeout(() => setFlashFeedback(null), 200);
 
       setActiveDot(null);
       setRound(r => r + 1);
@@ -149,32 +165,26 @@ const PeripheralVisionTest: React.FC = () => {
 
   const finish = () => {
       setPhase('result');
-      // Score = Accuracy
-      const totalHits = (Object.values(stats) as QuadrantStats[]).reduce<number>((acc, curr) => acc + curr.hits, 0);
+      const totalHits = Object.values(zoneStats).reduce((acc: number, curr: ZoneStats) => acc + curr.hits, 0);
       const score = Math.round((totalHits / TOTAL_ROUNDS) * 100);
       saveStat('peripheral-vision', score);
   };
 
-  // Helper for accuracy calculation
-  const getAccuracy = (data: QuadrantStats) => {
-      const total = data.hits + data.misses;
-      return total === 0 ? 0 : (data.hits / total) * 100;
+  // Heatmap Color Logic
+  const getZoneColor = (stats: ZoneStats) => {
+      const total = stats.hits + stats.misses;
+      if (total === 0) return 'bg-zinc-900'; // No data
+      
+      const accuracy = stats.hits / total;
+      if (accuracy === 1) {
+          // Check speed for green intensity
+          if (stats.avgRt < 400) return 'bg-emerald-500';
+          if (stats.avgRt < 600) return 'bg-emerald-600';
+          return 'bg-emerald-700';
+      }
+      if (accuracy >= 0.5) return 'bg-yellow-600';
+      return 'bg-red-900';
   };
-
-  // Radar Data calculation: Accuracy % per quadrant
-  const radarData = [
-      { subject: 'Top-Left', A: getAccuracy(stats.TL), fullMark: 100 },
-      { subject: 'Top-Right', A: getAccuracy(stats.TR), fullMark: 100 },
-      { subject: 'Bottom-Right', A: getAccuracy(stats.BR), fullMark: 100 },
-      { subject: 'Bottom-Left', A: getAccuracy(stats.BL), fullMark: 100 },
-  ];
-
-  // Calculate average latency explicitly to avoid type errors
-  const averageLatency = Math.round(
-      (Object.values(stats) as QuadrantStats[]).reduce<number>((acc, curr) => {
-          return acc + (curr.hits > 0 ? curr.avgRt : 0);
-      }, 0) / 4
-  );
 
   return (
     <div className="max-w-4xl mx-auto text-center select-none touch-none">
@@ -185,8 +195,8 @@ const PeripheralVisionTest: React.FC = () => {
                <p className="text-zinc-400 mb-8 max-w-md mx-auto leading-relaxed">
                    Measure your visual field reactivity.
                    <br/><br/>
-                   1. Stare at the <strong>Central Cross</strong>. Do not move your eyes.<br/>
-                   2. Press <strong>SPACEBAR</strong> or <strong>TAP SCREEN</strong> immediately when you see a white dot flash in your peripheral vision.
+                   1. Keep your eyes locked on the <strong>changing letter</strong> in the center.<br/>
+                   2. Press <strong>SPACEBAR</strong> or <strong>TAP</strong> when a white dot flashes in your side vision.
                </p>
                <button onClick={startGame} className="btn-primary">Start Examination</button>
            </div>
@@ -198,81 +208,82 @@ const PeripheralVisionTest: React.FC = () => {
               onTouchStart={(e) => { e.preventDefault(); handleInput(); }}
               onMouseDown={() => { if(window.innerWidth > 768) handleInput(); }}
            >
-               {/* Radar Grid UI */}
-               <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.8)_100%)] z-10 pointer-events-none"></div>
-               <div className="absolute inset-0 opacity-20 pointer-events-none">
-                   <div className="absolute top-1/2 left-0 w-full h-px bg-primary-900"></div>
-                   <div className="absolute top-0 left-1/2 w-px h-full bg-primary-900"></div>
-                   <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[50%] h-[50%] border border-primary-900 rounded-full"></div>
-                   <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] border border-primary-900 rounded-full"></div>
+               {/* Grid Overlay (Subtle) */}
+               <div className="absolute inset-0 z-0 pointer-events-none opacity-10">
+                   <div className="w-full h-full grid grid-cols-4 grid-rows-3">
+                       {Array.from({length: 12}).map((_, i) => (
+                           <div key={i} className="border border-zinc-500"></div>
+                       ))}
+                   </div>
                </div>
 
-               {/* Fixation Point */}
-               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center z-20">
-                   <Crosshair size={32} className={`text-primary-500 ${activeDot ? '' : 'opacity-50'}`} />
-                   {flashFeedback === 'hit' && <div className="absolute text-emerald-500 font-bold text-xs mt-8">DETECTED</div>}
-                   {flashFeedback === 'miss' && <div className="absolute text-red-500 font-bold text-xs mt-8">MISSED</div>}
+               {/* Fixation Point - Dynamic */}
+               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center z-30">
+                   <div className="w-12 h-12 bg-zinc-900/80 border border-zinc-700 rounded flex items-center justify-center">
+                       <span className="text-xl font-mono font-bold text-primary-500 animate-pulse">{centralChar}</span>
+                   </div>
+                   {flashFeedback === 'hit' && <div className="absolute top-full mt-2 text-emerald-500 font-bold text-xs">HIT</div>}
+                   {flashFeedback === 'miss' && <div className="absolute top-full mt-2 text-red-500 font-bold text-xs">MISS</div>}
                </div>
                
                {/* Target */}
                {activeDot && (
                    <div 
-                      className="absolute w-3 h-3 bg-white rounded-full shadow-[0_0_15px_white] animate-pulse z-10"
+                      className="absolute w-4 h-4 bg-white rounded-full shadow-[0_0_20px_white] animate-[ping_0.5s_linear_infinite] z-20"
                       style={{ top: `${activeDot.y}%`, left: `${activeDot.x}%` }}
                    ></div>
                )}
 
-               {/* Scanline */}
-               <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary-500/5 to-transparent h-[10%] animate-scan pointer-events-none z-0"></div>
-
                <div className="absolute bottom-4 left-4 text-xs font-mono text-zinc-500 z-30">
                    TARGETS: {round}/{TOTAL_ROUNDS}
-               </div>
-               <div className="absolute bottom-4 right-4 text-xs font-mono text-zinc-500 z-30 flex items-center gap-2">
-                   <MousePointer2 size={12} /> TAP ANYWHERE
                </div>
            </div>
        )}
 
        {phase === 'result' && (
            <div className="py-12 animate-in zoom-in">
-               <h2 className="text-3xl font-bold text-white mb-8">Visual Field Map</h2>
+               <h2 className="text-3xl font-bold text-white mb-2">Visual Field Map</h2>
+               <p className="text-zinc-400 text-sm mb-8">Green = Fast Reaction. Red = Blind Spot / Slow.</p>
                
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-                   <div className="h-64 w-full relative">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
-                                <PolarGrid stroke="#333" />
-                                <PolarAngleAxis dataKey="subject" tick={{ fill: '#71717a', fontSize: 10 }} />
-                                <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-                                <Radar name="Vision" dataKey="A" stroke="#06b6d4" strokeWidth={2} fill="#06b6d4" fillOpacity={0.3} />
-                            </RadarChart>
-                        </ResponsiveContainer>
+               {/* Heatmap Visualization */}
+               <div className="max-w-lg mx-auto bg-black border border-zinc-800 p-1 rounded-lg shadow-2xl mb-8">
+                   <div className="grid grid-cols-4 gap-1 aspect-video">
+                       {Array.from({length: 12}).map((_, i) => {
+                           const stat = zoneStats[i];
+                           const colorClass = getZoneColor(stat);
+                           
+                           return (
+                               <div key={i} className={`${colorClass} relative group rounded-sm transition-all hover:opacity-80`}>
+                                   <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                       <span className="text-xs font-bold text-white drop-shadow-md">
+                                           {stat.hits}/{stat.hits+stat.misses}
+                                       </span>
+                                       {stat.hits > 0 && <span className="text-[9px] text-white font-mono drop-shadow-md">{Math.round(stat.avgRt)}ms</span>}
+                                   </div>
+                               </div>
+                           );
+                       })}
                    </div>
+               </div>
 
-                   <div className="text-left space-y-4">
-                       <div className="bg-zinc-900 border border-zinc-800 p-4 rounded">
-                           <h4 className="text-zinc-400 text-xs uppercase tracking-widest mb-2">Reaction Latency (Avg)</h4>
-                           <div className="text-2xl font-mono text-white">
-                               {averageLatency}ms
-                           </div>
-                       </div>
-                       
-                       <div className="bg-zinc-900 border border-zinc-800 p-4 rounded">
-                           <h4 className="text-zinc-400 text-xs uppercase tracking-widest mb-2">Blind Spots</h4>
-                           <div className="text-sm text-white">
-                               {radarData.some(d => d.A < 50) 
-                                 ? `Deficit detected in: ${radarData.filter(d => d.A < 50).map(d => d.subject).join(', ')}`
-                                 : "No significant blind spots detected."
-                               }
-                           </div>
-                       </div>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
+                   <div className="bg-zinc-900 border border-zinc-800 p-4 rounded text-left">
+                       <h4 className="text-zinc-400 text-xs uppercase tracking-widest mb-1">Central Focus</h4>
+                       <p className="text-sm text-white">
+                           Maintaining central fixation while detecting peripheral stimuli tests your <strong className="text-primary-400">Divided Attention</strong>.
+                       </p>
+                   </div>
+                   <div className="bg-zinc-900 border border-zinc-800 p-4 rounded text-left">
+                       <h4 className="text-zinc-400 text-xs uppercase tracking-widest mb-1">Field Analysis</h4>
+                       <p className="text-sm text-white">
+                           Gaps in the outer edges (red blocks) may indicate tunnel vision tendencies or simple fatigue.
+                       </p>
                    </div>
                </div>
                
                <div className="mt-12">
-                   <button onClick={startGame} className="btn-secondary">
-                       Retake Calibration
+                   <button onClick={startGame} className="btn-secondary flex items-center justify-center gap-2 mx-auto">
+                       <RefreshCcw size={16}/> Retake Calibration
                    </button>
                </div>
            </div>
