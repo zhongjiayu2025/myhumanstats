@@ -1,9 +1,10 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { RefreshCcw, Check, Volume2, ArrowRight, Minus, Plus, AlertTriangle, Info, Mic } from 'lucide-react';
+import { RefreshCcw, Check, Volume2, ArrowRight, Minus, Plus, AlertTriangle, Info, Mic, Music2 } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 import ShareCard from '../ShareCard';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import Link from 'next/link';
 
 type EarSide = 'left' | 'right';
 
@@ -337,7 +338,15 @@ const HearingAgeTest: React.FC = () => {
                       </div>
                   </div>
                   <ShareCard testName="Hearing Age" scoreDisplay={`${bestFreq} Hz`} resultLabel={`Ear Age: ${getAgeFromFreq(bestFreq)}`} />
-                  <button onClick={() => { setPhase('testing'); setResults({left:null, right:null}); }} className="btn-secondary w-full mt-8 flex items-center justify-center gap-2"><RefreshCcw size={16}/> New Test</button>
+                  
+                  <div className="flex gap-4 mt-8">
+                      <button onClick={() => { setPhase('testing'); setResults({left:null, right:null}); }} className="btn-secondary flex-1 flex items-center justify-center gap-2"><RefreshCcw size={16}/> New Test</button>
+                      
+                      {/* Point 4: Internal Linking Hook */}
+                      <Link href="/test/tone-deaf-test" className="btn-primary flex-1 flex items-center justify-center gap-2 text-xs uppercase">
+                          <Music2 size={16} /> Test Pitch (Tone Deaf)
+                      </Link>
+                  </div>
               </div>
           </div>
       );
@@ -347,6 +356,11 @@ const HearingAgeTest: React.FC = () => {
   return (
     <div className="max-w-3xl mx-auto select-none">
        <div className="tech-border bg-black relative clip-corner-lg overflow-hidden border-zinc-800">
+           {/* Point 1: Semantic Output for Screen Readers */}
+           <output className="sr-only" aria-live="polite">
+               {isPlaying ? `Playing ${frequency} Hertz` : "Generator Stopped"}
+           </output>
+
            <div className="flex border-b border-zinc-800">
                <button onClick={() => { stopAudio(); setActiveSide('left'); setMode('auto'); }} disabled={!!results.left} className={`flex-1 py-4 flex items-center justify-center gap-2 transition-all ${activeSide === 'left' ? 'bg-zinc-900 text-white border-b-2 border-emerald-500' : 'text-zinc-600'} ${results.left ? 'opacity-50' : ''}`}>
                   <span className="font-bold">L</span> Left Ear {results.left && <Check size={12} className="text-emerald-500" />}
@@ -362,7 +376,7 @@ const HearingAgeTest: React.FC = () => {
                <div className="text-7xl font-mono font-bold text-white tracking-tighter mb-2 text-glow tabular-nums">{frequency.toLocaleString()}</div>
                <div className="text-sm font-mono text-primary-500 mb-12">HERTZ</div>
 
-               <div className="h-16 flex items-end justify-center gap-[2px] mb-8 px-12 opacity-80">
+               <div className="h-16 flex items-end justify-center gap-[2px] mb-8 px-12 opacity-80" aria-hidden="true">
                     {vizData.map((val, i) => (
                         <div key={i} className="flex-1 bg-primary-500 transition-all duration-75 ease-out rounded-t-sm" style={{ height: `${Math.max(2, val / 2)}%`, opacity: Math.max(0.1, val / 200) }}></div>
                     ))}

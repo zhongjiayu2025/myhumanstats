@@ -4,9 +4,9 @@
 import React, { Suspense, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Cpu, Info, FileText, ChevronRight, Loader2, HelpCircle, BookOpen, Microscope, CheckCircle2, Bookmark, BarChart3, History, Wrench, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Cpu, Info, FileText, ChevronRight, Loader2, HelpCircle, BookOpen, Microscope, CheckCircle2, Bookmark, BarChart3, History, Wrench, AlertTriangle, ExternalLink } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
-import { TESTS } from '@/lib/data'; // Ensure we import from data
+import { TESTS } from '@/lib/data';
 import { getHistory } from '@/lib/core';
 import { BLOG_POSTS } from '@/lib/blogData';
 import { TEST_REGISTRY } from '@/components/tests/registry';
@@ -24,7 +24,7 @@ const TEST_TO_TOOL_MAP: Record<string, { id: string, name: string, desc: string,
 };
 
 const LoadingModule = () => (
-  <div className="flex flex-col items-center justify-center w-full h-full min-h-[500px] text-zinc-500 bg-zinc-900/20">
+  <div className="flex flex-col items-center justify-center w-full min-h-[600px] text-zinc-500 bg-zinc-900/20">
      <Loader2 size={48} className="animate-spin text-primary-500 mb-4" />
      <div className="text-xs font-mono uppercase tracking-widest">Initializing Module...</div>
      <div className="text-[10px] font-mono mt-2 text-zinc-600">LOADING_ASSETS</div>
@@ -91,7 +91,6 @@ export default function TestRunnerClient({ id }: { id: string }) {
   }
 
   const TestComponent = TEST_REGISTRY[id];
-  const relatedPosts = BLOG_POSTS.filter(p => p.relatedTestId === id);
   const relatedTools = TEST_TO_TOOL_MAP[testDef.id] || [];
 
   return (
@@ -174,7 +173,7 @@ export default function TestRunnerClient({ id }: { id: string }) {
 
         {/* Test Container */}
         <div className="lg:col-span-9">
-          <div className="relative w-full min-h-[500px] bg-black border border-zinc-800 flex flex-col mb-8">
+          <div className="relative w-full min-h-[600px] bg-black border border-zinc-800 flex flex-col mb-8">
              <div className="h-8 border-b border-zinc-800 bg-zinc-900/50 flex items-center justify-center relative">
                 <div className="absolute left-4 flex gap-1">
                    <div className="w-2 h-2 rounded-full bg-zinc-700"></div>
@@ -322,7 +321,7 @@ export default function TestRunnerClient({ id }: { id: string }) {
              </section>
           )}
 
-          {/* Citations */}
+          {/* Citations (E-E-A-T Enhanced) */}
           {testDef.citations && testDef.citations.length > 0 && (
              <div className="mb-8 border-t border-zinc-800 pt-8">
                 <h4 className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-4 flex items-center gap-2">
@@ -330,43 +329,19 @@ export default function TestRunnerClient({ id }: { id: string }) {
                 </h4>
                 <ul className="space-y-2">
                    {testDef.citations.map((cite, idx) => (
-                      <li key={idx} className="text-xs text-zinc-500 font-mono pl-4 border-l-2 border-zinc-800">
-                         <cite>{cite}</cite>
+                      <li key={idx} className="text-xs text-zinc-500 font-mono pl-4 border-l-2 border-zinc-800 flex items-start gap-2">
+                         <a 
+                            href={`https://scholar.google.com/scholar?q=${encodeURIComponent(cite)}`}
+                            target="_blank"
+                            rel="noopener noreferrer nofollow"
+                            className="hover:text-primary-400 hover:underline flex items-center gap-1 transition-colors"
+                         >
+                            {cite} <ExternalLink size={10} className="inline opacity-50" />
+                         </a>
                       </li>
                    ))}
                 </ul>
              </div>
-          )}
-
-          {/* Related Articles */}
-          {relatedPosts.length > 0 && (
-             <aside>
-                <h3 className="text-sm font-mono text-zinc-500 uppercase tracking-widest flex items-center gap-2 mb-4">
-                   <FileText size={14} /> Related Research Logs
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                   {relatedPosts.map(post => (
-                      <Link 
-                         key={post.slug} 
-                         href={`/blog/${post.slug}`}
-                         className="flex items-start gap-4 p-4 border border-zinc-800 bg-zinc-900/30 hover:bg-zinc-900 hover:border-primary-500/30 transition-all group clip-corner-sm"
-                      >
-                         <img 
-                            src={post.coverImage} 
-                            alt={post.title} 
-                            className="w-16 h-16 object-cover opacity-80 group-hover:opacity-100 transition-opacity"
-                         />
-                         <div className="flex-1 min-w-0">
-                             <h4 className="text-sm font-bold text-white truncate group-hover:text-primary-400 transition-colors mb-1">{post.title}</h4>
-                             <p className="text-xs text-zinc-500 line-clamp-2">{post.excerpt}</p>
-                             <div className="mt-2 flex items-center gap-1 text-[10px] text-primary-500 font-mono">
-                               READ_ENTRY <ChevronRight size={10} />
-                             </div>
-                         </div>
-                      </Link>
-                   ))}
-                </div>
-             </aside>
           )}
 
         </div>

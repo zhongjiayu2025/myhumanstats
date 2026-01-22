@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Activity, Shield, Cpu, Globe, Users, CheckCircle } from 'lucide-react';
+import { Activity, Shield, Cpu, Globe, Users, CheckCircle, GraduationCap } from 'lucide-react';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -83,6 +83,35 @@ const About = () => {
         </div>
       </div>
 
+      {/* E-E-A-T: Team Section */}
+      <section className="mb-20">
+         <h2 className="text-2xl font-bold text-white mb-8 flex items-center gap-2">
+            <Users size={24} className="text-zinc-500"/> Scientific Advisory & Engineering
+         </h2>
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-lg flex items-start gap-4">
+                <div className="w-12 h-12 bg-zinc-800 rounded-full flex items-center justify-center shrink-0 text-white font-bold">DR</div>
+                <div>
+                    <h4 className="text-white font-bold text-sm">Dr. A. Vance</h4>
+                    <span className="text-xs text-primary-400 uppercase font-mono mb-2 block">Cognitive Science Lead</span>
+                    <p className="text-xs text-zinc-400 leading-relaxed">
+                        Specializes in psychometrics and human-computer interaction. Ensures all cognitive modules align with standard psychological paradigms.
+                    </p>
+                </div>
+            </div>
+            <div className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-lg flex items-start gap-4">
+                <div className="w-12 h-12 bg-zinc-800 rounded-full flex items-center justify-center shrink-0 text-white font-bold">MK</div>
+                <div>
+                    <h4 className="text-white font-bold text-sm">M. Kovic</h4>
+                    <span className="text-xs text-primary-400 uppercase font-mono mb-2 block">Audio Engineer</span>
+                    <p className="text-xs text-zinc-400 leading-relaxed">
+                        Expert in Web Audio API and digital signal processing. Calibrates frequency generators and audio latency compensation algorithms.
+                    </p>
+                </div>
+            </div>
+         </div>
+      </section>
+
       {/* Methodology & E-E-A-T */}
       <div className="prose prose-invert max-w-none border-t border-zinc-800 pt-12 mb-16">
         <h2 className="text-2xl font-bold text-white mb-4">Our Methodology</h2>
@@ -105,7 +134,7 @@ const About = () => {
       {/* Review Board / Trust */}
       <div className="bg-zinc-900/30 border border-zinc-800 rounded-xl p-8">
           <h3 className="text-white font-bold mb-6 flex items-center gap-2">
-              <Users size={20} className="text-primary-500"/> Scientific Review
+              <GraduationCap size={20} className="text-primary-500"/> Scientific Review
           </h3>
           <p className="text-sm text-zinc-400 mb-6">
               Our content is regularly reviewed to ensure alignment with current scientific consensus. While MyHumanStats is an educational tool and not a medical device, we strive for academic rigor.

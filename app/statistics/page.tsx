@@ -50,31 +50,38 @@ const Statistics = () => {
         </p>
       </div>
 
+      {/* Programmatic SEO Hub - Links to individual pages */}
       <div className="bg-zinc-900/30 border border-zinc-800 p-6 mb-16 rounded-lg">
-         <h3 className="text-sm font-mono text-zinc-500 uppercase tracking-widest mb-4">Quick Navigation</h3>
+         <h3 className="text-sm font-mono text-zinc-500 uppercase tracking-widest mb-4">Browse Datasets</h3>
          <div className="flex flex-wrap gap-3">
             {dataPoints.map(t => (
-               <a 
+               <Link 
                   key={t.id} 
-                  href={`#stat-${t.id}`}
+                  href={`/statistics/${t.id}`}
                   className="px-3 py-1 bg-black border border-zinc-700 text-xs text-zinc-300 hover:text-white hover:border-primary-500 transition-colors rounded-full"
                >
-                  {t.title}
-               </a>
+                  {t.title} Data
+               </Link>
             ))}
          </div>
       </div>
 
       <div className="space-y-20">
          {dataPoints.map((test, idx) => (
-            <section key={test.id} id={`stat-${test.id}`} className="scroll-mt-32">
+            <section key={test.id} className="scroll-mt-32">
                <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 gap-4">
                   <div>
                      <div className="flex items-center gap-2 text-primary-500 mb-2">
                         <BarChart2 size={20} />
                         <span className="text-xs font-mono uppercase tracking-widest">Dataset #{idx + 1}</span>
                      </div>
-                     <h2 className="text-2xl font-bold text-white">{test.benchmarks?.title}</h2>
+                     {/* Internal Link for SEO weighting */}
+                     <Link href={`/statistics/${test.id}`} className="block group">
+                        <h2 className="text-2xl font-bold text-white group-hover:text-primary-400 transition-colors flex items-center gap-2">
+                            {test.benchmarks?.title}
+                            <ArrowUpRight size={18} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </h2>
+                     </Link>
                      <p className="text-sm text-zinc-500 mt-2 max-w-2xl">
                         Reference data for the <Link href={`/test/${test.id}`} className="text-zinc-300 hover:text-primary-400 underline decoration-zinc-700 underline-offset-4">{test.title}</Link>.
                      </p>
@@ -100,7 +107,7 @@ const Statistics = () => {
                            </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-800/50">
-                           {test.benchmarks?.rows.map((row, rIdx) => (
+                           {test.benchmarks?.rows.slice(0, 3).map((row, rIdx) => (
                               <tr key={rIdx} className="hover:bg-white/5 transition-colors">
                                  {row.map((cell, cIdx) => (
                                     <td key={cIdx} className="p-4 text-zinc-300">
@@ -112,10 +119,10 @@ const Statistics = () => {
                         </tbody>
                      </table>
                   </div>
-                  <div className="bg-black/50 p-3 border-t border-zinc-800 flex justify-between items-center">
-                     <span className="text-[10px] text-zinc-600 font-mono">SOURCE: MHS_INTERNAL_AGGREGATE</span>
-                     <span className="text-[10px] text-zinc-600 font-mono">UPDATED: {new Date().getFullYear()}</span>
-                  </div>
+                  {/* View Full Data Link */}
+                  <Link href={`/statistics/${test.id}`} className="bg-black/50 p-3 border-t border-zinc-800 flex justify-center items-center text-xs text-primary-500 font-mono hover:bg-zinc-900 transition-colors">
+                     VIEW_FULL_DATASET // {test.id.toUpperCase()}
+                  </Link>
                </div>
             </section>
          ))}

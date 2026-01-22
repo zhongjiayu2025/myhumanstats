@@ -5,7 +5,7 @@ export const TESTS: TestDefinition[] = [
   // --- AUDITORY STATS ---
   {
     id: 'hearing-age-test',
-    title: 'Hearing Age Test',
+    title: 'Hearing Age Test (Frequency Check)',
     category: TestCategory.AUDITORY,
     description: 'How old are your ears? Measure your high-frequency hearing limit (8kHz - 22kHz) and compare it to global age benchmarks.',
     iconName: 'Ear',
@@ -59,12 +59,20 @@ export const TESTS: TestDefinition[] = [
         answer: "The 'Mosquito Tone' is a sound at 17.4 kHz. It is famously used as a ringtone by teenagers because most adults over 25 cannot hear it."
       }
     ],
+    // Point 2: Structure for Featured Snippet (Definition + List)
     seoContent: `
       <h2>What is a Hearing Age Test?</h2>
-      <p>A Hearing Age Test measures your ability to hear high-frequency sounds, specifically those above 8,000 Hertz. As we age, the microscopic hair cells (stereocilia) in our inner ear that are responsible for detecting high-pitched sounds naturally degrade. This condition is known as Presbycusis.</p>
+      <p>A <strong>Hearing Age Test</strong> is a digital audiometric assessment that measures the upper frequency limit of the human ear, typically ranging from 8,000 Hz to 22,000 Hz. It is used to detect early signs of <strong>Presbycusis</strong> (age-related hearing loss).</p>
       
+      <h3>3 Signs of High-Frequency Hearing Loss</h3>
+      <ul class="list-disc pl-5 space-y-2 text-zinc-400">
+        <li>Difficulty understanding speech in noisy environments (Cocktail Party Effect).</li>
+        <li>Inability to hear high-pitched sounds like birds chirping or phone notifications.</li>
+        <li>Frequent need to ask others to repeat themselves, especially women and children.</li>
+      </ul>
+
       <h3>How This Test Works</h3>
-      <p>This online tool generates a pure sine wave that sweeps from 22,000 Hz down to 8,000 Hz. By pausing the generator the moment you can hear the sound, we can estimate the physiological age of your cochlea. Note that hardware limitations (cheap speakers/headphones) may affect results above 16kHz.</p>
+      <p>This online tool generates a pure sine wave that sweeps from 22,000 Hz down to 8,000 Hz. By pausing the generator the moment you can hear the sound, we can estimate the physiological age of your cochlea based on ISO 7029 standards.</p>
     `
   },
   {
@@ -121,7 +129,7 @@ export const TESTS: TestDefinition[] = [
   },
   {
     id: 'tone-deaf-test',
-    title: 'Tone Deaf Test',
+    title: 'Tone Deaf Test (Amusia)',
     category: TestCategory.AUDITORY,
     description: 'Am I Tone Deaf? A scientific relative pitch test to measure your frequency discrimination ability (JND) in Hz.',
     iconName: 'Music2',
@@ -180,7 +188,7 @@ export const TESTS: TestDefinition[] = [
   },
   {
     id: 'misophonia-test',
-    title: 'Misophonia Test',
+    title: 'Misophonia Test (Trigger Check)',
     category: TestCategory.AUDITORY,
     description: 'Do chewing sounds trigger you? Assess your selective sound sensitivity to common triggers (organic vs mechanical).',
     iconName: 'VolumeX',
@@ -195,7 +203,7 @@ export const TESTS: TestDefinition[] = [
   // --- VISUAL STATS ---
   {
     id: 'color-blind-test',
-    title: 'Color Blind Test',
+    title: 'Color Blind Test (Ishihara)',
     category: TestCategory.VISUAL,
     description: 'Ishihara Plate Test. Screen for Red-Green (Protan/Deutan) and Blue-Yellow (Tritan) color vision deficiencies.',
     iconName: 'Eye',
@@ -224,7 +232,7 @@ export const TESTS: TestDefinition[] = [
   },
   {
     id: 'contrast-test',
-    title: 'Contrast Sensitivity',
+    title: 'Contrast Sensitivity Test',
     category: TestCategory.VISUAL,
     description: 'Can you see the hidden letters? Measure your ability to distinguish faint objects from their background.',
     iconName: 'Contrast',
@@ -245,7 +253,7 @@ export const TESTS: TestDefinition[] = [
   },
   {
     id: 'peripheral-vision-test',
-    title: 'Peripheral Vision',
+    title: 'Peripheral Vision Test',
     category: TestCategory.VISUAL,
     description: 'Test your side vision field awareness. Detect flashing targets while maintaining central focus.',
     iconName: 'Eye',
@@ -254,7 +262,7 @@ export const TESTS: TestDefinition[] = [
   },
   {
     id: 'face-blindness-test',
-    title: 'Face Blindness Test',
+    title: 'Face Blindness Test (Prosopagnosia)',
     category: TestCategory.VISUAL,
     description: 'Do you struggle to recognize faces? A prosopagnosia screening test using feature matching.',
     iconName: 'ScanFace',
@@ -287,7 +295,7 @@ export const TESTS: TestDefinition[] = [
   },
   {
     id: 'visual-memory-test',
-    title: 'Sequence Memory Test',
+    title: 'Sequence Memory Test (Corsi)',
     category: TestCategory.VISUAL,
     description: 'Photographic memory challenge. Recall the pattern of lighting grids in the correct order.',
     iconName: 'Grid',
@@ -334,7 +342,7 @@ export const TESTS: TestDefinition[] = [
   // --- COGNITIVE STATS ---
   {
     id: 'reaction-time-test',
-    title: 'Reaction Time Test',
+    title: 'Reaction Time Test (ms)', // Point 5
     category: TestCategory.COGNITIVE,
     description: 'Measure your visual reflex speed in milliseconds. Compare your result to the human average (215ms).',
     iconName: 'Zap',
@@ -385,16 +393,20 @@ export const TESTS: TestDefinition[] = [
         answer: "Factors include display latency (60Hz vs 144Hz monitors), input lag (wireless vs wired mice), and your current state of alertness (fatigue/caffeine)."
       }
     ],
+    // Point 2: Structure for Featured Snippet (Definition + List)
     seoContent: `
-      <h2>Why Measure Reaction Time?</h2>
-      <p>Reaction time (RT) is the elapsed time between the presentation of a sensory stimulus and the subsequent behavioral response. It is a critical indicator of central nervous system processing speed.</p>
-      <h3>Factors Affecting Reaction Time</h3>
-      <p>Several variables impact your score on this <strong>Reaction Time Test</strong>:</p>
+      <h2>What is Reaction Time?</h2>
+      <p><strong>Reaction Time (RT)</strong> is the interval of time between the presentation of a stimulus and the initiation of a muscular response. It is a direct measure of central nervous system processing speed.</p>
+      
+      <h3>3 Factors That Affect Reaction Time</h3>
       <ul class="list-disc pl-5 space-y-1 text-zinc-400">
         <li><strong>Age:</strong> RT naturally slows as we age due to the gradual loss of neurons and reduced myelination.</li>
-        <li><strong>Hardware Latency:</strong> Wireless mice and 60Hz monitors can add 10-30ms of input lag compared to wired peripherals and 144Hz+ displays.</li>
-        <li><strong>Alertness:</strong> Caffeine and adrenaline can temporarily decrease reaction time (improve speed).</li>
+        <li><strong>Fatigue:</strong> Sleep deprivation significantly impairs neural transmission, slowing reflexes similar to alcohol intoxication.</li>
+        <li><strong>Hardware Latency:</strong> Input lag from wireless mice and 60Hz monitors can add 10-50ms to your score.</li>
       </ul>
+
+      <h3>How This Test Works</h3>
+      <p>This test measures <strong>Simple Reaction Time (SRT)</strong>. You must respond to a single stimulus (color change) with a single response (click). It averages 5 attempts to filter out lucky guesses or distractions.</p>
     `
   },
   {
@@ -408,7 +420,7 @@ export const TESTS: TestDefinition[] = [
   },
   {
     id: 'typing-speed-test',
-    title: 'Typing Speed Test',
+    title: 'Typing Speed Test (WPM)', // Point 5
     category: TestCategory.COGNITIVE,
     description: 'WPM Test. Calculate your Words Per Minute and keyboard accuracy in a 60-second sprint.',
     iconName: 'Keyboard',
@@ -443,7 +455,7 @@ export const TESTS: TestDefinition[] = [
   },
   {
     id: 'chimp-test',
-    title: 'Chimp Test',
+    title: 'Chimp Test (Spatial Recall)', // Point 5
     category: TestCategory.COGNITIVE,
     description: 'Are you smarter than a chimpanzee? Test your working memory and iconic memory span.',
     iconName: 'Brain',
@@ -495,7 +507,7 @@ export const TESTS: TestDefinition[] = [
   },
   {
     id: 'cps-test',
-    title: 'CPS Test',
+    title: 'CPS Test (Click Speed)', // Point 5
     category: TestCategory.COGNITIVE,
     description: 'Clicks Per Second. Test your finger speed and mouse clicking stamina.',
     iconName: 'MousePointer',
@@ -568,7 +580,7 @@ export const TESTS: TestDefinition[] = [
   },
   {
     id: 'eq-test',
-    title: 'EQ Test',
+    title: 'EQ Test (Emotional IQ)', // Point 5
     category: TestCategory.PERSONALITY,
     description: 'Emotional Intelligence assessment. Evaluate your empathy and social awareness.',
     iconName: 'Heart',
@@ -581,7 +593,7 @@ export const TESTS: TestDefinition[] = [
   },
   {
     id: 'anxiety-test',
-    title: 'Anxiety Test',
+    title: 'Anxiety Test (GAD-7)', // Point 5
     category: TestCategory.PERSONALITY,
     description: 'GAD-7 Anxiety Screener. Check the severity of generalized anxiety symptoms.',
     iconName: 'AlertCircle',

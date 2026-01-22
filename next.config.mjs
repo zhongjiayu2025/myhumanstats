@@ -3,6 +3,7 @@
 const nextConfig = {
   output: 'export',
   reactStrictMode: true,
+  trailingSlash: true, // Point 5: URL Normalization
   images: {
     unoptimized: true,
     remotePatterns: [

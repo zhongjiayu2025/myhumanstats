@@ -5,6 +5,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import ClientLayout from "@/components/Layout";
 import { SettingsProvider } from "@/lib/settings";
+import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains" });
@@ -13,7 +14,6 @@ export const viewport: Viewport = {
   themeColor: "#050505",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
 };
 
 export const metadata: Metadata = {
@@ -50,7 +50,7 @@ export const metadata: Metadata = {
     siteName: 'MyHumanStats',
     images: [
       {
-        url: '/logo.svg', // Fallback to static logo since dynamic API is disabled
+        url: '/logo.svg',
         width: 512,
         height: 512,
         alt: 'MyHumanStats Dashboard',
@@ -58,7 +58,7 @@ export const metadata: Metadata = {
     ],
   },
   twitter: {
-    card: 'summary_large_image',
+    card: 'summary',
     title: 'MyHumanStats | Quantify Yourself',
     description: 'Measure your auditory, visual, and cognitive performance.',
     images: ['/logo.svg'],
@@ -80,10 +80,40 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Advanced Schema: Sitelinks Search Box
+  const searchSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "url": "https://myhumanstats.org/",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": {
+        "@type": "EntryPoint",
+        "urlTemplate": "https://myhumanstats.org/search?q={search_term_string}"
+      },
+      "query-input": "required name=search_term_string"
+    }
+  };
+
   return (
     <html lang="en" className="dark">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(searchSchema) }}
+        />
+        {/* Point 3: Fallback for Image SEO if JS fails */}
+        <noscript>
+          <img 
+            src="https://myhumanstats.org/logo.svg" 
+            alt="MyHumanStats Quantified Self Dashboard Logo" 
+            style={{ display: 'none', visibility: 'hidden' }} 
+          />
+        </noscript>
+      </head>
       <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans bg-background text-zinc-200 antialiased`}>
         <SettingsProvider>
+           <ServiceWorkerRegister />
            <ClientLayout>
               {children}
            </ClientLayout>

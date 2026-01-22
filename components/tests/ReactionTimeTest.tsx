@@ -1,9 +1,10 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Zap, AlertTriangle, RotateCcw, Clock, BarChart3, Medal, Volume2, Eye, ScatterChart as ScatterIcon, History, Settings2 } from 'lucide-react';
+import { Zap, AlertTriangle, RotateCcw, Clock, BarChart3, Medal, Volume2, Eye, ScatterChart as ScatterIcon, History, Settings2, Crosshair } from 'lucide-react';
 import { saveStat, getHistory } from '../../lib/core';
 import { playUiSound } from '../../lib/sounds';
 import { ScatterChart, Scatter, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, ZAxis, LineChart, Line } from 'recharts';
+import Link from 'next/link';
 
 enum GameState { IDLE, WAITING, READY, RESULT, EARLY, CHEAT }
 
@@ -249,12 +250,12 @@ const ReactionTimeTest: React.FC = () => {
   return (
     <div className="max-w-xl mx-auto select-none relative touch-none">
       
-      {/* Live Region for Screen Readers */}
-      <div className="sr-only" aria-live="polite">
-          {gameState === GameState.WAITING && "Waiting for signal..."}
-          {gameState === GameState.READY && "Click now!"}
+      {/* Point 1: Live Region for Screen Readers */}
+      <div className="sr-only" aria-live="polite" role="status">
+          {gameState === GameState.WAITING && "Status: Waiting for signal."}
+          {gameState === GameState.READY && "Status: Go! Click now!"}
           {gameState === GameState.RESULT && `Test complete. Average reaction time ${average} milliseconds.`}
-          {gameState === GameState.EARLY && "Too early. Try again."}
+          {gameState === GameState.EARLY && "Status: Failed. Too early. Click to try again."}
       </div>
 
       {/* Settings Modal */}
@@ -385,12 +386,22 @@ const ReactionTimeTest: React.FC = () => {
                   </div>
               </div>
 
-              <button 
-                onClick={(e) => { e.stopPropagation(); resetTest(); playUiSound('click'); }}
-                className="btn-primary w-full flex items-center justify-center gap-2"
-              >
-                  <RotateCcw size={16} /> Press [R] to Restart
-              </button>
+              <div className="flex flex-col gap-3">
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); resetTest(); playUiSound('click'); }}
+                    className="btn-primary w-full flex items-center justify-center gap-2"
+                  >
+                      <RotateCcw size={16} /> Press [R] to Restart
+                  </button>
+                  
+                  {/* Point 4: Internal Linking Hook */}
+                  <Link 
+                    href="/test/aim-trainer-test"
+                    className="btn-secondary w-full flex items-center justify-center gap-2 text-xs uppercase"
+                  >
+                      <Crosshair size={14} /> Train Your Aim (Next)
+                  </Link>
+              </div>
           </div>
       )}
 

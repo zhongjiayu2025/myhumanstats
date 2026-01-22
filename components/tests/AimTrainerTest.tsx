@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Crosshair, Trophy, MousePointer2, Target, Activity, RefreshCcw, Smartphone } from 'lucide-react';
+import { Crosshair, Trophy, MousePointer2, Target, Activity, RefreshCcw, Smartphone, Zap } from 'lucide-react';
 import { saveStat, getHistory } from '../../lib/core';
 import { playUiSound } from '../../lib/sounds';
 import { LineChart, Line, YAxis, ResponsiveContainer } from 'recharts';
 import CountdownOverlay from '../CountdownOverlay';
+import Link from 'next/link';
 
 interface TargetObj {
   id: number;
@@ -39,7 +40,7 @@ const AimTrainerTest: React.FC = () => {
   
   // Tracking Stats
   const [trackingScore, setTrackingScore] = useState(0); // Milliseconds on target
-  const [trackingTarget, setTrackingTarget] = useState<TrackingTarget>({x: 0, y: 0, dx: 2, dy: 2});
+  const [trackingTarget, setTrackingTarget] = useState<TrackingTarget>({x: 100, y: 100, dx: 2, dy: 2});
   const [isTracked, setIsTracked] = useState(false);
 
   // Shared
@@ -313,6 +314,11 @@ const AimTrainerTest: React.FC = () => {
 
        {(phase === 'play' || phase === 'countdown') && (
            <div className="relative">
+               {/* Point 1: Live Status for Screen Readers */}
+               <div className="sr-only" aria-live="assertive">
+                   {phase === 'countdown' ? "Prepare to aim..." : `Game active. Time left: ${timeLeft} seconds.`}
+               </div>
+
                {/* HUD */}
                <div className="flex justify-between items-center mb-4 bg-black border border-zinc-800 p-4 clip-corner-sm">
                    <div className="flex gap-8">
@@ -359,6 +365,8 @@ const AimTrainerTest: React.FC = () => {
                           onTouchStart={(e) => handleTargetClick(e, t.id, t.born)}
                           className="absolute w-16 h-16 -translate-x-1/2 -translate-y-1/2 rounded-full bg-zinc-900 border-2 border-primary-500 flex items-center justify-center cursor-pointer active:scale-95 transition-transform duration-75 z-10 animate-in zoom-in-50 duration-100 group touch-manipulation touch-none"
                           style={{ left: `${t.x}%`, top: `${t.y}%` }}
+                          aria-label="Target"
+                          role="button"
                        >
                            {/* Bullseye inner */}
                            <div className="w-10 h-10 rounded-full bg-primary-500/20 border border-primary-400 flex items-center justify-center group-hover:bg-primary-500/40">
@@ -426,9 +434,15 @@ const AimTrainerTest: React.FC = () => {
                    </ResponsiveContainer>
                </div>
 
-               <button onClick={initiateGame} className="btn-secondary w-full flex items-center justify-center gap-2">
-                   <RefreshCcw size={16} /> Restart Round
-               </button>
+               <div className="flex flex-col gap-3">
+                   <button onClick={initiateGame} className="btn-secondary w-full flex items-center justify-center gap-2">
+                       <RefreshCcw size={16} /> Restart Round
+                   </button>
+                   {/* Point 4: Internal Linking Hook */}
+                   <Link href="/test/cps-test" className="btn-primary w-full flex items-center justify-center gap-2 text-xs uppercase">
+                       <Zap size={14} /> Test Click Speed (CPS)
+                   </Link>
+               </div>
            </div>
        )}
     </div>
