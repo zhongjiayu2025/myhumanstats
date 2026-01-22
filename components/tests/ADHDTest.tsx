@@ -1,7 +1,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Activity, RotateCcw, Play } from 'lucide-react';
+import { Activity, RotateCcw, Play, Zap, Brain, AlertTriangle } from 'lucide-react';
 import { saveStat } from '../../lib/core';
+import { LineChart, Line, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from 'recharts';
 
 // ASRS-v1.1 Part A
 const ASRS_QUESTIONS = [
@@ -9,8 +10,6 @@ const ASRS_QUESTIONS = [
   { id: 2, text: "How often do you have difficulty getting things in order?", options: [{label: "Never", value: 0}, {label: "Rarely", value: 1}, {label: "Sometimes", value: 2}, {label: "Often", value: 3}, {label: "Very Often", value: 4}] },
   { id: 3, text: "How often do you have problems remembering appointments?", options: [{label: "Never", value: 0}, {label: "Rarely", value: 1}, {label: "Sometimes", value: 2}, {label: "Often", value: 3}, {label: "Very Often", value: 4}] },
   { id: 4, text: "When you have a task that requires a lot of thought, how often do you avoid or delay getting started?", options: [{label: "Never", value: 0}, {label: "Rarely", value: 1}, {label: "Sometimes", value: 2}, {label: "Often", value: 3}, {label: "Very Often", value: 4}] },
-  { id: 5, text: "How often do you fidget or squirm with your hands or feet?", options: [{label: "Never", value: 0}, {label: "Rarely", value: 1}, {label: "Sometimes", value: 2}, {label: "Often", value: 3}, {label: "Very Often", value: 4}] },
-  { id: 6, text: "How often do you feel overly active and compelled to do things?", options: [{label: "Never", value: 0}, {label: "Rarely", value: 1}, {label: "Sometimes", value: 2}, {label: "Often", value: 3}, {label: "Very Often", value: 4}] }
 ];
 
 const ADHDTest: React.FC = () => {
@@ -18,8 +17,15 @@ const ADHDTest: React.FC = () => {
   
   // Go/No-Go State
   const [gonogoState, setGonogoState] = useState<'wait' | 'go' | 'nogo' | 'feedback'>('wait');
-  const [impulseErrors, setImpulseErrors] = useState(0); // Clicked on No-Go
+  const [impulseErrors, setImpulseErrors] = useState(0); 
+  const [omissionErrors, setOmissionErrors] = useState(0);
   const [trial, setTrial] = useState(0);
+  
+  // RTV Analysis
+  const [reactionTimes, setReactionTimes] = useState<{trial: number, ms: number}[]>([]);
+  const [stimulusTime, setStimulusTime] = useState(0);
+  const [distracted, setDistracted] = useState(false);
+
   const TOTAL_TRIALS = 15;
   const timerRef = useRef<number | null>(null);
 
@@ -38,7 +44,8 @@ const ADHDTest: React.FC = () => {
       setPhase('gonogo');
       setTrial(0);
       setImpulseErrors(0);
-      // Small delay before first trial so user is ready
+      setOmissionErrors(0);
+      setReactionTimes([]);
       setTimeout(scheduleTrial, 500);
   };
 
@@ -46,73 +53,77 @@ const ADHDTest: React.FC = () => {
       if (timerRef.current) clearTimeout(timerRef.current);
       
       setGonogoState('wait');
+      setDistracted(false);
       
-      // Random wait 1.5s - 3s
-      const delay = 1500 + Math.random() * 1500;
+      // Variable Inter-Stimulus Interval (ISI) to test sustained attention
+      const delay = 1500 + Math.random() * 2000;
+      
+      // Distraction: Flash screen white briefly during wait?
+      if (Math.random() > 0.7 && trial > 3) {
+          setTimeout(() => {
+              setDistracted(true);
+              setTimeout(() => setDistracted(false), 100);
+          }, delay / 2);
+      }
       
       timerRef.current = window.setTimeout(() => {
           // 30% chance of No-Go (Red)
           const isNoGo = Math.random() < 0.3;
           setGonogoState(isNoGo ? 'nogo' : 'go');
+          setStimulusTime(performance.now());
           
           // Reaction window: 800ms
-          // If they don't click within 800ms:
           timerRef.current = window.setTimeout(() => {
               if (isNoGo) {
-                  // Correctly ignored No-Go (Success)
-                  handleSuccess(); 
+                  // Correctly ignored No-Go
+                  handleSuccess(false); 
               } else {
-                  // Missed Go (Timeout)
-                  // We treat missed Go as "neutral" or just next trial in this simple version, 
-                  // but ideally it's an attention lapse. For flow, we just move on.
+                  // Missed Go (Inattention)
+                  setOmissionErrors(prev => prev + 1);
                   nextTrial(); 
               }
-          }, 800); 
+          }, 1000); 
       }, delay);
   };
 
   const handleInput = (e?: React.MouseEvent | KeyboardEvent) => {
       if (e) {
-        // Prevent spacebar scrolling
         if ((e as KeyboardEvent).key === ' ' || (e as KeyboardEvent).code === 'Space') {
             e.preventDefault();
         }
       }
       
-      if (phase !== 'gonogo') return;
-      
-      // CRITICAL FIX: Ignore inputs during 'wait' phase so we don't clear the spawn timer
-      if (gonogoState === 'wait') return;
+      if (phase !== 'gonogo' || gonogoState === 'wait') return;
 
-      // Clear the "Reaction Window" timer since user responded
       if (timerRef.current) clearTimeout(timerRef.current);
       
       if (gonogoState === 'go') {
-          handleSuccess();
+          handleSuccess(true);
       } else if (gonogoState === 'nogo') {
           setImpulseErrors(prev => prev + 1);
           flashFeedback();
       }
   };
 
-  // Add Keyboard Listener
   useEffect(() => {
       const handleKeyDown = (e: KeyboardEvent) => {
-          if (e.code === 'Space') {
-              handleInput(e);
-          }
+          if (e.code === 'Space') handleInput(e);
       };
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
   }, [phase, gonogoState]);
 
-  const handleSuccess = () => {
+  const handleSuccess = (wasClick: boolean) => {
+      if (wasClick) {
+          const rt = Math.round(performance.now() - stimulusTime);
+          setReactionTimes(prev => [...prev, { trial: trial + 1, ms: rt }]);
+      }
       nextTrial();
   };
 
   const flashFeedback = () => {
       setGonogoState('feedback');
-      setTimeout(nextTrial, 500);
+      setTimeout(nextTrial, 300);
   };
 
   const nextTrial = () => {
@@ -135,85 +146,68 @@ const ADHDTest: React.FC = () => {
   };
 
   const finishTest = (finalQuizRaw: number) => {
-      // Logic:
-      // Impulse Score: (15 - errors) / 15
-      // Quiz Score: (Raw / 24) * 100
+      // Calculate Variability (Standard Deviation)
+      const rts = reactionTimes.map(r => r.ms);
+      const mean = rts.reduce((a,b) => a+b, 0) / rts.length;
+      const variance = rts.reduce((a,b) => a + Math.pow(b - mean, 2), 0) / rts.length;
+      const stdDev = Math.sqrt(variance); // Reaction Time Variability (RTV)
+
+      // Scoring
+      const rtvScore = Math.min(100, (stdDev / 150) * 100); // Higher RTV = More ADHD-like
+      const impulseScore = (impulseErrors / (TOTAL_TRIALS * 0.3)) * 100;
+      const symptomScore = (finalQuizRaw / (ASRS_QUESTIONS.length * 4)) * 100;
       
-      // Normalizing Impulse errors: >3 errors is high impulsivity.
-      const impulseScore = (impulseErrors / (TOTAL_TRIALS * 0.3)) * 100; // % of No-Go's failed
-      const symptomScore = (finalQuizRaw / 24) * 100;
-      
-      const composite = Math.min(100, Math.round((impulseScore * 0.4) + (symptomScore * 0.6)));
+      const composite = Math.min(100, Math.round((impulseScore * 0.3) + (rtvScore * 0.3) + (symptomScore * 0.4)));
       saveStat('adhd-test', composite);
       setPhase('result');
   };
 
   return (
     <div className="max-w-2xl mx-auto select-none" onMouseDown={phase === 'gonogo' ? handleInput : undefined}>
-       <style>{`
-          @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-8px); }
-            75% { transform: translateX(8px); }
-          }
-          .animate-shake { animation: shake 0.3s ease-in-out; }
-       `}</style>
-
+       
        {phase === 'intro' && (
            <div className="text-center py-12 animate-in fade-in">
                <Activity size={64} className="mx-auto text-amber-500 mb-6" />
-               <h2 className="text-3xl font-bold text-white mb-2">ADHD Screener Plus</h2>
+               <h2 className="text-3xl font-bold text-white mb-2">Clinical ADHD Screener</h2>
                <p className="text-zinc-400 mb-8 max-w-md mx-auto">
-                   A comprehensive assessment combining:
-                   <br/>1. <strong>Go/No-Go Task:</strong> Measures impulse control behaviorally.
-                   <br/>2. <strong>ASRS-v1.1:</strong> Standardized symptom checklist.
+                   Measures <strong>Reaction Time Variability (RTV)</strong> - a core biomarker of ADHD.
+                   <br/>Includes distraction resistance and impulse control tasks.
                </p>
                <button onClick={startGoNoGo} className="btn-primary flex items-center gap-2 mx-auto">
-                   <Play size={18} fill="currentColor" /> Start Assessment
+                   <Play size={18} fill="currentColor" /> Start Behavioral Task
                </button>
            </div>
        )}
 
        {phase === 'gonogo' && (
-           <div className="py-12 flex flex-col items-center justify-center min-h-[450px]">
-               <div className="mb-8 text-center">
-                   <h3 className="text-xl font-bold text-white mb-2">Impulse Control Task</h3>
-                   <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-lg inline-block text-left text-sm text-zinc-400 mb-4">
-                       <div className="flex items-center gap-2 mb-1">
-                           <span className="w-3 h-3 rounded-full bg-emerald-500"></span> 
-                           <span>Green Box = <strong>PRESS SPACE</strong></span>
+           <div className={`py-12 flex flex-col items-center justify-center min-h-[450px] transition-colors duration-100 ${distracted ? 'bg-white' : ''}`}>
+               {!distracted && (
+                   <>
+                       <div className="mb-8 text-center">
+                           <h3 className="text-xl font-bold text-white mb-2">Attention Task</h3>
+                           <div className="text-xs font-mono text-zinc-600 mt-2">TRIAL {trial+1}/{TOTAL_TRIALS}</div>
                        </div>
-                       <div className="flex items-center gap-2">
-                           <span className="w-3 h-3 rounded-full bg-red-500"></span> 
-                           <span>Red Box = <strong>DO NOT PRESS</strong></span>
-                       </div>
-                   </div>
-                   <div className="text-xs font-mono text-zinc-600 mt-2">TRIAL {trial+1}/{TOTAL_TRIALS}</div>
-               </div>
 
-               <div className={`
-                   w-64 h-64 rounded-3xl flex items-center justify-center transition-all duration-100 shadow-2xl cursor-pointer border-4
-                   ${gonogoState === 'wait' ? 'bg-zinc-800 border-zinc-700' : ''}
-                   ${gonogoState === 'go' ? 'bg-emerald-500 border-emerald-400 scale-105 shadow-[0_0_50px_#10b981]' : ''}
-                   ${gonogoState === 'nogo' ? 'bg-red-500 border-red-400 scale-105 shadow-[0_0_50px_#ef4444]' : ''}
-                   ${gonogoState === 'feedback' ? 'bg-red-900 border-red-500 animate-shake' : ''}
-               `}>
-                   {gonogoState === 'wait' && <span className="text-zinc-600 font-bold font-mono animate-pulse">WAIT...</span>}
-                   {gonogoState === 'go' && <span className="text-black font-black text-4xl">CLICK!</span>}
-                   {gonogoState === 'nogo' && <span className="text-black font-black text-4xl">STOP!</span>}
-                   {gonogoState === 'feedback' && <span className="text-red-500 font-bold text-xl">MISTAKE</span>}
-               </div>
-               
-               <div className="mt-8 text-zinc-500 text-xs font-mono">
-                   Tap area or use Spacebar
-               </div>
+                       <div className={`
+                           w-64 h-64 rounded-3xl flex items-center justify-center transition-all duration-75 shadow-2xl cursor-pointer border-4
+                           ${gonogoState === 'wait' ? 'bg-zinc-800 border-zinc-700' : ''}
+                           ${gonogoState === 'go' ? 'bg-emerald-500 border-emerald-400 scale-105 shadow-[0_0_50px_#10b981]' : ''}
+                           ${gonogoState === 'nogo' ? 'bg-red-500 border-red-400 scale-105 shadow-[0_0_50px_#ef4444]' : ''}
+                           ${gonogoState === 'feedback' ? 'bg-red-900 border-red-500 animate-shake' : ''}
+                       `}>
+                           {gonogoState === 'go' && <span className="text-black font-black text-4xl">CLICK!</span>}
+                           {gonogoState === 'nogo' && <span className="text-black font-black text-4xl">STOP!</span>}
+                           {gonogoState === 'feedback' && <span className="text-red-500 font-bold text-xl">IMPULSE!</span>}
+                       </div>
+                   </>
+               )}
            </div>
        )}
 
        {phase === 'quiz' && (
            <div className="py-12 animate-in slide-in-from-right">
                <div className="flex justify-between items-center mb-8 px-4 border-b border-zinc-800 pb-4">
-                   <span className="text-xs font-mono text-zinc-500">PART 2: ASRS CHECKLIST</span>
+                   <span className="text-xs font-mono text-zinc-500">PART 2: SYMPTOMS</span>
                    <span className="text-xs font-mono text-amber-500">Q.{qIndex + 1}</span>
                </div>
 
@@ -236,12 +230,19 @@ const ADHDTest: React.FC = () => {
 
        {phase === 'result' && (
            <div className="py-12 text-center animate-in zoom-in">
-               <h2 className="text-sm font-mono text-zinc-500 uppercase tracking-widest mb-4">ADHD Likelihood Score</h2>
+               <h2 className="text-sm font-mono text-zinc-500 uppercase tracking-widest mb-4">Attention Profile</h2>
                
-               {/* Calc composite for display */}
-               <div className="text-6xl font-bold text-white mb-8">
-                   {Math.round(((impulseErrors / (TOTAL_TRIALS * 0.3)) * 100 * 0.4) + ((quizScore / 24) * 100 * 0.6))}
-                   <span className="text-2xl text-zinc-600">%</span>
+               <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6 mb-8 h-64">
+                   <div className="text-[10px] text-zinc-500 text-left mb-2 flex items-center gap-2"><Zap size={10}/> REACTION TIME VARIABILITY (RTV)</div>
+                   <ResponsiveContainer width="100%" height="100%">
+                       <LineChart data={reactionTimes}>
+                           <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                           <YAxis stroke="#555" fontSize={10} domain={['auto', 'auto']} width={30} />
+                           <Tooltip contentStyle={{ backgroundColor: '#000', borderColor: '#333' }} />
+                           <Line type="monotone" dataKey="ms" stroke="#f59e0b" strokeWidth={2} dot={{r: 3}} />
+                       </LineChart>
+                   </ResponsiveContainer>
+                   <div className="text-[10px] text-zinc-500 text-right mt-1">Consistency Check</div>
                </div>
 
                <div className="grid grid-cols-2 gap-4 max-w-md mx-auto mb-8">
@@ -250,25 +251,18 @@ const ADHDTest: React.FC = () => {
                        <div className={`text-xl font-bold ${impulseErrors > 1 ? 'text-red-500' : 'text-emerald-500'}`}>
                            {impulseErrors} Errors
                        </div>
-                       <div className="text-[10px] text-zinc-600 mt-1">NO-GO FAILURES</div>
                    </div>
                    <div className="bg-zinc-900 border border-zinc-800 p-4 rounded text-center">
-                       <div className="text-xs text-zinc-500 uppercase mb-1">Symptoms</div>
-                       <div className="text-xl font-bold text-white">
-                           {Math.round((quizScore / 24) * 100)}%
+                       <div className="text-xs text-zinc-500 uppercase mb-1">Inattention</div>
+                       <div className={`text-xl font-bold ${omissionErrors > 1 ? 'text-yellow-500' : 'text-emerald-500'}`}>
+                           {omissionErrors} Misses
                        </div>
-                       <div className="text-[10px] text-zinc-600 mt-1">ASRS MATCH</div>
                    </div>
                </div>
 
                <div className="bg-zinc-900/50 p-6 rounded border border-zinc-800 text-left text-sm text-zinc-400 mb-8">
-                   <strong className="text-white block mb-2">Assessment Analysis:</strong>
-                   {impulseErrors > 2 ? 
-                       "You demonstrated significant difficulty inhibiting motor responses during the No-Go task, a common behavioral marker of impulsivity." : 
-                       "You performed well on the impulse control task, suggesting good executive inhibition."
-                   }
-                   <br/><br/>
-                   Combined with your symptom report, the results suggest {quizScore > 14 ? "a high probability of adult ADHD." : "you likely do not meet the clinical criteria for ADHD."}
+                   <strong className="text-white block mb-2">Bio-Marker Analysis:</strong>
+                   Your Reaction Time Variability graph {Math.max(...reactionTimes.map(r=>r.ms)) - Math.min(...reactionTimes.map(r=>r.ms)) > 200 ? "shows significant spikes, a potential indicator of micro-lapses in attention." : "is relatively stable, indicating consistent focus."}
                </div>
 
                <button onClick={() => window.location.reload()} className="btn-secondary flex items-center gap-2 justify-center mx-auto">

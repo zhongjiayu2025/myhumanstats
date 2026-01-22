@@ -303,7 +303,7 @@ const TypingSpeedTest: React.FC = () => {
                    <div className="mb-8 p-4 bg-red-900/10 border border-red-500/20 rounded">
                        <h4 className="text-xs font-bold text-red-400 uppercase mb-2 flex items-center gap-2"><AlertTriangle size={12}/> Trouble Keys</h4>
                        <div className="flex gap-2 flex-wrap">
-                           {Object.entries(missedKeys).sort((a,b) => b[1] - a[1]).slice(0, 5).map(([key, count]) => (
+                           {Object.entries(missedKeys).sort((a: [string, number], b: [string, number]) => b[1] - a[1]).slice(0, 5).map(([key, count]) => (
                                <div key={key} className="bg-red-900/40 text-red-200 px-3 py-1 rounded text-xs border border-red-500/30">
                                    <strong className="text-white font-mono text-sm">'{key}'</strong> x{count}
                                </div>
@@ -343,7 +343,7 @@ const TypingSpeedTest: React.FC = () => {
                                         fontSize={9} 
                                         tickLine={false} 
                                         axisLine={false} 
-                                        domain={[(dataMin: any) => dataMin - 10, (dataMax: any) => dataMax + 10]} 
+                                        domain={[(dataMin: number) => (dataMin || 0) - 10, (dataMax: number) => (dataMax || 0) + 10]} 
                                     />
                                     <Tooltip contentStyle={{ backgroundColor: '#000', borderColor: '#333', fontSize: '12px' }} itemStyle={{ color: '#8b5cf6' }} />
                                     <Area type="monotone" dataKey="score" stroke="#8b5cf6" strokeWidth={2} fill="url(#histGrad)" />

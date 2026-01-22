@@ -1,11 +1,14 @@
+
 import React, { useState } from 'react';
-import { Moon, Sun, Briefcase, Bed, Sunrise, RotateCcw, Activity } from 'lucide-react';
+import { Moon, Sun, Briefcase, Coffee, Zap, RotateCcw, Sunrise, Sunset } from 'lucide-react';
 import { saveStat } from '../../lib/core';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, CartesianGrid } from 'recharts';
 
 // Simplified Logic: 
-// Q1 (Wake): Early(1) -> Late(3)
-// Q2 (Peak): Morning(1) -> Night(3)
-// Lion (Low score), Bear (Mid), Wolf (High), Dolphin (Irregular)
+// Lion: Early riser, crash early.
+// Bear: Solar cycle, steady.
+// Wolf: Late riser, energy at night.
+// Dolphin: Irregular, low sleep drive.
 
 const QUESTIONS = [
   { id: 1, text: "If you had no schedule, what time would you wake up?", options: [{label: "Before 6:30 AM", value: 1}, {label: "7:00 AM - 9:00 AM", value: 2}, {label: "After 9:00 AM", value: 3}, {label: "It varies / Insomnia", value: 4}] },
@@ -16,45 +19,21 @@ const QUESTIONS = [
 
 type Chronotype = 'Lion' | 'Bear' | 'Wolf' | 'Dolphin';
 
-const SCHEDLUES: Record<Chronotype, { wake: string, focus: string, exercise: string, sleep: string, desc: string, icon: string }> = {
-    'Lion': {
-        wake: "5:30 AM",
-        focus: "8:00 AM - 12:00 PM",
-        exercise: "5:00 PM",
-        sleep: "10:00 PM",
-        desc: "Morning hunter. High energy early in the day, but crashes in the evening.",
-        icon: "🦁"
-    },
-    'Bear': {
-        wake: "7:00 AM",
-        focus: "10:00 AM - 2:00 PM",
-        exercise: "6:00 PM",
-        sleep: "11:00 PM",
-        desc: "Follows the sun. Steady energy. Needs consistent 8 hours.",
-        icon: "🐻"
-    },
-    'Wolf': {
-        wake: "9:00 AM",
-        focus: "5:00 PM - 9:00 PM",
-        exercise: "7:00 PM",
-        sleep: "1:00 AM",
-        desc: "Nocturnal creative. Struggles with mornings, peaks when others sleep.",
-        icon: "🐺"
-    },
-    'Dolphin': {
-        wake: "6:30 AM",
-        focus: "Flexible Bursts",
-        exercise: "Morning",
-        sleep: "11:30 PM",
-        desc: "Light sleeper with irregular energy. Wired and tired.",
-        icon: "🐬"
-    }
+// Hourly energy data (0-23h)
+const ENERGY_CURVES: Record<Chronotype, number[]> = {
+    'Lion': [10, 10, 20, 50, 80, 95, 100, 90, 80, 70, 60, 50, 60, 50, 40, 30, 20, 15, 10, 10, 10, 10, 10, 10],
+    'Bear': [10, 10, 10, 10, 20, 40, 60, 80, 90, 100, 90, 80, 70, 60, 70, 80, 70, 60, 50, 40, 30, 20, 10, 10],
+    'Wolf': [20, 30, 40, 20, 10, 10, 10, 20, 30, 40, 50, 60, 70, 60, 50, 60, 80, 90, 100, 90, 80, 60, 40, 30],
+    'Dolphin': [30, 20, 10, 20, 30, 40, 50, 60, 50, 40, 50, 60, 50, 40, 50, 60, 50, 40, 30, 40, 30, 20, 30, 40]
 };
 
 const ChronotypeTest: React.FC = () => {
   const [phase, setPhase] = useState<'intro' | 'quiz' | 'result'>('intro');
   const [currentQ, setCurrentQ] = useState(0);
   const [score, setScore] = useState(0);
+  
+  // Interactive Schedule
+  const [wakeTime, setWakeTime] = useState(7); // Default 7 AM
 
   const handleAnswer = (val: number) => {
       setScore(s => s + val);
@@ -66,16 +45,11 @@ const ChronotypeTest: React.FC = () => {
   };
 
   const finishTest = (finalScore: number) => {
-      saveStat('chronotype-test', Math.round((finalScore/16)*100)); // Just for completion stat
+      saveStat('chronotype-test', Math.round((finalScore/16)*100)); 
       setPhase('result');
   };
 
   const getResult = (): Chronotype => {
-      // 4 questions, min 4, max 16.
-      // 4-6: Lion
-      // 7-10: Bear
-      // 11-13: Wolf
-      // 14+: Dolphin (Rough approx)
       if (score <= 6) return 'Lion';
       if (score <= 10) return 'Bear';
       if (score <= 13) return 'Wolf';
@@ -83,20 +57,42 @@ const ChronotypeTest: React.FC = () => {
   };
 
   const result = getResult();
-  const schedule = SCHEDLUES[result];
+  
+  // Generate Graph Data based on Wake Time Shift
+  const generateChartData = () => {
+      const baseCurve = ENERGY_CURVES[result];
+      // Default curves are based on ~7AM wake. 
+      // If user wakes at 5AM, shift left by 2. If 9AM, shift right by 2.
+      const shift = wakeTime - 7;
+      
+      return baseCurve.map((energy, hour) => {
+          // Circular shift logic
+          let sourceIndex = (hour - shift);
+          if (sourceIndex < 0) sourceIndex += 24;
+          if (sourceIndex >= 24) sourceIndex -= 24;
+          
+          return {
+              hour: `${hour}:00`,
+              energy: baseCurve[sourceIndex],
+              isSleep: hour < wakeTime || hour > (wakeTime + 16) % 24 // Approx 16h awake
+          };
+      });
+  };
+
+  const chartData = generateChartData();
 
   return (
     <div className="max-w-3xl mx-auto text-center select-none">
        
        {phase === 'intro' && (
            <div className="py-12 animate-in fade-in">
-               <Moon size={64} className="mx-auto text-indigo-400 mb-6" />
-               <h2 className="text-3xl font-bold text-white mb-2">Chronotype Finder</h2>
+               <Sun size={64} className="mx-auto text-amber-500 mb-6" />
+               <h2 className="text-3xl font-bold text-white mb-2">Chronotype & Circadian Rhythm</h2>
                <p className="text-zinc-400 mb-8 max-w-md mx-auto">
-                   Based on Dr. Michael Breus's "The Power of When". 
-                   <br/>Are you a Lion, Bear, Wolf, or Dolphin? Find your optimal daily schedule.
+                   Analyze your biological clock. 
+                   <br/>Find your genetically optimal times for <strong>Deep Work</strong>, <strong>Caffeine</strong>, and <strong>Sleep</strong>.
                </p>
-               <button onClick={() => setPhase('quiz')} className="btn-primary">Begin Analysis</button>
+               <button onClick={() => setPhase('quiz')} className="btn-primary">Start Analysis</button>
            </div>
        )}
 
@@ -109,7 +105,7 @@ const ChronotypeTest: React.FC = () => {
                        <button 
                           key={i} 
                           onClick={() => handleAnswer(opt.value)}
-                          className="w-full p-4 border border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800 hover:border-indigo-500/50 rounded text-left transition-all text-zinc-300 hover:text-white"
+                          className="w-full p-4 border border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800 hover:border-amber-500/50 rounded text-left transition-all text-zinc-300 hover:text-white"
                        >
                            {opt.label}
                        </button>
@@ -120,48 +116,84 @@ const ChronotypeTest: React.FC = () => {
 
        {phase === 'result' && (
            <div className="py-8 animate-in zoom-in">
-               <div className="text-8xl mb-4 animate-bounce">{schedule.icon}</div>
-               <h2 className="text-sm font-mono text-zinc-500 uppercase tracking-widest mb-2">Your Chronotype</h2>
-               <div className="text-5xl font-bold text-white mb-4">{result}</div>
-               <p className="text-zinc-400 max-w-md mx-auto mb-12 leading-relaxed">
-                   {schedule.desc}
-               </p>
+               <div className="mb-8">
+                   <div className="text-6xl mb-2">{result === 'Lion' ? '🦁' : result === 'Bear' ? '🐻' : result === 'Wolf' ? '🐺' : '🐬'}</div>
+                   <h2 className="text-sm font-mono text-zinc-500 uppercase tracking-widest mb-1">Biological Profile</h2>
+                   <div className="text-4xl font-bold text-white mb-4">{result} Chronotype</div>
+                   <p className="text-zinc-400 max-w-md mx-auto text-sm">
+                       {result === 'Lion' && "Early riser. Peak productivity in the morning. Exhausted by evening."}
+                       {result === 'Bear' && "Solar synced. Steady energy flows. Needs consistent 8 hours."}
+                       {result === 'Wolf' && "Nocturnal. Struggles with mornings. Creative peaks late at night."}
+                       {result === 'Dolphin' && "Irregular. Light sleeper. Bursts of nervous energy."}
+                   </p>
+               </div>
 
-               {/* Schedule Timeline Visual */}
-               <div className="bg-zinc-900/50 border border-zinc-800 p-8 rounded-xl max-w-xl mx-auto text-left">
-                   <h3 className="text-white font-bold mb-6 flex items-center gap-2">
-                       <Sun size={18} className="text-amber-500"/> Ideal Daily Rhythm
-                   </h3>
-                   
-                   <div className="relative border-l-2 border-zinc-800 ml-3 space-y-8 pb-2">
-                       {/* Wake */}
-                       <div className="relative pl-8">
-                           <div className="absolute -left-[9px] top-0 w-4 h-4 bg-zinc-900 border-2 border-amber-500 rounded-full"></div>
-                           <div className="text-xs font-mono text-amber-500 mb-1">{schedule.wake}</div>
-                           <div className="text-white font-bold flex items-center gap-2"><Sunrise size={16}/> Wake Up</div>
+               {/* Schedule Simulator */}
+               <div className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-xl mb-8">
+                   <div className="flex justify-between items-center mb-6">
+                       <div className="text-left">
+                           <h3 className="text-white font-bold flex items-center gap-2"><Zap size={16} className="text-amber-500"/> Energy Map</h3>
+                           <p className="text-xs text-zinc-500">Based on your wake-up time</p>
                        </div>
+                       <div className="flex items-center gap-2 bg-black px-3 py-1 rounded border border-zinc-800">
+                           <Sunrise size={14} className="text-zinc-400" />
+                           <select 
+                              value={wakeTime} 
+                              onChange={(e) => setWakeTime(parseInt(e.target.value))}
+                              className="bg-transparent text-white text-xs font-mono outline-none cursor-pointer"
+                           >
+                               {[5,6,7,8,9,10,11,12].map(h => (
+                                   <option key={h} value={h}>Wake: {h}:00 AM</option>
+                               ))}
+                           </select>
+                       </div>
+                   </div>
 
-                       {/* Focus */}
-                       <div className="relative pl-8">
-                           <div className="absolute -left-[9px] top-0 w-4 h-4 bg-zinc-900 border-2 border-indigo-500 rounded-full"></div>
-                           <div className="text-xs font-mono text-indigo-500 mb-1">{schedule.focus}</div>
-                           <div className="text-white font-bold flex items-center gap-2"><Briefcase size={16}/> Deep Work</div>
-                           <div className="text-xs text-zinc-500 mt-1">Maximum cognitive throughput window.</div>
-                       </div>
+                   <div className="h-48 w-full">
+                       <ResponsiveContainer width="100%" height="100%">
+                           <AreaChart data={chartData}>
+                               <defs>
+                                   <linearGradient id="energyGrad" x1="0" y1="0" x2="0" y2="1">
+                                       <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3}/>
+                                       <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                                   </linearGradient>
+                               </defs>
+                               <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                               <XAxis dataKey="hour" stroke="#555" fontSize={9} interval={3} tickLine={false} axisLine={false} />
+                               <Tooltip contentStyle={{ backgroundColor: '#09090b', border: '1px solid #333', fontSize: '12px' }} />
+                               <Area 
+                                  type="monotone" 
+                                  dataKey="energy" 
+                                  stroke="#f59e0b" 
+                                  fill="url(#energyGrad)" 
+                                  strokeWidth={2}
+                               />
+                               {/* Key Markers */}
+                               <ReferenceLine x={`${wakeTime + 2}:00`} stroke="#06b6d4" strokeDasharray="3 3" label={{ value: 'Focus', fill: '#06b6d4', fontSize: 10, position: 'top' }} />
+                               <ReferenceLine x={`${wakeTime + 9}:00`} stroke="#10b981" strokeDasharray="3 3" label={{ value: 'Exercise', fill: '#10b981', fontSize: 10, position: 'top' }} />
+                           </AreaChart>
+                       </ResponsiveContainer>
+                   </div>
+               </div>
 
-                       {/* Exercise */}
-                       <div className="relative pl-8">
-                           <div className="absolute -left-[9px] top-0 w-4 h-4 bg-zinc-900 border-2 border-emerald-500 rounded-full"></div>
-                           <div className="text-xs font-mono text-emerald-500 mb-1">{schedule.exercise}</div>
-                           <div className="text-white font-bold flex items-center gap-2"><Activity size={16} /> Exercise</div> {/* Using Activity instead of Dumbbell for simplicity unless imported */}
+               <div className="grid grid-cols-2 gap-4 max-w-lg mx-auto text-left">
+                   <div className="p-4 bg-zinc-900 border border-zinc-800 rounded">
+                       <div className="flex items-center gap-2 mb-2 text-amber-500">
+                           <Coffee size={16} />
+                           <span className="text-xs font-bold uppercase">Caffeine Window</span>
                        </div>
-
-                       {/* Sleep */}
-                       <div className="relative pl-8">
-                           <div className="absolute -left-[9px] top-0 w-4 h-4 bg-zinc-900 border-2 border-zinc-500 rounded-full"></div>
-                           <div className="text-xs font-mono text-zinc-500 mb-1">{schedule.sleep}</div>
-                           <div className="text-white font-bold flex items-center gap-2"><Bed size={16}/> Sleep</div>
+                       <div className="text-white font-mono text-sm">{wakeTime + 2}:00 AM - {wakeTime + 4}:00 AM</div>
+                       <p className="text-[10px] text-zinc-500 mt-1">Wait 90m after waking to avoid crash.</p>
+                   </div>
+                   <div className="p-4 bg-zinc-900 border border-zinc-800 rounded">
+                       <div className="flex items-center gap-2 mb-2 text-indigo-500">
+                           <Briefcase size={16} />
+                           <span className="text-xs font-bold uppercase">Deep Work</span>
                        </div>
+                       <div className="text-white font-mono text-sm">
+                           {result === 'Wolf' ? `${wakeTime + 8}:00 PM` : `${wakeTime + 2}:00 AM`}
+                       </div>
+                       <p className="text-[10px] text-zinc-500 mt-1">Peak cognitive throughput.</p>
                    </div>
                </div>
 
