@@ -1,46 +1,68 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { RotateCcw, Clock, Music, HeartPulse, Activity } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { RotateCcw, Clock, Music, HeartPulse, Activity, Target, TrendingUp } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 
 export default function BPMClient() {
-  const [taps, setTaps] = useState<number[]>([]);
+  const [taps, setTaps] = useState<{time: number, bpm: number}[]>([]);
   const [bpm, setBpm] = useState(0);
-  const [stability, setStability] = useState(0); // Standard Deviation in ms
+  const [stability, setStability] = useState(0); // SD
   const [message, setMessage] = useState('Tap any key or click to start');
   const [isTapping, setIsTapping] = useState(false);
   
+  // Trainer Mode
+  const [targetBpm, setTargetBpm] = useState<number | null>(null);
+  const [accuracy, setAccuracy] = useState(100);
+
   const handleTap = () => {
      const now = performance.now();
      setIsTapping(true);
      setTimeout(() => setIsTapping(false), 100);
      
      setTaps(prev => {
-        if (prev.length > 0 && now - prev[prev.length - 1] > 2500) {
-           return [now]; // Reset if gap > 2.5s
+        // Reset if gap > 2.5s
+        if (prev.length > 0 && now - prev[prev.length - 1].time > 2500) {
+           return [{ time: now, bpm: 0 }]; 
         }
-        const newTaps = [...prev, now].slice(-16); // Keep last 16 taps for rolling avg
-        return newTaps;
+        
+        // Calculate instant BPM for this tap
+        let instantBpm = 0;
+        if (prev.length > 0) {
+            const delta = now - prev[prev.length - 1].time;
+            instantBpm = Math.round(60000 / delta);
+        }
+
+        const newTaps = [...prev, { time: now, bpm: instantBpm }];
+        return newTaps.slice(-30); // Keep last 30 points for graph
      });
   };
 
   useEffect(() => {
      if (taps.length > 1) {
-        let intervals = [];
+        const intervals = [];
         for (let i = 1; i < taps.length; i++) {
-           intervals.push(taps[i] - taps[i-1]);
+           intervals.push(taps[i].time - taps[i-1].time);
         }
         
         const avgInterval = intervals.reduce((a,b) => a+b, 0) / intervals.length;
+        const currentBpm = Math.round(60000 / avgInterval);
         
-        // Calculate Standard Deviation (Stability)
+        // Calculate Stability (Standard Deviation)
         const variance = intervals.reduce((a, b) => a + Math.pow(b - avgInterval, 2), 0) / intervals.length;
         const stdDev = Math.sqrt(variance);
         
         setStability(stdDev);
-        setBpm(Math.round(60000 / avgInterval));
+        setBpm(currentBpm);
+        
+        // Trainer Logic
+        if (targetBpm) {
+            const error = Math.abs(currentBpm - targetBpm);
+            const acc = Math.max(0, 100 - (error * 2)); // 2% penalty per BPM off
+            setAccuracy(acc);
+        }
         
         if (taps.length < 4) setMessage('Calculating...');
         else if (stdDev < 10) setMessage('Timing: Metronomic');
@@ -51,8 +73,9 @@ export default function BPMClient() {
         setMessage('First beat registered...');
         setBpm(0);
         setStability(0);
+        setAccuracy(100);
      }
-  }, [taps]);
+  }, [taps, targetBpm]);
 
   useEffect(() => {
      const handleKey = (e: KeyboardEvent) => {
@@ -65,12 +88,13 @@ export default function BPMClient() {
      return () => window.removeEventListener('keydown', handleKey);
   }, []);
 
-  const reset = (e: React.MouseEvent) => {
-     e.stopPropagation();
+  const reset = (e?: React.MouseEvent) => {
+     e?.stopPropagation();
      setTaps([]);
      setBpm(0);
      setStability(0);
      setMessage('Tap any key or click to start');
+     setAccuracy(100);
   };
 
   const getStabilityColor = (sd: number) => {
@@ -91,8 +115,8 @@ export default function BPMClient() {
                 onMouseDown={handleTap}
                 className="bg-black border border-zinc-800 rounded-2xl aspect-square md:aspect-video flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500/50 hover:bg-zinc-900 transition-all active:scale-[0.99] select-none shadow-2xl relative overflow-hidden group"
              >
-                {/* Ripple Effect Center */}
-                <div className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${isTapping ? 'opacity-30' : 'opacity-0'}`}>
+                {/* Visual Metronome Pulse */}
+                <div className={`absolute inset-0 flex items-center justify-center transition-opacity duration-100 ${isTapping ? 'opacity-40' : 'opacity-0'}`}>
                    <div className="w-64 h-64 bg-emerald-500 rounded-full filter blur-3xl animate-ping"></div>
                 </div>
 
@@ -113,6 +137,16 @@ export default function BPMClient() {
                         </div>
                     </div>
                 )}
+                
+                {/* Trainer Mode Display */}
+                {targetBpm && taps.length > 1 && (
+                    <div className="absolute top-6 left-6 flex flex-col items-start">
+                        <div className="text-[10px] text-zinc-600 font-mono uppercase">Target: {targetBpm}</div>
+                        <div className={`text-lg font-mono font-bold ${accuracy > 90 ? 'text-emerald-500' : 'text-yellow-500'}`}>
+                            {Math.round(accuracy)}% ACC
+                        </div>
+                    </div>
+                )}
 
                 {taps.length > 0 && (
                    <button 
@@ -123,80 +157,67 @@ export default function BPMClient() {
                    </button>
                 )}
              </div>
+             
+             {/* Micro-Timing Graph */}
+             {taps.length > 4 && (
+                 <div className="mt-4 h-32 w-full bg-zinc-900/30 border border-zinc-800 rounded-xl p-4">
+                     <div className="text-[10px] text-zinc-500 font-mono mb-2 flex items-center gap-2">
+                         <TrendingUp size={12}/> TEMPO DRIFT ANALYSIS
+                     </div>
+                     <ResponsiveContainer width="100%" height="100%">
+                         <AreaChart data={taps.slice(2)}> {/* Skip first couple erratic taps */}
+                             <defs>
+                                 <linearGradient id="colorBpm" x1="0" y1="0" x2="0" y2="1">
+                                     <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                                     <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                                 </linearGradient>
+                             </defs>
+                             <YAxis domain={['dataMin - 10', 'dataMax + 10']} hide />
+                             <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #333', fontSize: '12px' }} />
+                             {targetBpm && <ReferenceLine y={targetBpm} stroke="#ef4444" strokeDasharray="3 3" />}
+                             <Area type="monotone" dataKey="bpm" stroke="#10b981" fillOpacity={1} fill="url(#colorBpm)" />
+                         </AreaChart>
+                     </ResponsiveContainer>
+                 </div>
+             )}
           </div>
 
           <div className="lg:col-span-4 space-y-4">
+             {/* Trainer Settings */}
+             <div className="bg-zinc-900/30 border border-zinc-800 p-6 rounded-xl">
+                 <h3 className="text-white font-bold mb-4 flex items-center gap-2 text-sm">
+                    <Target size={16} className="text-primary-500" /> Target Trainer
+                 </h3>
+                 <div className="flex gap-2 mb-4">
+                     {[100, 120, 140].map(val => (
+                         <button 
+                            key={val}
+                            onClick={() => { setTargetBpm(val); reset(); }}
+                            className={`flex-1 py-2 text-xs font-mono border rounded ${targetBpm === val ? 'bg-primary-900/30 border-primary-500 text-primary-400' : 'bg-black border-zinc-700 text-zinc-400'}`}
+                         >
+                             {val}
+                         </button>
+                     ))}
+                     <button onClick={() => setTargetBpm(null)} className={`flex-1 py-2 text-xs font-mono border rounded ${!targetBpm ? 'bg-zinc-800 border-zinc-600 text-white' : 'bg-black border-zinc-700 text-zinc-400'}`}>OFF</button>
+                 </div>
+                 <p className="text-[10px] text-zinc-500 leading-relaxed">
+                     Select a target BPM to test your ability to maintain a specific tempo without drifting.
+                 </p>
+             </div>
+
              <div className="bg-zinc-900/30 border border-zinc-800 p-6 rounded-xl h-full flex flex-col justify-center">
                 <h3 className="text-white font-bold mb-4 flex items-center gap-2">
                    <Music size={18} className="text-emerald-500" /> Common Tempos
                 </h3>
                 <ul className="text-xs text-zinc-400 font-mono space-y-3">
-                   <li className="flex justify-between border-b border-zinc-800 pb-2">
-                       <span>Dubstep / Trap</span> 
-                       <span className="text-white">140 BPM</span>
-                   </li>
-                   <li className="flex justify-between border-b border-zinc-800 pb-2">
-                       <span>House / Techno</span> 
-                       <span className="text-white">120 - 130 BPM</span>
-                   </li>
-                   <li className="flex justify-between border-b border-zinc-800 pb-2">
-                       <span>Hip Hop</span> 
-                       <span className="text-white">80 - 100 BPM</span>
-                   </li>
-                   <li className="flex justify-between border-b border-zinc-800 pb-2">
-                       <span>Resting Heart Rate</span> 
-                       <span className="text-white">60 - 100 BPM</span>
-                   </li>
+                   <li className="flex justify-between border-b border-zinc-800 pb-2"><span>Dubstep</span> <span className="text-white">140 BPM</span></li>
+                   <li className="flex justify-between border-b border-zinc-800 pb-2"><span>House</span> <span className="text-white">120 - 130 BPM</span></li>
+                   <li className="flex justify-between border-b border-zinc-800 pb-2"><span>Hip Hop</span> <span className="text-white">80 - 100 BPM</span></li>
+                   <li className="flex justify-between border-b border-zinc-800 pb-2"><span>Heart (Rest)</span> <span className="text-white">60 - 100 BPM</span></li>
                 </ul>
-                
-                <div className="mt-6 pt-6 border-t border-zinc-800">
-                    <h3 className="text-white font-bold mb-2 flex items-center gap-2 text-sm">
-                       <Activity size={16} className="text-emerald-500" /> Stability Stat
-                    </h3>
-                    <p className="text-[10px] text-zinc-500 leading-relaxed">
-                        The <strong>Jitter</strong> value measures how consistent your taps are. Lower is better. Professional drummers typically score below ±15ms.
-                    </p>
-                </div>
              </div>
           </div>
        </div>
-
-       {/* SEO Rich Content */}
-       <article className="prose prose-invert max-w-none border-t border-zinc-800 pt-12">
-           <h2 className="flex items-center gap-3 text-2xl font-bold text-white">
-               <Clock className="text-emerald-500" />
-               What is Beats Per Minute (BPM)?
-           </h2>
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-               <div>
-                   <p className="text-zinc-400 text-sm leading-relaxed">
-                       <strong>Beats Per Minute (BPM)</strong> is a unit of measure used to express the tempo of music or the rate of a heartbeat. It simply counts how many beats occur in a sixty-second interval.
-                   </p>
-                   <h3 className="text-lg font-bold text-white mt-6 mb-2">How to Use This Tool</h3>
-                   <ul className="list-disc pl-5 space-y-2 text-zinc-400 text-sm">
-                       <li>Listen to the music or feel your pulse.</li>
-                       <li>Tap the <strong>SPACEBAR</strong> or click the box in time with the beat.</li>
-                       <li>Keep tapping for at least 5-10 seconds to get a stable average.</li>
-                       <li>Use the <strong>RESET</strong> button to start over for a new song.</li>
-                   </ul>
-               </div>
-               <div>
-                   <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                       <HeartPulse className="text-red-500" size={20} />
-                       Medical & Fitness Use
-                   </h3>
-                   <p className="text-zinc-400 text-sm leading-relaxed mb-4">
-                       While primarily a musical tool, a BPM counter can serve as a quick manual heart rate monitor. By tapping in sync with your pulse, you can estimate your heart rate without a smartwatch.
-                   </p>
-                   <div className="bg-zinc-900 p-4 rounded border border-zinc-800 text-xs text-zinc-500 font-mono">
-                       <strong>Target Zones:</strong><br/>
-                       Resting: 60-100 BPM<br/>
-                       Fat Burn: 120-140 BPM<br/>
-                       Cardio: 150-180 BPM
-                   </div>
-               </div>
-           </div>
-       </article>
     </div>
   );
 }

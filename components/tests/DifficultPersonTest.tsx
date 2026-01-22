@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { UserX, RefreshCcw, Skull, ShieldAlert, HeartHandshake } from 'lucide-react';
 import { saveStat } from '../../lib/core';
@@ -80,7 +79,7 @@ const DifficultPersonTest: React.FC = () => {
   };
 
   const finishTest = (finalScores: Record<string, number>) => {
-      const totalRaw = Object.values(finalScores).reduce((a: number, b: number) => a + b, 0);
+      const totalRaw = (Object.values(finalScores) as number[]).reduce((a, b) => a + b, 0);
       const avg = Math.round(totalRaw / SCENARIOS.length);
       
       saveStat('difficult-person-test', avg);
@@ -95,7 +94,7 @@ const DifficultPersonTest: React.FC = () => {
       }));
   };
 
-  const totalScore = Math.round(Object.values(scores).reduce((a: number, b: number) => a + b, 0) / SCENARIOS.length);
+  const totalScore = Math.round((Object.values(scores) as number[]).reduce((a, b) => a + b, 0) / SCENARIOS.length);
 
   // Dynamic "Dark Core" color based on slider
   const getCoreColor = () => {
