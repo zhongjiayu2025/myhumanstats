@@ -102,7 +102,11 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(searchSchema) }}
         />
-        {/* Point 3: Fallback for Image SEO if JS fails */}
+        {/* Performance Optimization: Preconnect to Image CDN */}
+        <link rel="preconnect" href="https://images.unsplash.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://images.unsplash.com" />
+        
+        {/* Fallback for Image SEO if JS fails */}
         <noscript>
           <img 
             src="https://myhumanstats.org/logo.svg" 
