@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { ChevronRight, Circle } from 'lucide-react';
 import { TestDefinition } from '@/types';
 import { getStats } from '@/lib/core';
@@ -14,7 +14,6 @@ interface TestCardProps {
 }
 
 const TestCard: React.FC<TestCardProps> = ({ test, index }) => {
-  const router = useRouter();
   const [score, setScore] = useState<number | undefined>(undefined);
   const [isHovered, setIsHovered] = useState(false);
   
@@ -35,12 +34,12 @@ const TestCard: React.FC<TestCardProps> = ({ test, index }) => {
   const hasScore = score !== undefined;
 
   return (
-    <div 
+    <Link 
+      href={`/test/${test.id}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      onClick={() => router.push(`/test/${test.id}`)}
       className={`
-        relative min-h-[180px] p-6 cursor-pointer transition-all duration-300 group
+        block relative min-h-[180px] p-6 cursor-pointer transition-all duration-300 group
         clip-corner-sm border
         ${hasScore 
            ? 'bg-primary-900/10 border-primary-500/40' 
@@ -82,7 +81,7 @@ const TestCard: React.FC<TestCardProps> = ({ test, index }) => {
             </div>
          </div>
       )}
-    </div>
+    </Link>
   );
 };
 
