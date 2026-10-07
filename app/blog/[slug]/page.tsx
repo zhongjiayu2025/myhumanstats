@@ -75,7 +75,7 @@ export default async function BlogPost({ params }: Props) {
     "dateModified": new Date(post.date).toISOString(),
     "author": {
       "@type": "Organization",
-      "name": "MyHumanStats Research Team",
+      "name": "MyHumanStats",
       "url": "https://myhumanstats.org"
     },
     "publisher": {
