@@ -23,11 +23,13 @@ const ADHDTest: React.FC = () => {
   
   // RTV Analysis
   const [reactionTimes, setReactionTimes] = useState<{trial: number, ms: number}[]>([]);
-  const [stimulusTime, setStimulusTime] = useState(0);
+  const stimulusTimeRef = useRef(0);
   const [distracted, setDistracted] = useState(false);
 
   const TOTAL_TRIALS = 15;
   const timerRef = useRef<number | null>(null);
+  const trialRef = useRef(0);
+  const inputLockedRef = useRef(false);
 
   // Quiz State
   const [quizScore, setQuizScore] = useState(0);
@@ -41,17 +43,24 @@ const ADHDTest: React.FC = () => {
 
   // --- GO / NO-GO LOGIC ---
   const startGoNoGo = () => {
+      if (timerRef.current !== null) clearTimeout(timerRef.current);
+      trialRef.current = 0;
+      inputLockedRef.current = false;
       setPhase('gonogo');
+      setGonogoState('wait');
       setTrial(0);
       setImpulseErrors(0);
       setOmissionErrors(0);
       setReactionTimes([]);
-      setTimeout(scheduleTrial, 500);
+      setQuizScore(0);
+      setQIndex(0);
+      timerRef.current = window.setTimeout(scheduleTrial, 500);
   };
 
   const scheduleTrial = () => {
       if (timerRef.current) clearTimeout(timerRef.current);
       
+      inputLockedRef.current = false;
       setGonogoState('wait');
       setDistracted(false);
       
@@ -59,7 +68,7 @@ const ADHDTest: React.FC = () => {
       const delay = 1500 + Math.random() * 2000;
       
       // Distraction: Flash screen white briefly during wait?
-      if (Math.random() > 0.7 && trial > 3) {
+      if (Math.random() > 0.7 && trialRef.current > 3) {
           setTimeout(() => {
               setDistracted(true);
               setTimeout(() => setDistracted(false), 100);
@@ -70,18 +79,17 @@ const ADHDTest: React.FC = () => {
           // 30% chance of No-Go (Red)
           const isNoGo = Math.random() < 0.3;
           setGonogoState(isNoGo ? 'nogo' : 'go');
-          setStimulusTime(performance.now());
+          stimulusTimeRef.current = performance.now();
           
           // Reaction window: 800ms
           timerRef.current = window.setTimeout(() => {
-              if (isNoGo) {
-                  // Correctly ignored No-Go
-                  handleSuccess(false); 
-              } else {
-                  // Missed Go (Inattention)
-                  setOmissionErrors(prev => prev + 1);
-                  nextTrial(); 
-              }
+              inputLockedRef.current = true;
+            if (isNoGo) {
+                handleSuccess(false);
+            } else {
+                setOmissionErrors(prev => prev + 1);
+                nextTrial();
+            }
           }, 1000); 
       }, delay);
   };
@@ -93,7 +101,8 @@ const ADHDTest: React.FC = () => {
         }
       }
       
-      if (phase !== 'gonogo' || gonogoState === 'wait') return;
+      if (phase !== 'gonogo' || (gonogoState !== 'go' && gonogoState !== 'nogo') || inputLockedRef.current) return;
+      inputLockedRef.current = true;
 
       if (timerRef.current) clearTimeout(timerRef.current);
       
@@ -115,22 +124,24 @@ const ADHDTest: React.FC = () => {
 
   const handleSuccess = (wasClick: boolean) => {
       if (wasClick) {
-          const rt = Math.round(performance.now() - stimulusTime);
-          setReactionTimes(prev => [...prev, { trial: trial + 1, ms: rt }]);
+          const rt = Math.round(performance.now() - stimulusTimeRef.current);
+          setReactionTimes(prev => [...prev, { trial: trialRef.current + 1, ms: rt }]);
       }
       nextTrial();
   };
 
   const flashFeedback = () => {
       setGonogoState('feedback');
-      setTimeout(nextTrial, 300);
+      timerRef.current = window.setTimeout(nextTrial, 300);
   };
 
   const nextTrial = () => {
-      if (trial + 1 >= TOTAL_TRIALS) {
+      trialRef.current += 1;
+      if (trialRef.current >= TOTAL_TRIALS) {
+          setGonogoState('feedback');
           setPhase('quiz');
       } else {
-          setTrial(t => t + 1);
+          setTrial(trialRef.current);
           scheduleTrial();
       }
   };
@@ -158,12 +169,13 @@ const ADHDTest: React.FC = () => {
       const symptomScore = (finalQuizRaw / (ASRS_QUESTIONS.length * 4)) * 100;
       
       const composite = Math.min(100, Math.round((impulseScore * 0.3) + (rtvScore * 0.3) + (symptomScore * 0.4)));
-      saveStat('adhd-test', composite);
+      // This is a non-clinical practice index, not ADHD symptom severity.
+       saveStat('adhd-test', Math.max(0, 100 - composite));
       setPhase('result');
   };
 
   return (
-    <div className="max-w-2xl mx-auto select-none" onMouseDown={phase === 'gonogo' ? handleInput : undefined}>
+    <div className="max-w-2xl mx-auto select-none" onPointerDown={phase === 'gonogo' ? handleInput : undefined}>
        
        {phase === 'intro' && (
            <div className="text-center py-12 animate-in fade-in">
@@ -207,7 +219,7 @@ const ADHDTest: React.FC = () => {
        {phase === 'quiz' && (
            <div className="py-12 animate-in slide-in-from-right">
                <div className="flex justify-between items-center mb-8 px-4 border-b border-zinc-800 pb-4">
-                   <span className="text-xs font-mono text-zinc-500">PART 2: SYMPTOMS</span>
+                   <span className="text-xs font-mono text-zinc-500">PART 2: SELF-REFLECTION (NOT A DIAGNOSIS)</span>
                    <span className="text-xs font-mono text-amber-500">Q.{qIndex + 1}</span>
                </div>
 
@@ -262,10 +274,13 @@ const ADHDTest: React.FC = () => {
 
                <div className="bg-zinc-900/50 p-6 rounded border border-zinc-800 text-left text-sm text-zinc-400 mb-8">
                    <strong className="text-white block mb-2">Task Consistency:</strong>
-                   Your Reaction Time Variability graph {Math.max(...reactionTimes.map(r=>r.ms)) - Math.min(...reactionTimes.map(r=>r.ms)) > 200 ? "varies across attempts; distractions, practice and input hardware may affect the result." : "is relatively stable in this short browser task."}
+                   Your Reaction Time Variability graph {reactionTimes.length < 2 ? "has too few successful responses to estimate consistency."
+                    : Math.max(...reactionTimes.map(r=>r.ms)) - Math.min(...reactionTimes.map(r=>r.ms)) > 200
+                      ? "varies across attempts; practice, distraction and input hardware may affect the result."
+                      : "is relatively stable in this short browser exercise."}
                </div>
 
-               <button onClick={() => window.location.reload()} className="btn-secondary flex items-center gap-2 justify-center mx-auto">
+               <button onClick={startGoNoGo} className="btn-secondary flex items-center gap-2 justify-center mx-auto">
                    <RotateCcw size={16} /> Retake Assessment
                </button>
            </div>
