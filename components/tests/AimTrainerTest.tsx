@@ -318,9 +318,9 @@ const AimTrainerTest: React.FC = () => {
       } else {
           finalScore = Math.min(100, Math.round((trackingScore / 30000) * 100));
       }
-      saveStat('aim-trainer', finalScore);
+      saveStat('aim-trainer-test', finalScore, mode === 'gridshot' ? score : trackingScore);
       
-      const hist = getHistory('aim-trainer');
+      const hist = getHistory('aim-trainer-test');
       setHistoryData(hist.slice(-20).map((h, i) => ({ i, score: h.score })));
   };
 
@@ -387,10 +387,8 @@ const AimTrainerTest: React.FC = () => {
 
                <div 
                   ref={containerRef}
-                  onMouseDown={handleBackgroundClick}
-                  onMouseMove={handleMouseMove}
-                  onTouchStart={(e) => { handleBackgroundClick(e); handleMouseMove(e); }}
-                  onTouchMove={handleMouseMove}
+                  onPointerDown={handleBackgroundClick}
+                   onPointerMove={handleMouseMove}
                   className="w-full h-[50vh] md:h-[500px] bg-zinc-950 border border-zinc-800 relative overflow-hidden cursor-crosshair shadow-[inset_0_0_50px_rgba(0,0,0,0.5)] rounded-lg touch-none"
                >
                    <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:50px_50px] pointer-events-none"></div>
@@ -408,8 +406,7 @@ const AimTrainerTest: React.FC = () => {
                    {mode === 'gridshot' && targets.map(t => (
                        <div
                           key={t.id}
-                          onMouseDown={(e) => handleTargetClick(e, t.id, t.born)}
-                          onTouchStart={(e) => handleTargetClick(e, t.id, t.born)}
+                          onPointerDown={(e) => handleTargetClick(e, t.id, t.born)}
                           className="absolute w-16 h-16 -translate-x-1/2 -translate-y-1/2 rounded-full bg-zinc-900 border-2 border-primary-500 flex items-center justify-center cursor-pointer active:scale-95 transition-transform duration-75 z-10 animate-in zoom-in-50 duration-100 group touch-manipulation touch-none"
                           style={{ left: `${t.x}%`, top: `${t.y}%` }}
                        >
