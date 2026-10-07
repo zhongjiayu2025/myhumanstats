@@ -623,7 +623,7 @@ export const TESTS: TestDefinition[] = [
     isImplemented: true,
     seoContent: `
       <h2>Emotional Intelligence Quotient (EQ)</h2>
-      <p>Unlike IQ, which measures cognitive intelligence, EQ measures your ability to identify, evaluate, control, and express emotions. High EQ is strongly correlated with leadership ability and relationship satisfaction.</p>
+      <p>The expression 'emotional intelligence' describes skills such as recognizing and responding to emotion. This brief browser questionnaire can prompt reflection, but does not provide a standardized emotional-intelligence score.</p>
     `
   },
   {
@@ -634,9 +634,10 @@ export const TESTS: TestDefinition[] = [
     iconName: 'AlertCircle',
     estimatedTime: '2 min',
     isImplemented: true,
-    citations: [
-        "Spitzer, R. L., et al. (2006). A brief measure for assessing generalized anxiety disorder: the GAD-7. Archives of Internal Medicine."
-    ]
+    seoContent: `
+      <h2>How this anxiety test activity works</h2><p>This free browser activity combines a ten-second pointer-control exercise with four optional questions about worry and relaxation. The movement score describes pointer travel in screen pixels, and the questions provide an informal self-reflection index.</p><h3>Is this the GAD-7?</h3><p>No. A four-question selection is not the validated seven-item GAD-7, and pointer movement does not measure anxiety. The result cannot diagnose, confirm or rule out an anxiety disorder. Consult a qualified professional for persistent health concerns.</p>
+    `,
+
   },
   {
     id: 'chronotype-test',
@@ -646,6 +647,9 @@ export const TESTS: TestDefinition[] = [
     iconName: 'Moon',
     estimatedTime: '2 min',
     isImplemented: true,
+    seoContent: `
+      <h2>Exploring your preferred daily routine</h2><p>Chronotype refers broadly to differences in preferred times for sleep and activity. This informal quiz asks about habits and schedules, then offers a playful animal-style description.</p><h3>Are the animal categories scientific?</h3><p>Not as diagnostic categories. Real sleep timing also depends on work schedules, age, light exposure and sleep debt. Use the result for reflection, not to determine medical sleep needs.</p>
+    `,
     citations: [
         "Breus, M. J. (2016). The Power of When. Little, Brown Spark."
     ]
@@ -657,7 +661,10 @@ export const TESTS: TestDefinition[] = [
     description: 'Explore empathy-related situations in an informal self-reflection questionnaire.',
     iconName: 'Users',
     estimatedTime: '3 min',
-    isImplemented: true
+    isImplemented: true,
+    seoContent: `
+      <h2>Reflecting on empathy</h2><p>The questionnaire presents everyday situations and asks how you might think or respond. Questions may prompt reflection on understanding another person's perspective and emotional experience.</p><h3>What does the score mean?</h3><p>This short questionnaire is not a validated psychological inventory. Responses depend on context, culture and interpretation. Avoid using the result to judge another person's character.</p>
+    `,
   },
   {
     id: 'procrastination-test',
@@ -666,7 +673,10 @@ export const TESTS: TestDefinition[] = [
     description: 'Analyze your time management habits and procrastination triggers.',
     iconName: 'Clock',
     estimatedTime: '5 min',
-    isImplemented: true
+    isImplemented: true,
+    seoContent: `
+      <h2>What does the procrastination exercise explore?</h2><p>The tool combines a short waiting challenge, a time-estimation activity and questions about everyday task habits. The aim is to help you reflect on how you approach small decisions.</p><h3>Interpreting the outcome</h3><p>Practice, attention, device timing and distractions influence the interactive results. A score from a brief browser task cannot diagnose a mental health condition or establish a stable personality trait.</p>
+    `,
   },
   {
     id: 'difficult-person-test',
@@ -675,7 +685,10 @@ export const TESTS: TestDefinition[] = [
     description: 'Reflect on interpersonal habits with a playful quiz; scores do not diagnose or label anyone.',
     iconName: 'UserX',
     estimatedTime: '4 min',
-    isImplemented: true
+    isImplemented: true,
+    seoContent: `
+      <h2>Self-reflection on interpersonal habits</h2><p>This informal questionnaire asks about communication, frustration and how you respond to other people. It can start a useful conversation about habits and preferences.</p><h3>Is “difficult person” a diagnosis?</h3><p>No. There is no clinical diagnosis based on this online activity, and a short quiz cannot establish how others perceive you. Results are playful and context-dependent.</p>
+    `,
   },
   {
     id: 'social-battery-test',
@@ -684,7 +697,10 @@ export const TESTS: TestDefinition[] = [
     description: 'Introvert, Extrovert, or Ambivert? Check your social energy drain rate.',
     iconName: 'Battery',
     estimatedTime: '3 min',
-    isImplemented: true
+    isImplemented: true,
+    seoContent: `
+      <h2>What does “social battery” mean?</h2><p>Social battery is an informal way to describe feeling refreshed or tired after different interactions. The quiz presents familiar social situations and summarizes the preferences you select.</p><h3>How should you use the result?</h3><p>Preferences can change with sleep, context and company. This is a reflective quiz, not a medical measure or a fixed classification of your personality.</p>
+    `,
   },
   {
     id: 'left-right-brain-test',
@@ -693,6 +709,9 @@ export const TESTS: TestDefinition[] = [
     description: 'A playful learning-style quiz, not a scientifically valid measure of brain-hemisphere dominance.',
     iconName: 'Split',
     estimatedTime: '4 min',
-    isImplemented: true
+    isImplemented: true,
+    seoContent: `
+      <h2>Is there a left-brain or right-brain personality?</h2><p>The popular idea that analytical people are “left-brained” and creative people are “right-brained” is an oversimplification. Many complex mental activities involve networks across both brain hemispheres.</p><h3>What is this quiz for?</h3><p>Enjoy it as a playful discussion of learning preferences. The result does not measure neurological dominance, intelligence or brain health.</p>
+    `,
   }
 ];
