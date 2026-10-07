@@ -6,8 +6,9 @@ import { Metadata } from 'next';
 import Breadcrumbs from '@/components/Breadcrumbs';
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/tools/' },
   title: "Tools & Utilities | MyHumanStats",
-  description: "Free online utilities for hardware calibration and measurement. Hz Test, Mic Test, Tone Generator, and more."
+  description: "Free browser-based utilities for exploring screen, microphone and audio behavior. Hz Test, Mic Test, Tone Generator, and more."
 };
 
 const ToolsIndex = () => {

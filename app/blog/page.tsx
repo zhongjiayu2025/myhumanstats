@@ -7,6 +7,7 @@ import { Metadata } from 'next';
 import { BLOG_POSTS } from '@/lib/blogData';
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/blog/' },
   title: "Research Log | MyHumanStats",
   description: "Deep dives into the science of human performance. Read articles about hearing loss, reaction time science, color blindness types, and more."
 };

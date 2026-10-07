@@ -6,8 +6,9 @@ import { ArrowRight, Crosshair, Zap } from 'lucide-react';
 import HzCheckClient from '@/components/tools/HzCheckClient';
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/tools/hz-test/' },
   title: "Screen Refresh Rate Test | Hz Checker",
-  description: "Check your monitor's real refresh rate (Hz) and frame time latency. Visualize motion smoothness and motion blur.",
+  description: "Estimate the visible browser animation frame rate (Hz) and observe frame pacing; not a calibrated hardware refresh-rate measurement.",
   keywords: ["hz test", "refresh rate", "monitor test", "fps counter", "screen check"]
 };
 

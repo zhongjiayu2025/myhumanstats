@@ -6,6 +6,7 @@ import { ArrowRight, Mic, Music } from 'lucide-react';
 import MicTestClient from '@/components/tools/MicTestClient';
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/tools/mic-test/' },
   title: "Online Microphone Test | Visualizer & Recorder",
   description: "Test your microphone online. Visualize audio input, check volume levels, and record a playback clip to ensure your mic is working.",
   keywords: ["mic test", "microphone test", "online voice recorder", "audio input test"]
