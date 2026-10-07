@@ -209,8 +209,7 @@ const StroopTest: React.FC = () => {
                 {COLORS.map(c => (
                    <button 
                       key={c.name}
-                      onMouseDown={(e) => { e.preventDefault(); handleAnswer(c.name); }}
-                      onTouchStart={(e) => { e.preventDefault(); handleAnswer(c.name); }}
+                      onClick={() => handleAnswer(c.name)}
                       className="py-8 border border-zinc-700 bg-zinc-900 active:bg-zinc-700 text-white font-bold uppercase tracking-widest clip-corner-sm relative group active:scale-[0.98] transition-transform no-tap-highlight"
                    >
                       <span className="text-xl">{c.name}</span>
