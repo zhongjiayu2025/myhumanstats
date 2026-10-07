@@ -102,28 +102,20 @@ const ReactionTimeTest: React.FC = () => {
     clearExistingTimeout();
     timeoutRef.current = window.setTimeout(() => {
       setGameState(GameState.READY);
-      startTimeRef.current = Date.now();
+      startTimeRef.current = performance.now();
       if (mode === 'audio') playStimulus();
     }, delay);
   };
 
-  const handleAction = (e: React.MouseEvent | React.TouchEvent) => {
+  const handleAction = (e: React.PointerEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>) => {
     // Prevent default to stop scrolling or zooming on rapid taps
-    if (e.cancelable && e.type !== 'mousedown') e.preventDefault(); 
+    if (e.cancelable) e.preventDefault(); 
     
     // Calculate click pos for ripple
-    let clientX, clientY;
-    if ('touches' in e) {
-        clientX = e.touches[0].clientX;
-        clientY = e.touches[0].clientY;
-    } else {
-        clientX = (e as React.MouseEvent).clientX;
-        clientY = (e as React.MouseEvent).clientY;
-    }
-    // Relative to container logic would be better, but for full screen effect:
-    const target = e.currentTarget as HTMLElement;
-    const rect = target.getBoundingClientRect();
-    setClickPos({ x: clientX - rect.left, y: clientY - rect.top });
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = 'clientX' in e ? e.clientX - rect.left : rect.width / 2;
+    const y = 'clientY' in e ? e.clientY - rect.top : rect.height / 2;
+    setClickPos({ x, y });
 
     if (gameState === GameState.IDLE || gameState === GameState.RESULT || gameState === GameState.CHEAT) {
         if (!showSettings) resetTest();
@@ -147,7 +139,7 @@ const ReactionTimeTest: React.FC = () => {
     }
 
     if (gameState === GameState.READY) {
-        const endTime = Date.now();
+        const endTime = performance.now();
         const rawDiff = endTime - startTimeRef.current;
         // Apply manual hardware lag compensation
         const diff = Math.max(0, rawDiff - inputLag);
@@ -180,7 +172,7 @@ const ReactionTimeTest: React.FC = () => {
             // Save & Load History
             const score = Math.max(0, Math.min(100, Math.round(100 - (avg - 150) / 3.5)));
             // IMPORTANT: Saving RAW average now
-            saveStat('reaction-time', score, avg);
+            saveStat('reaction-time-test', score, avg);
             
             const rawHist = getHistory('reaction-time');
             setLongTermHistory(rawHist);
@@ -353,9 +345,8 @@ const ReactionTimeTest: React.FC = () => {
           <div 
             role="button"
             tabIndex={0}
-            onMouseDown={handleAction}
-            onTouchStart={handleAction}
-            onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') handleAction(e as any); }}
+            onPointerDown={handleAction}
+            onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleAction(e); } }}
             className={`
                 relative w-full h-[50vh] min-h-[300px] md:h-[400px] rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-colors duration-150 shadow-2xl overflow-hidden group touch-none
                 ${ui.bg}

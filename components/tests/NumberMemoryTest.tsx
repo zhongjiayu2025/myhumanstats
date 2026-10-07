@@ -133,7 +133,10 @@ const NumberMemoryTest: React.FC = () => {
           setLevel(l => l + 1);
           setTimeout(() => startLevel(level + 1), 200);
       } else {
-          saveStat('number-memory', level);
+          // Level 1 presents three digits. Save a bounded practice score for
+          // the shared dashboard and the longest successful span separately.
+          const longestCorrectSpan = Math.max(0, level + 1);
+          saveStat('number-memory-test', Math.min(100, (level - 1) * 5), longestCorrectSpan);
           setPhase('result');
       }
   };

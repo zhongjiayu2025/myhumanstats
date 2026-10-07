@@ -271,13 +271,10 @@ const VisualMemoryTest: React.FC = () => {
                    }
 
                    return (
-                      <div 
-                         key={i}
-                         onMouseDown={() => handleTileClick(i)}
-                         onTouchStart={(e) => { e.preventDefault(); handleTileClick(i); }}
+                      <button type="button" key={i} aria-label={`Memory tile ${i + 1}`} onClick={() => handleTileClick(i)}
                          className={`rounded-lg border-2 transition-all duration-150 ${bg} ${shadow}`}
                          style={{ transform }}
-                      ></div>
+                       ></button>
                    );
                 })}
              </div>

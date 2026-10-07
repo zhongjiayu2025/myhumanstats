@@ -205,7 +205,7 @@ const SpacebarSpeedTest: React.FC = () => {
      if (mode === 'sprint') {
          const cps = count / 5;
          const score = Math.min(100, Math.round((cps / 10) * 100)); 
-         saveStat('spacebar-speed', score);
+         saveStat('spacebar-speed-test', score, cps);
      }
   };
 
@@ -251,13 +251,10 @@ const SpacebarSpeedTest: React.FC = () => {
        {/* Giant Tap Area */}
        {!finished && (
            <div 
-              className="absolute inset-0 z-20 cursor-pointer md:pointer-events-none no-tap-highlight"
-              onTouchStart={(e) => { e.preventDefault(); handleInput(); }}
-              onMouseDown={(e) => { 
-                  if(window.innerWidth > 768) { 
-                      e.preventDefault(); handleInput(); 
-                  }
-              }}
+              className="absolute inset-0 z-20 cursor-pointer touch-none no-tap-highlight"
+              role="button" tabIndex={0}
+              aria-label="Press Space or tap to count a spacebar press"
+              onPointerDown={(e) => { e.preventDefault(); handleInput(); }}
            ></div>
        )}
 

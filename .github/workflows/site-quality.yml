@@ -27,6 +27,8 @@ jobs:
         run: npx tsc --noEmit
       - name: Static export
         run: npm run build
+      - name: Audit all 35 test registrations, score IDs and static pages
+        run: node scripts/audit-tests.mjs
       - name: Verify SEO and core static routes
         run: |
           test -f out/index.html

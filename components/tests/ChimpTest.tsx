@@ -255,8 +255,9 @@ const ChimpTest: React.FC = () => {
                    {!isRevealing && nodes.map((node) => (
                        <div
                           key={node.val}
-                          onMouseDown={(e) => { e.preventDefault(); handleNodeClick(node); }}
-                          onTouchStart={(e) => { e.preventDefault(); handleNodeClick(node); }}
+                          role="button" tabIndex={0} aria-label={`Select number ${node.val}`}
+                           onPointerDown={(e) => { e.preventDefault(); handleNodeClick(node); }}
+                           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleNodeClick(node); } }}
                           className={`
                               absolute flex items-center justify-center rounded-lg cursor-pointer transition-all duration-100 active:scale-90 z-20
                               ${isMasked 

@@ -150,10 +150,9 @@ const ProcrastinationTest: React.FC = () => {
                {!impulseFail ? (
                    <div className="relative">
                        <button
-                          onMouseDown={startHold}
-                          onMouseUp={releaseHold}
-                          onTouchStart={(e) => { e.preventDefault(); startHold(); }}
-                          onTouchEnd={releaseHold}
+                          onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); startHold(); }}
+                           onPointerUp={releaseHold}
+                           onPointerCancel={releaseHold}
                           className={`w-32 h-32 rounded-full border-4 flex flex-col items-center justify-center transition-all active:scale-95 ${holding ? 'border-primary-500 bg-primary-900/20' : 'border-zinc-600 bg-zinc-900'}`}
                        >
                            <Hand size={32} className={holding ? 'text-primary-500' : 'text-zinc-500'} />
