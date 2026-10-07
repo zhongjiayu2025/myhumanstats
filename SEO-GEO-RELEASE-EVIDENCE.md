@@ -46,3 +46,12 @@ No new languages, keyword-variant pages, paid APIs, changed indexed test slugs, 
 | Safari/iOS hardware, Android real microphone/audio | NOT VERIFIED | real-device acceptance matrix |
 | Core Web Vitals lab/field LCP/INP/CLS | NOT MEASURED | real site and CrUX/lab measurement |
 | New GSC clicks/CTR or AI-search visibility | NOT YET MEASURED | 28/90-day GSC export; this site not in the currently linked GSC list |
+
+## L2 incremental technical integrity pass — 2026-10-07
+Governing source: `chenmu2024/Website-Starter-Standard`, `SEO-GEO-QUALITY-GATE.md` technical and raw HTML sections.
+
+The L1 raw-HTML test, 35 test registry/score check, six utility canonical validation, schema parity and baseline artifact remain mandatory. Additional `scripts/audit-internal-links.mjs` checks exported HTML links, sitemap destinations and local image references for build-time 404s. It does not claim remote-image availability, actual HTTP redirect semantics, browser event correctness, or live field CWV.
+
+Removed misleading homepage `iq test` meta-keyword because there is no validated IQ test; this is not an owner-locked approved primary keyword. Existing owner-approved search terms and their exact canonical routes remain unchanged. Aligned tool hub descriptions with actually available non-calibrated browser measurements.
+
+Gate outcome and Cloudflare release SHA must be filled with actual CI status. Follow-up: obtain first-party connected GSC for page/query changes; do not infer traffic gains from a build.

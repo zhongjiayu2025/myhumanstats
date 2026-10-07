@@ -16,7 +16,7 @@ const ToolsIndex = () => {
      {
         id: 'refresh-rate',
         title: 'Hz Checker',
-        desc: 'Check your screen Refresh Rate and Frame Time latency.',
+        desc: 'Estimate browser animation frame rate and frame pacing, not calibrated monitor Hz.',
         icon: Zap,
         color: 'text-yellow-500',
         path: '/tools/hz-test'
@@ -32,7 +32,7 @@ const ToolsIndex = () => {
      {
         id: 'tone-generator',
         title: 'Tone Generator',
-        desc: 'Generate pure sine waves from 1Hz to 22kHz. Audio system testing.',
+        desc: 'Generate browser sine tones at a comfortable volume. Actual output depends on your audio equipment.',
         icon: Music,
         color: 'text-primary-500',
         path: '/tools/tone-generator'
@@ -48,7 +48,7 @@ const ToolsIndex = () => {
      {
         id: 'dead-pixel',
         title: 'Dead Pixel Test',
-        desc: 'Flash colors to find dead or stuck pixels on your screen.',
+        desc: 'Display solid colors to help you spot potentially stuck pixels.',
         icon: Monitor,
         color: 'text-rose-500',
         path: '/tools/dead-pixel-test'
@@ -56,7 +56,7 @@ const ToolsIndex = () => {
      {
         id: 'stereo-test',
         title: 'Stereo Check',
-        desc: 'Test Left/Right audio channels and speaker polarity.',
+        desc: 'Explore left/right headphone playback using comfortable-volume browser tones.',
         icon: Headphones,
         color: 'text-amber-500',
         path: '/tools/stereo-test'
