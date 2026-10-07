@@ -332,7 +332,6 @@ const HearingAgeTest: React.FC = () => {
                                   <YAxis stroke="#555" fontSize={10} tickFormatter={(val) => `${val/1000}k`} />
                                   <Tooltip contentStyle={{ backgroundColor: '#000' }} itemStyle={{ color: '#fff' }} />
                                   <Area type="linear" dataKey="freq" stroke="#10b981" fill="#10b981" fillOpacity={0.12} />
-                                  {results.right && <ReferenceLine y={results.right} stroke="#ef4444" strokeDasharray="3 3" label="R" />}
                               </AreaChart>
                           </ResponsiveContainer>
                       </div>
