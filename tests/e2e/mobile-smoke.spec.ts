@@ -17,6 +17,7 @@ test('search landing pages remain usable at 390px mobile viewport', async ({ pag
 test('mobile CPS counts one touch and finishes a one-second test', async ({ page }) => {
   await page.goto('/test/cps-test/');
   await page.getByRole('button', { name: '1s', exact: true }).click();
+  await expect(page.getByText('Initialize Profile?')).toHaveCount(0);
   const surface = page.getByRole('button', { name: /Click, tap, Space or Enter to measure click speed/i });
   await expect(surface).toBeVisible();
   await surface.tap();
@@ -38,5 +39,5 @@ test('microphone permission denial is explained and no capture is required for p
   await page.goto('/tools/mic-test/');
   await expect(page.getByRole('heading', { name: /Microphone Test/i })).toBeVisible();
   await page.getByRole('button', { name: /Start Monitoring/i }).click();
-  await expect(page.getByRole('alert')).toContainText(/permission|microphone|supported browser/i);
+  await expect(page.locator('p[role="alert"]').filter({ hasText: /permission|microphone|supported browser/i }).first()).toBeVisible();
 });
