@@ -48,26 +48,22 @@ const CpsTest: React.FC = () => {
 
   const timerRef = useRef<number | null>(null);
   const intervalRef = useRef<number | null>(null);
-  const animRef = useRef<number | null>(null);
+  const clicksRef = useRef(0);
+  const activeRef = useRef(false);
+  const finishedRef = useRef(false);
   const clickTimestampsRef = useRef<number[]>([]);
   const startTimeRef = useRef<number>(0);
   const heatmapRef = useRef<HTMLCanvasElement>(null);
 
-  // Particle Loop
+  // Limit particle updates to active tests and 20fps on slower mobile hardware.
   useEffect(() => {
-      const loop = () => {
-          setParticles(prev => prev.map(p => ({
-              ...p,
-              x: p.x + p.vx,
-              y: p.y + p.vy,
-              vy: p.vy + 0.5 // Gravity
-          })).filter(p => p.y < 500)); // Cull
-          
-          animRef.current = requestAnimationFrame(loop);
-      };
-      animRef.current = requestAnimationFrame(loop);
-      return () => { if (animRef.current) cancelAnimationFrame(animRef.current); };
-  }, []);
+    if (!active) return;
+    const interval = window.setInterval(() => setParticles(prev =>
+      prev.map(p => ({ ...p, x: p.x + p.vx, y: p.y + p.vy, vy: p.vy + 0.5 }))
+        .filter(p => p.y < 500)
+    ), 50);
+    return () => window.clearInterval(interval);
+  }, [active]);
 
   // Draw Heatmap on Result
   useEffect(() => {
@@ -109,14 +105,18 @@ const CpsTest: React.FC = () => {
       }
   }, [finished, clickPoints]);
 
+  // A monotonic timer prevents inactive/background tabs from extending test time.
   useEffect(() => {
-    if (active && timeLeft > 0) {
-       timerRef.current = window.setTimeout(() => setTimeLeft(t => Math.max(0, t - 0.1)), 100);
-    } else if (active && timeLeft <= 0) {
-       finish();
-    }
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, [active, timeLeft]);
+    if (!active) return;
+    const tick = () => {
+      const remaining = Math.max(0, targetTime - (performance.now() - startTimeRef.current) / 1000);
+      setTimeLeft(remaining);
+      if (remaining <= 0) finish();
+    };
+    const interval = window.setInterval(tick, 50);
+    tick();
+    return () => window.clearInterval(interval);
+  }, [active, targetTime]);
 
   // Live Chart Updater
   useEffect(() => {
@@ -133,53 +133,41 @@ const CpsTest: React.FC = () => {
       return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [active]);
 
-  const handleInteraction = (e: React.MouseEvent | React.TouchEvent) => {
-     if (finished) return;
-     if (e.cancelable && e.type === 'touchstart') e.preventDefault();
-     
-     // Coords relative to container
-     let clientX, clientY;
-     if ('touches' in e) {
-         clientX = e.touches[0].clientX;
-         clientY = e.touches[0].clientY;
-     } else {
-         clientX = (e as React.MouseEvent).clientX;
-         clientY = (e as React.MouseEvent).clientY;
-     }
-     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-     const x = clientX - rect.left;
-     const y = clientY - rect.top;
-
-     // Store click point
-     setClickPoints(prev => [...prev, { x, y, t: performance.now() }]);
-
-     // Spawn Particles
-     const newParticles = Array.from({length: 5}).map(() => ({
-         id: Math.random(),
-         x,
-         y,
-         vx: (Math.random() - 0.5) * 10,
-         vy: (Math.random() - 1) * 10,
-         color: Math.random() > 0.5 ? '#06b6d4' : '#ffffff'
-     }));
-     setParticles(prev => [...prev, ...newParticles]);
-
-     if (!active) {
-        setActive(true);
-        startTimeRef.current = performance.now();
-        setHistory([{ time: 0, rate: 0 }]);
-     }
-     
-     setClicks(c => c + 1);
-     clickTimestampsRef.current.push(performance.now());
+  const registerClick = (clientX: number, clientY: number, rect: DOMRect) => {
+    if (finishedRef.current) return;
+    const now = performance.now();
+    if (activeRef.current && now - startTimeRef.current >= targetTime * 1000) {
+      finish();
+      return;
+    }
+    const x = (clientX - rect.left) * 300 / Math.max(1, rect.width);
+    const y = (clientY - rect.top) * 160 / Math.max(1, rect.height);
+    setClickPoints(prev => [...prev, { x, y, t: now }]);
+    const spawned: Particle[] = Array.from({length: 3}, () => ({
+      id: Math.random(), x: clientX - rect.left, y: clientY - rect.top,
+      vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 1) * 10,
+      color: Math.random() > 0.5 ? '#06b6d4' : '#ffffff'
+    }));
+    setParticles(prev => [...prev.slice(-90), ...spawned]);
+    if (!activeRef.current) {
+      activeRef.current = true;
+      startTimeRef.current = now;
+      setActive(true);
+      setHistory([{ time: 0, rate: 0 }]);
+    }
+    clicksRef.current += 1;
+    setClicks(clicksRef.current);
+    clickTimestampsRef.current.push(now);
   };
 
   const finish = () => {
-     setActive(false);
-     setFinished(true);
-     setTimeLeft(0);
-     
-     const cps = clicks / targetTime;
+    if (finishedRef.current) return;
+    finishedRef.current = true;
+    activeRef.current = false;
+    setActive(false);
+    setFinished(true);
+    setTimeLeft(0);
+    const cps = clicksRef.current / targetTime;
      
      // Stability Calc
      const intervals = [];
@@ -195,15 +183,18 @@ const CpsTest: React.FC = () => {
      // Only save stat if standard 10s test (for leaderboard consistency mostly)
      if (targetTime === 10) {
          const score = Math.min(100, Math.round((cps / 12) * 100)); 
-         saveStat('cps-test', score);
+         saveStat('cps-test', score, cps);
      }
   };
 
-  const reset = () => {
-     setActive(false);
-     setFinished(false);
-     setClicks(0);
-     setTimeLeft(targetTime);
+  const reset = (duration = targetTime) => {
+    activeRef.current = false;
+    finishedRef.current = false;
+    clicksRef.current = 0;
+    setActive(false);
+    setFinished(false);
+    setClicks(0);
+    setTimeLeft(duration);
      setHistory([]);
      setParticles([]);
      setClickPoints([]);
@@ -212,9 +203,8 @@ const CpsTest: React.FC = () => {
   };
 
   const setDuration = (sec: number) => {
-      setTargetTime(sec);
-      setTimeLeft(sec);
-      reset();
+    setTargetTime(sec);
+    reset(sec);
   };
 
   const currentCPS = active ? (clicks / (targetTime - timeLeft + 0.001)).toFixed(1) : (clicks / targetTime).toFixed(1);
@@ -256,16 +246,23 @@ const CpsTest: React.FC = () => {
        {/* Click Area */}
        {!finished ? (
            <div 
-              onMouseDown={handleInteraction}
-              onTouchStart={handleInteraction}
+              role="button" tabIndex={0}
+               aria-label="Click, tap, Space or Enter to measure click speed"
+               onPointerDown={(e) => { e.preventDefault(); registerClick(e.clientX, e.clientY, e.currentTarget.getBoundingClientRect()); }}
+               onKeyDown={(e) => {
+                 if (e.key === ' ' || e.key === 'Enter') {
+                   e.preventDefault();
+                   if (e.repeat) return;
+                   const rect = e.currentTarget.getBoundingClientRect();
+                   registerClick(rect.left + rect.width / 2, rect.top + rect.height / 2, rect);
+                 }
+               }
               className={`
                  w-full h-64 tech-border bg-black relative overflow-hidden group transition-all duration-50 active:scale-[0.99] cursor-crosshair touch-none
                  ${active ? 'border-primary-500 shadow-[0_0_30px_rgba(34,211,238,0.1)]' : 'border-zinc-700 hover:bg-zinc-900'}
               `}
               // Shake effect proportional to CPS
-              style={{
-                  transform: active ? `translate(${Math.random() * Number(currentCPS) * 0.2}px, ${Math.random() * Number(currentCPS) * 0.2}px)` : 'none'
-              }}
+              style={{ touchAction: 'manipulation' }}
            >
               {/* Particles */}
               {particles.map(p => (
