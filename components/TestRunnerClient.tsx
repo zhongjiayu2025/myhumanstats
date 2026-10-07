@@ -202,7 +202,7 @@ export default function TestRunnerClient({ id }: { id: string }) {
 
              <div className="h-6 border-t border-zinc-800 bg-black flex items-center px-4 justify-between">
                 <span className="text-[9px] text-zinc-600 font-mono">MEMORY_USAGE: LOW</span>
-                <span className="text-[9px] text-zinc-600 font-mono">LATENCY: 0ms</span>
+                <span className="text-[9px] text-zinc-600 font-mono">LATENCY: DEVICE-DEPENDENT</span>
              </div>
           </div>
 
@@ -213,9 +213,9 @@ export default function TestRunnerClient({ id }: { id: string }) {
              <div className="tech-border bg-black/50 p-6 mb-8 border-l-4 border-l-primary-500">
                 <div className="flex items-center gap-3 mb-4">
                    <Microscope className="text-primary-500" size={20} />
-                   <h3 className="text-lg font-bold text-white uppercase tracking-wide">Clinical Relevance</h3>
+                   <h3 className="text-lg font-bold text-white uppercase tracking-wide">Background and Limitations</h3>
                 </div>
-                <p className="text-sm text-zinc-400 mb-4">Why does this metric matter in a physiological context?</p>
+                <p className="text-sm text-zinc-400 mb-4">Context for interpreting this educational browser exercise; not a clinical diagnosis.</p>
                 <ul className="space-y-3">
                    {testDef.clinicalRelevance.map((point, idx) => (
                       <li key={idx} className="flex gap-3 text-sm text-zinc-300">
@@ -246,11 +246,11 @@ export default function TestRunnerClient({ id }: { id: string }) {
              <section className="tech-border bg-zinc-900/30 p-8 mb-8 overflow-hidden">
                 <div className="flex items-center gap-3 mb-6">
                    <BarChart3 className="text-primary-500" size={20} />
-                   <h3 className="text-xl font-bold text-white">Global Statistics</h3>
+                   <h3 className="text-xl font-bold text-white">Illustrative Reference Values</h3>
                 </div>
                 
                 <p className="text-sm text-zinc-400 mb-6">
-                   How do you compare? See the global average scores for the <strong>{testDef.title}</strong> below.
+                   These tables are illustrative only. They are not derived from MyHumanStats users, are not verified population averages, and should not guide medical decisions.
                 </p>
 
                 <div className="overflow-x-auto">

@@ -1,5 +1,6 @@
 
 import React from 'react';
+import type { Metadata } from 'next';
 import { Fingerprint, Activity, HelpCircle } from 'lucide-react';
 import { TESTS } from '@/lib/data';
 import TypingTitle from '@/components/TypingTitle';
@@ -7,6 +8,8 @@ import DashboardRadar from '@/components/DashboardRadar';
 import TestCard from '@/components/TestCard';
 import DashboardStatsOverview from '@/components/DashboardStatsOverview';
 import WorkoutSection from '@/components/WorkoutSection';
+
+export const metadata: Metadata = { alternates: { canonical: '/' } };
 
 const categories = Array.from(new Set(TESTS.map(t => t.category)));
 
@@ -134,17 +137,17 @@ export default function Dashboard() {
          <div className="prose prose-invert prose-sm text-zinc-400">
             <h2 className="text-white text-2xl font-bold mb-4">The Science of Human Benchmarking</h2>
             <p>
-               <strong>MyHumanStats</strong> is a comprehensive digital platform designed to measure the limits of human perception and cognition. In the modern era, "knowing yourself" involves more than introspection; it requires quantifiable data. Our suite of 30+ tests provides a standardized way to benchmark your biological hardware against the global population.
+               <strong>MyHumanStats</strong> is a comprehensive digital platform designed to measure the limits of human perception and cognition. In the modern era, "knowing yourself" involves more than introspection; it requires quantifiable data. Our suite of 30+ tests provides a a consistent way to explore your own performance over time without implying global clinical norms.
             </p>
             <p>
-               From detecting the early signs of <strong>Presbycusis</strong> via our <em>Hearing Age Test</em> to analyzing synaptic efficiency with the <em>Reaction Time Test</em>, every module uses Web Audio API and high-performance canvas rendering to ensure millisecond precision.
+               From detecting the early signs of <strong>Presbycusis</strong> via our <em>Hearing Age Test</em> to analyzing synaptic efficiency with the <em>Reaction Time Test</em>, interactive modules use appropriate browser APIs while acknowledging hardware and input latency.
             </p>
          </div>
          <div className="prose prose-invert prose-sm text-zinc-400">
             <h3 className="text-white text-lg font-bold mb-4">Why Measure Cognitive & Sensory Traits?</h3>
             <ul className="list-disc pl-4 space-y-2">
                <li><strong>Neuroplasticity Monitoring:</strong> Track improvements in cognitive processing speed (WPM, CPS) over time.</li>
-               <li><strong>Early Detection:</strong> Identify potential visual anomalies like <em>Color Blindness</em> or <em>Astigmatism</em> before they impact daily life.</li>
+               <li><strong>Early Detection:</strong> Explore color and contrast perception; browser-based exercises do not replace vision examinations.</li>
                <li><strong>Performance Optimization:</strong> Gamers and athletes use our <em>Aim Trainer</em> and <em>Rhythm Test</em> to fine-tune motor cortex reflexes.</li>
                <li><strong>Self-Awareness:</strong> Personality assessments based on the Big Five and ASRS-v1.1 models help navigate social dynamics.</li>
             </ul>

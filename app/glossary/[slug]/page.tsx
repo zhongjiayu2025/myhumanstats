@@ -36,6 +36,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${concept.term}: Definition & Meaning | MyHumanStats Glossary`,
     description: `What is ${concept.term}? ${concept.definition}. Learn more about ${concept.term} in the context of the ${concept.testTitle}.`,
+    robots: { index: false, follow: true },
+    alternates: { canonical: `/glossary/${concept.slug}/` },
     openGraph: {
         title: `What is ${concept.term}?`,
         description: concept.definition

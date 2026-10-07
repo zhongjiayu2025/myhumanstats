@@ -18,7 +18,7 @@ export const BLOG_POSTS: BlogPost[] = [
     excerpt: "Discover the biological mechanisms of Presbycusis, why we lose the ability to hear 17kHz+ tones as we age, and how digital audiometry measures your biological ear age.",
     coverImage: "https://images.unsplash.com/photo-1516280440614-6697288d5d38?auto=format&fit=crop&q=80&w=1200",
     date: "January 20, 2026",
-    readTime: "12 min read",
+    readTime: "5 min read",
     category: "Auditory Science",
     tags: ["Hearing Age Test", "Presbycusis", "Audio Frequency", "Health"],
     relatedTestId: "hearing-age-test",
@@ -26,7 +26,7 @@ export const BLOG_POSTS: BlogPost[] = [
       <p class="lead">We often take our hearing for granted until we notice we're missing parts of the conversation. But long before we struggle to hear speech, our ears lose the ability to detect the "shimmer" of high-frequency sounds. This phenomenon is the basis of the <strong>Hearing Age Test</strong>.</p>
 
       <h2>The Biology of Sound Perception</h2>
-      <p>To understand how a <a href="https://myhumanstats.org/#/test/hearing-age-test" class="text-primary-400 hover:underline">Hearing Age Test</a> works, we must first look inside the cochlea. The human ear is a marvel of biological engineering, capable of detecting pressure variations as small as one-billionth of an atmosphere.</p>
+      <p>To understand how a <a href="/test/hearing-age-test" class="text-primary-400 hover:underline">Hearing Age Test</a> works, we must first look inside the cochlea. The human ear is a marvel of biological engineering, capable of detecting pressure variations as small as one-billionth of an atmosphere.</p>
       
       <p>Inside the cochlea, sound waves travel through fluid, stimulating thousands of tiny hair cells (stereocilia). These cells are tonotopically organized, meaning they are mapped like a piano keyboard:</p>
       <ul class="list-disc pl-6 space-y-2 my-4 text-zinc-300">
@@ -50,7 +50,7 @@ export const BLOG_POSTS: BlogPost[] = [
         </ul>
       </div>
       
-      <p>You can verify your own threshold immediately using our <a href="https://myhumanstats.org/#/test/hearing-age-test" class="text-primary-400 hover:underline font-bold">free online Hearing Age Test</a>. This tool generates a precise sine wave to pinpoint your exact cutoff frequency.</p>
+      <p>You can verify your own threshold immediately using our <a href="/test/hearing-age-test" class="text-primary-400 hover:underline font-bold">free online Hearing Age Test</a>. This tool generates a precise sine wave to pinpoint your exact cutoff frequency.</p>
 
       <h2>Why Do We Lose High Frequencies?</h2>
       <p>The degradation of high-frequency hearing is natural, but the rate at which it happens varies wildly based on lifestyle and genetics. According to the <a href="https://www.nidcd.nih.gov/health/age-related-hearing-loss" target="_blank" rel="noopener noreferrer" class="text-zinc-400 underline decoration-zinc-600 hover:text-white">National Institute on Deafness and Other Communication Disorders (NIDCD)</a>, approximately one in three people in the United States between the ages of 65 and 74 has hearing loss.</p>
@@ -76,7 +76,7 @@ export const BLOG_POSTS: BlogPost[] = [
       <h2>Conclusion</h2>
       <p>Your "Hearing Age" is more than just a party trick or a number on a screen. It is a biometric marker of your cumulative noise exposure and auditory health. By understanding the science behind the frequency response of the cochlea, we can take better steps to preserve the fidelity of our world.</p>
       
-      <p>Ready to benchmark your ears? <a href="https://myhumanstats.org/#/test/hearing-age-test" class="text-primary-400 hover:underline font-bold">Start the Hearing Age Test now</a> and see how you compare to the global average.</p>
+      <p>Ready to benchmark your ears? <a href="/test/hearing-age-test" class="text-primary-400 hover:underline font-bold">Start the Hearing Age Test now</a> and see how you compare to the global average.</p>
     `
   },
   {
@@ -85,7 +85,7 @@ export const BLOG_POSTS: BlogPost[] = [
     excerpt: "Reaction time is more than just gaming skill. It is a direct measure of processing speed and synaptic efficiency. Learn how to benchmark and improve your cognitive throughput.",
     coverImage: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80&w=1200",
     date: "January 18, 2026",
-    readTime: "10 min read",
+    readTime: "3 min read",
     category: "Cognitive Performance",
     tags: ["Reaction Time", "Neuroscience", "Gaming", "Cognition"],
     relatedTestId: "reaction-time-test",
@@ -93,7 +93,7 @@ export const BLOG_POSTS: BlogPost[] = [
       <p class="lead">From braking a car to catching a falling glass, reaction time is the fundamental unit of interaction with the physical world. But in the realm of neuroscience, it serves as a critical window into the efficiency of your central nervous system.</p>
       
       <h2>The Anatomy of a Reflex</h2>
-      <p>When you take a <a href="https://myhumanstats.org/#/test/reaction-time-test" class="text-primary-400 hover:underline">Reaction Time Test</a>, you aren't just clicking a mouse. You are initiating a complex neural loop:</p>
+      <p>When you take a <a href="/test/reaction-time-test" class="text-primary-400 hover:underline">Reaction Time Test</a>, you aren't just clicking a mouse. You are initiating a complex neural loop:</p>
       <ol class="list-decimal pl-6 space-y-2 text-zinc-300">
         <li><strong>Visual Transduction:</strong> The retina detects the color change (stimulus).</li>
         <li><strong>Transmission:</strong> The optic nerve sends the signal to the visual cortex.</li>
@@ -106,10 +106,10 @@ export const BLOG_POSTS: BlogPost[] = [
       <h2>Measuring Mental Processing Speed</h2>
       <p>Reaction time is heavily correlated with "g" (general intelligence) because it reflects the myelination of neurons—essentially, the insulation that allows electrical signals to move quickly. Slower reaction times can be an early indicator of cognitive fatigue, sleep deprivation, or systemic inflammation.</p>
       
-      <p>Regular benchmarking via the <a href="https://myhumanstats.org/#/test/reaction-time-test" class="text-primary-400 hover:underline">MyHumanStats Reaction Time module</a> allows you to establish a baseline. Sudden deviations from this baseline are often more telling than the raw number itself.</p>
+      <p>Regular benchmarking via the <a href="/test/reaction-time-test" class="text-primary-400 hover:underline">MyHumanStats Reaction Time module</a> allows you to establish a baseline. Sudden deviations from this baseline are often more telling than the raw number itself.</p>
       
-      <!-- Content truncated for architectural demo, but this would continue for 2000+ words covering Factors affecting RT, Training methods, and Clinical correlations. -->
-      <p>To get a precise measurement of your current neural latency, ensure you are using a low-latency display and a wired mouse, then <a href="https://myhumanstats.org/#/test/reaction-time-test" class="text-primary-400 hover:underline font-bold">test your reaction time here</a>.</p>
+      
+      <p>To get a precise measurement of your current neural latency, ensure you are using a low-latency display and a wired mouse, then <a href="/test/reaction-time-test" class="text-primary-400 hover:underline font-bold">test your reaction time here</a>.</p>
     `
   },
   {
@@ -118,7 +118,7 @@ export const BLOG_POSTS: BlogPost[] = [
     excerpt: "Protanopia, Deuteranopia, Tritanopia. We break down the genetics of Color Blindness and how digital Ishihara plates function to detect these ocular anomalies.",
     coverImage: "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&q=80&w=1200",
     date: "January 15, 2026",
-    readTime: "15 min read",
+    readTime: "3 min read",
     category: "Visual Health",
     tags: ["Color Blindness", "Ishihara", "Genetics", "Vision"],
     relatedTestId: "color-blind-test",
@@ -135,7 +135,7 @@ export const BLOG_POSTS: BlogPost[] = [
       <p>Our brain compares the signals from these three cones (Trichromacy) to perceive millions of colors. When one type of cone is missing or anomalous, the brain loses the ability to distinguish between certain hues.</p>
 
       <h2>Types of Color Blindness</h2>
-      <p>Using our <a href="https://myhumanstats.org/#/test/color-blind-test" class="text-primary-400 hover:underline">Color Blind Test</a>, users can screen for the following conditions:</p>
+      <p>Using our <a href="/test/color-blind-test" class="text-primary-400 hover:underline">Color Blind Test</a>, users can screen for the following conditions:</p>
       <h3>Deuteranomal (Green-Weak)</h3>
       <p>The most common form, affecting roughly 6% of males. The green cone is present but shifted toward the red spectrum, creating a "confusion line" where red and green look identical.</p>
       
@@ -145,8 +145,8 @@ export const BLOG_POSTS: BlogPost[] = [
       <h2>The Ishihara Mechanism</h2>
       <p>Developed by Dr. Shinobu Ishihara in 1917, the pseudoisochromatic plates used in our test work on the principle of "confusion colors." Dots are arranged such that a trichromat (normal vision) sees a pattern based on hue, while a color-blind person sees a random field of brightness noise.</p>
       
-      <!-- Content truncated -->
-      <p>Curious about your own spectral sensitivity? Take the <a href="https://myhumanstats.org/#/test/color-blind-test" class="text-primary-400 hover:underline font-bold">Ishihara Color Blind Test</a> now.</p>
+      
+      <p>Curious about your own spectral sensitivity? Take the <a href="/test/color-blind-test" class="text-primary-400 hover:underline font-bold">Ishihara Color Blind Test</a> now.</p>
     `
   }
 ];

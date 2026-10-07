@@ -5,7 +5,8 @@ import { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: "About Us | MyHumanStats",
-  description: "Learn about MyHumanStats, a privacy-first platform for quantifying human perception and cognition using local-first browser technologies."
+  description: "Learn about MyHumanStats, a privacy-first platform for exploring perception and cognition with local-first browser tests.",
+  alternates: { canonical: "/about/" }
 };
 
 const About = () => {
@@ -16,7 +17,6 @@ const About = () => {
     "url": "https://myhumanstats.org",
     "logo": "https://myhumanstats.org/logo.svg",
     "description": "MyHumanStats is a digital laboratory dedicated to the measurement of human perception, cognition, and personality using local-first browser technologies.",
-    "foundingDate": "2024",
     "knowsAbout": [
       "Psychometrics",
       "Audiometry",
@@ -24,10 +24,6 @@ const About = () => {
       "Reaction Time",
       "Color Vision Deficiency",
       "Web Audio API"
-    ],
-    "sameAs": [
-      "https://github.com/myhumanstats",
-      "https://twitter.com/myhumanstats"
     ]
   };
 

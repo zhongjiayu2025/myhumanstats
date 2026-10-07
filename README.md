@@ -1,20 +1,31 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# MyHumanStats
 
-# Run and deploy your AI Studio app
+MyHumanStats is a browser-based collection of 35 interactive auditory, visual, cognitive and personality/attention exercises, plus six utility tools. The public site is https://myhumanstats.org/.
 
-This contains everything you need to run your app locally.
+## Stack and local development
 
-View your app in AI Studio: https://ai.studio/apps/drive/1E2DcUghhei215T626VrIGLIhOgNjNiir
+- Next.js 14 App Router (static export with `output: 'export'`)
+- React, TypeScript, Tailwind CSS and Recharts
+- Browser APIs for tests; LocalStorage for private per-device test history
+- No server database or Gemini API is used by the current app
 
-## Run Locally
+```bash
+npm install
+npm run dev
+npx tsc --noEmit
+npm run build
+```
 
-**Prerequisites:**  Node.js
+The static build is written to `out/`. Do not enable dynamic API handlers in static-export mode. Deploy `out/` using the existing static hosting workflow.
 
+## Product safety and content integrity
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+- Browser-based hearing and vision activities are **not clinical exams**.
+- The attention/impulse-control exercise is **not a validated ADHD screener**.
+- Reference tables are illustrative, not verified samples of site visitors or population norms. They are `noindex` pending source review.
+- Never invent scientific norms, sample sizes, percentiles, user data, citations or publication dates.
+- Preserve indexed core tool slugs and approved primary keywords.
+
+## Release process
+
+Use `DESIGN.md`, `SEO-GEO-PROJECT-BRIEF.md`, `SEO-GEO-RELEASE-EVIDENCE.md`, and `QA-CHECKLIST.md`, based on the owner's Website-Starter-Standard. Check Actions for a successful type check, static build, route smoke test, then inspect a production deployment before marking a release complete.

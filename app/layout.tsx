@@ -41,9 +41,6 @@ export const metadata: Metadata = {
   verification: {
     google: 'E1jHr8AEwiAZj_z2xiCx4e6hsv6G1HubWpunyL5sYPA',
   },
-  alternates: {
-    canonical: './',
-  },
   openGraph: {
     type: 'website',
     locale: 'en_US',
@@ -83,19 +80,12 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Advanced Schema: Sitelinks Search Box
-  const searchSchema = {
+  // Declare only a real WebSite entity; there is no /search URL.
+  const siteSchema = {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    "url": "https://myhumanstats.org/",
-    "potentialAction": {
-      "@type": "SearchAction",
-      "target": {
-        "@type": "EntryPoint",
-        "urlTemplate": "https://myhumanstats.org/search?q={search_term_string}"
-      },
-      "query-input": "required name=search_term_string"
-    }
+    "name": "MyHumanStats",
+    "url": "https://myhumanstats.org/"
   };
 
   return (
@@ -103,7 +93,7 @@ export default function RootLayout({
       <head>
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(searchSchema) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(siteSchema) }}
         />
         {/* Performance Optimization: Preconnect to Image CDN */}
         <link rel="preconnect" href="https://images.unsplash.com" crossOrigin="anonymous" />

@@ -99,7 +99,7 @@ export const CATEGORY_DATA: Record<TestCategory, CategoryMeta> = {
   },
   [TestCategory.PERSONALITY]: {
     title: "Psychometric Profiling & Personality Assessments",
-    description: "Explore your traits with tools based on the Big Five and ASRS-v1.1 models. Self-knowledge through data.",
+    description: "Explore personality traits and attention exercises. These educational tools are not medical diagnoses.",
     keywords: ["personality test", "adhd screener", "eq test", "psychometrics"],
     faqs: [
         {
@@ -108,7 +108,7 @@ export const CATEGORY_DATA: Record<TestCategory, CategoryMeta> = {
         },
         {
             question: "Is the ADHD test a diagnosis?",
-            answer: "No. Our ADHD screener is based on the ASRS-v1.1 checklist used by clinicians, but an online test cannot provide a medical diagnosis. It acts as a tool to identify symptoms worth discussing with a professional."
+            answer: "No. The attention exercise on MyHumanStats is not a validated ASRS-v1.1 screener and cannot diagnose, confirm, or rule out ADHD. A qualified clinician can help assess persistent symptoms."
         },
         {
             question: "What is Emotional Intelligence (EQ)?",
@@ -118,7 +118,7 @@ export const CATEGORY_DATA: Record<TestCategory, CategoryMeta> = {
     seoContent: `
       <h2>Modern Psychometrics</h2>
       <p>Understanding your software is as important as understanding your hardware. Our personality modules use standardized self-report scales to help you visualize your behavioral patterns.</p>
-      <p>While these tools are for educational purposes, they are based on robust psychological constructs such as the <strong>Five Factor Model (Big 5)</strong> and the <strong>Adult ADHD Self-Report Scale</strong>.</p>
+      <p>These tools are for educational self-reflection only. The browser attention exercise is not the official Adult ADHD Self-Report Scale and does not provide medical screening or diagnosis.</p>
     `
   }
 };

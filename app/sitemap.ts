@@ -16,10 +16,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/contact',
     '/privacy',
     '/terms',
-    '/statistics',
+    // Unverified reference tables are noindex and are intentionally excluded.
     '/tools',
     '/glossary',
     '/blog',
+    '/sitemap',
   ];
 
   const staticEntries = staticRoutes.map((route) => ({
@@ -68,6 +69,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
   }));
 
   return [
+    // Include only canonical, indexable destinations; noindex reference tables and
+    // short glossary definitions remain discoverable through internal links.
     ...staticEntries,
     ...testEntries,
     ...blogEntries,

@@ -113,14 +113,15 @@ const RhythmTest: React.FC = () => {
       const expected = startTimeRef.current + (count * INTERVAL_MS);
       const diff = now - expected;
       
-      setCalibrationTaps(prev => [...prev, diff]);
+      const updatedTaps = [...calibrationTaps, diff];
+      setCalibrationTaps(updatedTaps);
       setCount(c => c + 1);
       
       if (count >= 9) {
           // Finish calibration
           setTimeout(() => {
-              const validTaps = calibrationTaps.slice(2); // Remove first 2 for stability
-              const avg = validTaps.reduce((a,b)=>a+b, 0) / validTaps.length;
+              const validTaps = updatedTaps.slice(2); // Include the final tap, exclude first two for stability
+              const avg = validTaps.length ? validTaps.reduce((a,b)=>a+b, 0) / validTaps.length : 0;
               setInputLatency(avg);
               startTest();
           }, 500);

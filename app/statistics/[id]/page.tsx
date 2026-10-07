@@ -21,8 +21,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!test || !test.benchmarks) return { title: "Statistics Not Found" };
 
   return {
-    title: `${test.benchmarks.title} | Global Statistics`,
-    description: `View aggregated global data for ${test.title}. Compare your results against average benchmarks categorized by age, skill level, or demographic.`,
+    title: `${test.benchmarks.title} | Reference Table`,
+    description: `Illustrative reference values for ${test.title}. Not a verified global dataset or clinical norms.`,
+    robots: { index: false, follow: true },
+    alternates: { canonical: `/statistics/${test.id}/` },
     openGraph: {
         title: test.benchmarks.title,
         description: `Statistical breakdown for ${test.title}.`
@@ -45,26 +47,9 @@ export default function StatDetailPage({ params }: Props) {
 
   const { title, columns, rows } = test.benchmarks;
 
-  // Schema.org Dataset
-  const datasetSchema = {
-    "@context": "https://schema.org",
-    "@type": "Dataset",
-    "name": title,
-    "description": `Benchmark data for ${test.title}`,
-    "creator": {
-      "@type": "Organization",
-      "name": "MyHumanStats"
-    },
-    "variableMeasured": columns.join(", "),
-    "url": `https://myhumanstats.org/statistics/${test.id}`
-  };
 
   return (
     <div className="max-w-5xl mx-auto py-12 px-4 animate-in fade-in">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(datasetSchema) }}
-      />
       
       <Breadcrumbs items={[
           { label: 'Statistics', path: '/statistics' },
@@ -75,7 +60,7 @@ export default function StatDetailPage({ params }: Props) {
          <div className="max-w-2xl">
             <div className="flex items-center gap-2 text-primary-500 mb-4">
                 <Database size={24} />
-                <span className="font-mono text-sm uppercase tracking-widest">Public Dataset</span>
+                <span className="font-mono text-sm uppercase tracking-widest">Illustrative Reference · Unverified</span>
             </div>
             <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">{title}</h1>
             <p className="text-zinc-400 text-lg leading-relaxed">
@@ -128,7 +113,7 @@ export default function StatDetailPage({ params }: Props) {
           </div>
           <div className="bg-black/80 p-4 border-t border-zinc-800 flex justify-between items-center text-xs text-zinc-500 font-mono">
              <span>DATA_ID: {test.id.toUpperCase()}_BM</span>
-             <span>VERIFIED: {new Date().getFullYear()}</span>
+             <span>STATUS: SOURCE REVIEW REQUIRED</span>
           </div>
       </div>
 
@@ -136,10 +121,10 @@ export default function StatDetailPage({ params }: Props) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="bg-zinc-900/30 border border-zinc-800 p-6 rounded-lg">
               <h3 className="text-white font-bold mb-3 flex items-center gap-2">
-                  <BarChart3 size={18} className="text-zinc-500" /> Statistical Significance
+                  <BarChart3 size={18} className="text-zinc-500" /> Important Limitations
               </h3>
               <p className="text-sm text-zinc-400 leading-relaxed">
-                  The benchmarks provided here represent averages gathered from standardized digital environments. Factors such as device input latency (for reaction tests) or audio hardware quality (for hearing tests) play a significant role in individual scores. A variance of ±10-15% is expected across different hardware configurations.
+                  The values shown are illustrative and must not be treated as statistically representative. Browser, display and audio hardware differences can materially affect individual results. No universal margin of error is asserted.
               </p>
           </div>
           <div className="bg-zinc-900/30 border border-zinc-800 p-6 rounded-lg">
@@ -147,7 +132,7 @@ export default function StatDetailPage({ params }: Props) {
                   <Activity size={18} className="text-zinc-500" /> Improving Your Score
               </h3>
               <p className="text-sm text-zinc-400 leading-relaxed">
-                  Most cognitive and sensory skills measured here demonstrate neuroplasticity. Consistent training with the <strong>{test.title}</strong> can lead to measurable improvements. For example, reaction times can often be reduced by 10-20ms with adequate sleep and regular reflex training.
+                  Practice can improve performance on familiar tasks, but scores are also influenced by fatigue, practice effects and hardware. Repeating the <strong>{test.title}</strong> may help you track your own results; it cannot establish a diagnosis.
               </p>
           </div>
       </div>
