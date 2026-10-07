@@ -7,21 +7,16 @@ export const TESTS: TestDefinition[] = [
     id: 'hearing-age-test',
     title: 'Hearing Age Test (Frequency Check)',
     category: TestCategory.AUDITORY,
-    description: 'How old are your ears? Measure your high-frequency hearing limit (8kHz - 22kHz) and compare it to global age benchmarks.',
+    description: 'Explore your upper audible frequency with browser-generated tones. Hardware and volume affect results; this is not a clinical hearing assessment.',
     iconName: 'Ear',
     estimatedTime: '2 min',
     isImplemented: true,
     instructions: [
       "Wear high-quality headphones for the most accurate result.",
-      "Set your device volume to 50% to avoid ear damage.",
+      "Start with a low, comfortable volume. Never increase volume to force an inaudible high-frequency tone.",
       "Press the 'Start Generator' button to begin the frequency sweep.",
       "The sound will start at a very high pitch (22,000 Hz) and slowly lower.",
       "Press the 'I HEAR IT' button or Spacebar the exact moment you hear the tone."
-    ],
-    clinicalRelevance: [
-      "Presbycusis Indicator: High-frequency loss is often the first sign of age-related hearing decline.",
-      "Noise Exposure Tracking: Early loss of frequencies >16kHz may indicate damage from loud music or industrial noise.",
-      "Cochlear Health: Specifically tests the function of stereocilia at the basal turn of the cochlea."
     ],
     benchmarks: {
       title: "Average High-Frequency Hearing Limit by Age",
@@ -564,18 +559,15 @@ export const TESTS: TestDefinition[] = [
   },
   {
     id: 'adhd-test',
-    title: 'ADHD Screener',
+    title: 'Attention & Impulse Control Exercise',
     category: TestCategory.PERSONALITY,
-    description: 'Based on ASRS-v1.1. A 6-question screening tool for adult ADHD symptoms.',
+    description: 'An interactive attention exercise with a short, non-validated self-report. This activity cannot screen for or diagnose ADHD.',
     iconName: 'Activity',
     estimatedTime: '3 min',
     isImplemented: true,
-    citations: [
-        "Kessler, R. C., et al. (2005). The World Health Organization Adult ADHD Self-Report Scale (ASRS): a short screening scale for use in the general population. Psychological Medicine."
-    ],
     seoContent: `
-      <h2>Adult ADHD Self-Report Scale (ASRS-v1.1)</h2>
-      <p>This <strong>ADHD Test</strong> utilizes the 6-question screening checklist developed by the World Health Organization. It focuses on the frequency of symptoms related to inattention, impulsivity, and hyperactivity in adults.</p>
+      <h2>About this attention exercise</h2>
+      <p>This browser activity combines a short self-report with a response-control game. It is <strong>not</strong> the official ASRS-v1.1 questionnaire, is not clinically validated, and cannot establish whether someone has ADHD. Speak with a qualified professional if symptoms affect daily life.</p>
     `
   },
   {

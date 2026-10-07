@@ -4,7 +4,7 @@ import { Activity, RotateCcw, Play, Zap, Brain, AlertTriangle } from 'lucide-rea
 import { saveStat } from '../../lib/core';
 import { LineChart, Line, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from 'recharts';
 
-// ASRS-v1.1 Part A
+// Original four-item educational questionnaire; NOT the official ASRS screener.
 const ASRS_QUESTIONS = [
   { id: 1, text: "How often do you have trouble wrapping up the final details of a project?", options: [{label: "Never", value: 0}, {label: "Rarely", value: 1}, {label: "Sometimes", value: 2}, {label: "Often", value: 3}, {label: "Very Often", value: 4}] },
   { id: 2, text: "How often do you have difficulty getting things in order?", options: [{label: "Never", value: 0}, {label: "Rarely", value: 1}, {label: "Sometimes", value: 2}, {label: "Often", value: 3}, {label: "Very Often", value: 4}] },
@@ -148,12 +148,12 @@ const ADHDTest: React.FC = () => {
   const finishTest = (finalQuizRaw: number) => {
       // Calculate Variability (Standard Deviation)
       const rts = reactionTimes.map(r => r.ms);
-      const mean = rts.reduce((a,b) => a+b, 0) / rts.length;
-      const variance = rts.reduce((a,b) => a + Math.pow(b - mean, 2), 0) / rts.length;
+      const mean = rts.length > 0 ? rts.reduce((a,b) => a+b, 0) / rts.length : 0;
+      const variance = rts.length > 0 ? rts.reduce((a,b) => a + Math.pow(b - mean, 2), 0) / rts.length : 0;
       const stdDev = Math.sqrt(variance); // Reaction Time Variability (RTV)
 
       // Scoring
-      const rtvScore = Math.min(100, (stdDev / 150) * 100); // Higher RTV = More ADHD-like
+      const rtvScore = Math.min(100, (stdDev / 150) * 100); // Larger RTV = greater variability in this session; not diagnostic
       const impulseScore = (impulseErrors / (TOTAL_TRIALS * 0.3)) * 100;
       const symptomScore = (finalQuizRaw / (ASRS_QUESTIONS.length * 4)) * 100;
       
@@ -168,9 +168,9 @@ const ADHDTest: React.FC = () => {
        {phase === 'intro' && (
            <div className="text-center py-12 animate-in fade-in">
                <Activity size={64} className="mx-auto text-amber-500 mb-6" />
-               <h2 className="text-3xl font-bold text-white mb-2">Clinical ADHD Screener</h2>
+               <h2 className="text-3xl font-bold text-white mb-2">Attention & Impulse Control Exercise</h2>
                <p className="text-zinc-400 mb-8 max-w-md mx-auto">
-                   Measures <strong>Reaction Time Variability (RTV)</strong> - a core biomarker of ADHD.
+                   Explores <strong>reaction-time variability</strong> in a short browser exercise. This is not an ADHD screening or diagnostic test.
                    <br/>Includes distraction resistance and impulse control tasks.
                </p>
                <button onClick={startGoNoGo} className="btn-primary flex items-center gap-2 mx-auto">
@@ -261,8 +261,8 @@ const ADHDTest: React.FC = () => {
                </div>
 
                <div className="bg-zinc-900/50 p-6 rounded border border-zinc-800 text-left text-sm text-zinc-400 mb-8">
-                   <strong className="text-white block mb-2">Bio-Marker Analysis:</strong>
-                   Your Reaction Time Variability graph {Math.max(...reactionTimes.map(r=>r.ms)) - Math.min(...reactionTimes.map(r=>r.ms)) > 200 ? "shows significant spikes, a potential indicator of micro-lapses in attention." : "is relatively stable, indicating consistent focus."}
+                   <strong className="text-white block mb-2">Task Consistency:</strong>
+                   Your Reaction Time Variability graph {Math.max(...reactionTimes.map(r=>r.ms)) - Math.min(...reactionTimes.map(r=>r.ms)) > 200 ? "varies across attempts; distractions, practice and input hardware may affect the result." : "is relatively stable in this short browser task."}
                </div>
 
                <button onClick={() => window.location.reload()} className="btn-secondary flex items-center gap-2 justify-center mx-auto">

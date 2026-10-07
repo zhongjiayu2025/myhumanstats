@@ -7,52 +7,37 @@ import Breadcrumbs from '@/components/Breadcrumbs';
 import { TESTS } from '@/lib/data';
 
 export const metadata: Metadata = {
-  title: "Global Statistics & Human Benchmarks | MyHumanStats",
-  description: "Comprehensive dataset of human performance averages. Data tables for reaction time, hearing frequency, and typing speed by age and skill level."
+  title: "Performance Reference Tables | MyHumanStats",
+  description: "Illustrative reference tables for online tests. These are not verified user aggregates or clinical population norms.",
+  robots: { index: false, follow: true },
+  alternates: { canonical: "/statistics/" }
 };
 
 const Statistics = () => {
   const dataPoints = TESTS.filter(t => t.benchmarks);
 
-  const statsSchema = {
-    "@context": "https://schema.org",
-    "@type": "Dataset",
-    "name": "Global Human Performance Benchmarks 2026",
-    "description": "Aggregated statistical data on human auditory frequency limits, visual reaction times, and cognitive processing speeds by age group.",
-    "url": "https://myhumanstats.org/statistics",
-    "isAccessibleForFree": true,
-    "creator": {
-      "@type": "Organization",
-      "name": "MyHumanStats"
-    },
-    "keywords": ["human benchmarks", "average reaction time", "hearing loss statistics", "typing speed averages"]
-  };
 
   return (
     <div className="max-w-6xl mx-auto py-12 animate-in fade-in duration-500">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(statsSchema) }}
-      />
 
       <Breadcrumbs items={[{ label: 'Global Statistics' }]} />
 
       <div className="mb-16 border-b border-zinc-800 pb-12">
         <div className="flex items-center gap-3 text-primary-500 mb-4">
            <Database size={32} />
-           <span className="font-mono text-sm uppercase tracking-widest">Open Data Initiative</span>
+           <span className="font-mono text-sm uppercase tracking-widest">Illustrative references · sourcing under review</span>
         </div>
         <h1 className="text-4xl md:text-5xl font-bold text-white mb-6 max-w-4xl tracking-tight">
            Human Performance <span className="text-primary-400">Index</span>
         </h1>
         <p className="text-xl text-zinc-400 max-w-3xl leading-relaxed">
-           A collection of aggregated benchmarks establishing the baseline for human sensory and cognitive capabilities. Data derived from standardized browser-based assessments.
+           The tables below are illustrative reference values, not data collected from our visitors or validated population statistics. Do not use them for medical or diagnostic decisions.
         </p>
       </div>
 
       {/* Programmatic SEO Hub - Links to individual pages */}
       <div className="bg-zinc-900/30 border border-zinc-800 p-6 mb-16 rounded-lg">
-         <h3 className="text-sm font-mono text-zinc-500 uppercase tracking-widest mb-4">Browse Datasets</h3>
+         <h3 className="text-sm font-mono text-zinc-500 uppercase tracking-widest mb-4">Browse Reference Tables</h3>
          <div className="flex flex-wrap gap-3">
             {dataPoints.map(t => (
                <Link 
@@ -73,7 +58,7 @@ const Statistics = () => {
                   <div>
                      <div className="flex items-center gap-2 text-primary-500 mb-2">
                         <BarChart2 size={20} />
-                        <span className="text-xs font-mono uppercase tracking-widest">Dataset #{idx + 1}</span>
+                        <span className="text-xs font-mono uppercase tracking-widest">Reference #{idx + 1}</span>
                      </div>
                      {/* Internal Link for SEO weighting */}
                      <Link href={`/statistics/${test.id}`} className="block group">
@@ -121,7 +106,7 @@ const Statistics = () => {
                   </div>
                   {/* View Full Data Link */}
                   <Link href={`/statistics/${test.id}`} className="bg-black/50 p-3 border-t border-zinc-800 flex justify-center items-center text-xs text-primary-500 font-mono hover:bg-zinc-900 transition-colors">
-                     VIEW_FULL_DATASET // {test.id.toUpperCase()}
+                     VIEW_REFERENCE_TABLE // {test.id.toUpperCase()}
                   </Link>
                </div>
             </section>
@@ -129,9 +114,9 @@ const Statistics = () => {
       </div>
 
       <div className="mt-24 text-center border-t border-zinc-800 pt-12">
-         <h3 className="text-2xl font-bold text-white mb-4">Contribute Your Data</h3>
+         <h3 className="text-2xl font-bold text-white mb-4">Your Data Stays on Your Device</h3>
          <p className="text-zinc-400 max-w-lg mx-auto mb-8">
-            These statistics are refined by every user who completes a benchmark. Your data is processed locally to generate your percentile score.
+            Test results are stored in your browser. They do not feed a shared population dataset, and the reference tables are not personalized medical norms.
          </p>
          <Link href="/" className="btn-primary">
             Go to Dashboard

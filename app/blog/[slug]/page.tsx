@@ -142,7 +142,7 @@ export default function BlogPost({ params }: Props) {
                </div>
                <div className="flex items-center gap-2 text-primary-400 print:text-black">
                   <Activity size={14} />
-                  <span>Verified by MyHumanStats</span>
+                  <span>MyHumanStats Editorial</span>
                </div>
             </div>
          </div>
@@ -209,7 +209,7 @@ export default function BlogPost({ params }: Props) {
                         href={`/test/${relatedTest.id}`}
                         className="w-full btn-primary flex justify-center items-center gap-2 text-sm"
                      >
-                        Run Diagnosis <ChevronRight size={14} />
+                        Try Related Test <ChevronRight size={14} />
                      </Link>
                   </div>
                )}

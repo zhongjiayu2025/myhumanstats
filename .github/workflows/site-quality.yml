@@ -1,0 +1,44 @@
+name: Site quality gate
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, 'seo/**']
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: package.json
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Type-check
+        run: npx tsc --noEmit
+      - name: Static export
+        run: npm run build
+      - name: Verify SEO and core static routes
+        run: |
+          test -f out/index.html
+          test -f out/sitemap.xml
+          test -f out/robots.txt
+          test -f out/test/rhythm-test/index.html
+          test -f out/test/contrast-test/index.html
+          test -f out/test/color-hue-test/index.html
+          test -f out/test/perfect-pitch-test/index.html
+          test -f out/test/peripheral-vision-test/index.html
+          test -f out/tools/tone-generator/index.html
+          if grep -R -q '#/test/' out/blog; then
+            echo 'Legacy hash-router links detected in exported blog pages.'
+            exit 1
+          fi

@@ -3,22 +3,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import { RefreshCcw, Check, Volume2, ArrowRight, Minus, Plus, AlertTriangle, Info, Mic, Music2, MessageSquare } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 import ShareCard from '../ShareCard';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import Link from 'next/link';
 
 type EarSide = 'left' | 'right';
 
-// ISO 7029 Approximation Data
-const AGE_DATA = [
-  { age: 10, freq: 20000 },
-  { age: 20, freq: 17000 },
-  { age: 30, freq: 15000 },
-  { age: 40, freq: 12000 },
-  { age: 50, freq: 10500 },
-  { age: 60, freq: 8000 },
-  { age: 70, freq: 6000 },
-  { age: 80, freq: 4000 },
-];
+// Browser frequency threshold is not a clinically validated biological age.
 
 const HearingAgeTest: React.FC = () => {
   // System State
@@ -235,21 +225,6 @@ const HearingAgeTest: React.FC = () => {
       }
   };
 
-  // Improved calculation
-  const getAgeFromFreq = (freq: number) => {
-      // Linear interpolation based on standard curve
-      if (freq >= 19000) return "< 18";
-      if (freq >= 17000) return "18 - 24";
-      if (freq >= 16000) return "25 - 29";
-      if (freq >= 15000) return "30 - 35";
-      if (freq >= 14000) return "36 - 39";
-      if (freq >= 13000) return "40 - 45";
-      if (freq >= 12000) return "46 - 49";
-      if (freq >= 11000) return "50 - 55";
-      if (freq >= 10000) return "56 - 59";
-      if (freq >= 8000) return "60+";
-      return "Elderly";
-  };
 
   // --- RENDERERS ---
 
@@ -335,8 +310,8 @@ const HearingAgeTest: React.FC = () => {
                           <h2 className="text-sm font-mono text-zinc-500 uppercase tracking-widest mb-1">Audiometry Report</h2>
                           <div className="text-3xl font-bold text-white mb-6">Binaural Analysis</div>
                           <div className="mb-6">
-                              <div className="text-sm font-mono text-zinc-500 uppercase tracking-widest mb-1">Biological Age</div>
-                              <div className="text-5xl font-bold text-primary-400 text-glow">{getAgeFromFreq(bestFreq)} <span className="text-lg text-zinc-600">YRS</span></div>
+                              <div className="text-sm font-mono text-zinc-500 uppercase tracking-widest mb-1">Highest Detected Frequency</div>
+                              <div className="text-5xl font-bold text-primary-400 text-glow">{bestFreq.toLocaleString()} <span className="text-lg text-zinc-600">Hz</span></div>
                           </div>
                           <div className="flex gap-4">
                               <div className="bg-zinc-900 p-3 rounded w-1/2 border-l-4 border-emerald-500">
@@ -351,19 +326,19 @@ const HearingAgeTest: React.FC = () => {
                       </div>
                       <div className="h-64 w-full bg-zinc-900/30 border border-zinc-800 rounded p-2">
                           <ResponsiveContainer width="100%" height="100%">
-                              <AreaChart data={AGE_DATA}>
+                              <AreaChart data={[{ ear: "Left", freq: results.left ?? 0 }, { ear: "Right", freq: results.right ?? 0 }]}>
                                   <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                                  <XAxis dataKey="age" stroke="#555" fontSize={10} unit="yr" />
+                                  <XAxis dataKey="ear" stroke="#555" fontSize={10} />
                                   <YAxis stroke="#555" fontSize={10} tickFormatter={(val) => `${val/1000}k`} />
                                   <Tooltip contentStyle={{ backgroundColor: '#000' }} itemStyle={{ color: '#fff' }} />
-                                  <Area type="monotone" dataKey="freq" stroke="#52525b" fill="#52525b" fillOpacity={0.1} />
-                                  {results.left && <ReferenceLine y={results.left} stroke="#10b981" strokeDasharray="3 3" label="L" />}
+                                  <Area type="linear" dataKey="freq" stroke="#10b981" fill="#10b981" fillOpacity={0.12} />
                                   {results.right && <ReferenceLine y={results.right} stroke="#ef4444" strokeDasharray="3 3" label="R" />}
                               </AreaChart>
                           </ResponsiveContainer>
                       </div>
                   </div>
-                  <ShareCard testName="Hearing Age" scoreDisplay={`${bestFreq} Hz`} resultLabel={`Ear Age: ${getAgeFromFreq(bestFreq)}`} />
+                  <p className="mb-4 text-xs text-amber-200/80">Browser audio, headphone response and volume can affect the threshold. This result does not estimate biological ear age or diagnose hearing loss.</p>
+                  <ShareCard testName="Hearing Age" scoreDisplay={`${bestFreq} Hz`} resultLabel="Browser-based frequency threshold · not a medical hearing age" />
                   
                   <div className="flex gap-4 mt-8">
                       <button onClick={() => { setPhase('testing'); setResults({left:null, right:null}); }} className="btn-secondary flex-1 flex items-center justify-center gap-2"><RefreshCcw size={16}/> New Test</button>

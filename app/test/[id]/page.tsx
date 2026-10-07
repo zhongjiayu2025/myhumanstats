@@ -70,7 +70,7 @@ export default function TestPage({ params }: Props) {
     "@type": "SoftwareApplication",
     "name": testDef.title,
     "description": testDef.description,
-    "applicationCategory": "HealthApplication",
+    "applicationCategory": "EducationalApplication",
     "operatingSystem": "Any",
     "offers": {
       "@type": "Offer",
@@ -78,9 +78,6 @@ export default function TestPage({ params }: Props) {
       "priceCurrency": "USD"
     },
     "featureList": `Measure your ${testDef.category} capabilities online`,
-    "screenshot": `https://myhumanstats.org/logo.svg`,
-    "datePublished": "2026-01-01",
-    "dateModified": new Date().toISOString().split('T')[0],
     // Point 3: Removed aggregateRating to avoid Google Manual Action penalty
   };
 
