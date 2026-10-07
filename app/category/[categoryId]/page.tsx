@@ -11,12 +11,13 @@ import { Metadata } from 'next';
 import { iconMap } from '@/lib/iconMap';
 
 interface Props {
-  params: { categoryId: string };
+  params: Promise<{ categoryId: string }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { categoryId } = await params;
   const categoryEnum = Object.values(TestCategory).find(
-    c => c.toLowerCase() === params.categoryId?.toLowerCase()
+    c => c.toLowerCase() === categoryId?.toLowerCase()
   );
   if (!categoryEnum) return { title: "Category Not Found" };
   
@@ -25,7 +26,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `${meta.title} | MyHumanStats`,
     description: meta.description,
     alternates: {
-      canonical: `/category/${params.categoryId}`,
+      canonical: `/category/${categoryId}`,
     }
   };
 }
@@ -36,9 +37,10 @@ export async function generateStaticParams() {
   }));
 }
 
-export default function CategoryPage({ params }: Props) {
+export default async function CategoryPage({ params }: Props) {
+  const { categoryId } = await params;
   const categoryEnum = Object.values(TestCategory).find(
-    c => c.toLowerCase() === params.categoryId?.toLowerCase()
+    c => c.toLowerCase() === categoryId?.toLowerCase()
   );
 
   if (!categoryEnum) {
