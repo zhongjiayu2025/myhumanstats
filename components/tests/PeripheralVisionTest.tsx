@@ -31,145 +31,126 @@ const PeripheralVisionTest: React.FC = () => {
   const timeoutRef = useRef<number|null>(null);
   const charTimeoutRef = useRef<number|null>(null);
 
-  // Initialize Stats
-  useEffect(() => {
-      const initial: Record<number, ZoneStats> = {};
-      for(let i=0; i<ROWS*COLS; i++) initial[i] = {hits:0, misses:0, avgRt:0};
-      setZoneStats(initial);
-  }, []);
+  // Stable refs prevent expired timers and stale state from corrupting results.
+  const activeRef = useRef<typeof activeDot>(null);
+  const roundRef = useRef(0);
+  const phaseRef = useRef<'intro' | 'test' | 'result'>('intro');
+  const statsRef = useRef<Record<number, ZoneStats>>({});
+  const zoneOrderRef = useRef<number[]>([]);
+  const feedbackTimer = useRef<number | null>(null);
 
-  // Keyboard Listener
-  useEffect(() => {
-      const handleKey = (e: KeyboardEvent) => {
-          if (phase === 'test' && e.code === 'Space') {
-              e.preventDefault();
-              handleInput();
-          }
-      };
-      window.addEventListener('keydown', handleKey);
-      return () => {
-          window.removeEventListener('keydown', handleKey);
-          if (timeoutRef.current) clearTimeout(timeoutRef.current);
-          if (charTimeoutRef.current) clearTimeout(charTimeoutRef.current);
-      };
-  }, [phase, activeDot]);
+  const emptyStats = (): Record<number, ZoneStats> =>
+    Object.fromEntries(Array.from({ length: ROWS * COLS }, (_, i) => [i, {hits: 0, misses: 0, avgRt: 0}]));
 
-  // Central Character Loop (Variable Interval for better fixation load)
-  useEffect(() => {
-      const loop = () => {
-          const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-          setCentralChar(chars[Math.floor(Math.random() * chars.length)]);
-          // Random interval between 800ms and 2000ms to prevent rhythm prediction
-          const delay = 800 + Math.random() * 1200; 
-          charTimeoutRef.current = window.setTimeout(loop, delay);
-      };
-
-      if (phase === 'test') {
-          loop();
-      } else {
-          if (charTimeoutRef.current) clearTimeout(charTimeoutRef.current);
-      }
-      return () => { if (charTimeoutRef.current) clearTimeout(charTimeoutRef.current); };
-  }, [phase]);
-
-  const startGame = () => {
-      const initial: Record<number, ZoneStats> = {};
-      for(let i=0; i<ROWS*COLS; i++) initial[i] = {hits:0, misses:0, avgRt:0};
-      setZoneStats(initial);
-      
-      setRound(0);
-      setPhase('test');
-      scheduleNext();
-  };
-
-  const scheduleNext = () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      const delay = 800 + Math.random() * 1500;
-      timeoutRef.current = window.setTimeout(spawnDot, delay);
-  };
-
-  const spawnDot = () => {
-      if (round >= TOTAL_ROUNDS) {
-          finish();
-          return;
-      }
-
-      // Pick random zone
-      const r = Math.floor(Math.random() * ROWS);
-      const c = Math.floor(Math.random() * COLS);
-      
-      const w = 100/COLS;
-      const h = 100/ROWS;
-      
-      const padding = 5;
-      const x = (c * w) + padding + Math.random() * (w - padding*2);
-      const y = (r * h) + padding + Math.random() * (h - padding*2);
-
-      const dot = {
-          id: Date.now(),
-          r, c, x, y,
-          born: performance.now()
-      };
-      
-      setActiveDot(dot);
-      
-      timeoutRef.current = window.setTimeout(() => {
-          handleMiss(dot);
-      }, 1200);
-  };
-
-  const handleInput = () => {
-      if (!activeDot) return; 
-      
-      const rt = performance.now() - activeDot.born;
-      const zoneIdx = activeDot.r * COLS + activeDot.c;
-      
-      setZoneStats(prev => {
-          const z = prev[zoneIdx];
-          const newHits = z.hits + 1;
-          const newAvg = ((z.avgRt * z.hits) + rt) / newHits;
-          return {
-              ...prev,
-              [zoneIdx]: { ...z, hits: newHits, avgRt: newAvg }
-          };
-      });
-
-      setFlashFeedback('hit');
-      setTimeout(() => setFlashFeedback(null), 200);
-      
-      setActiveDot(null);
-      setRound(r => r + 1);
-      
-      if (round + 1 >= TOTAL_ROUNDS) finish();
-      else scheduleNext();
-  };
-
-  const handleMiss = (dot: typeof activeDot) => {
-      if (!dot) return;
-      
-      const zoneIdx = dot.r * COLS + dot.c;
-      setZoneStats(prev => ({
-          ...prev,
-          [zoneIdx]: { ...prev[zoneIdx], misses: prev[zoneIdx].misses + 1 }
-      }));
-      
-      setFlashFeedback('miss');
-      setTimeout(() => setFlashFeedback(null), 200);
-
-      setActiveDot(null);
-      setRound(r => r + 1);
-      
-      if (round + 1 >= TOTAL_ROUNDS) finish();
-      else scheduleNext();
+  const stopTimers = () => {
+    if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current);
+    if (charTimeoutRef.current !== null) window.clearTimeout(charTimeoutRef.current);
+    if (feedbackTimer.current !== null) window.clearTimeout(feedbackTimer.current);
   };
 
   const finish = () => {
-      setPhase('result');
-      // Explicitly cast Object.values to avoid TS errors about unknown types
-      const totalHits = (Object.values(zoneStats) as ZoneStats[]).reduce((acc, curr) => acc + curr.hits, 0);
-      const score = Math.round((totalHits / TOTAL_ROUNDS) * 100);
-      saveStat('peripheral-vision', score);
+    stopTimers();
+    phaseRef.current = 'result';
+    activeRef.current = null;
+    setActiveDot(null);
+    const hits = Object.values(statsRef.current).reduce((total, item) => total + item.hits, 0);
+    saveStat('peripheral-vision-test', Math.round(100 * hits / TOTAL_ROUNDS), hits);
+    setPhase('result');
   };
+
+  const resolveDot = (hit: boolean, dotId?: number) => {
+    if (phaseRef.current !== 'test') return;
+    const dot = activeRef.current;
+    if (!dot || (dotId !== undefined && dotId !== dot.id)) return;
+    if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current);
+    activeRef.current = null;
+    setActiveDot(null);
+    const idx = dot.r * COLS + dot.c;
+    const prev = statsRef.current[idx];
+    const newHits = prev.hits + (hit ? 1 : 0);
+    const nextStat = hit
+      ? { ...prev, hits: newHits, avgRt: (prev.avgRt * prev.hits + performance.now() - dot.born) / newHits }
+      : { ...prev, misses: prev.misses + 1 };
+    statsRef.current = { ...statsRef.current, [idx]: nextStat };
+    setZoneStats(statsRef.current);
+    setFlashFeedback(hit ? 'hit' : 'miss');
+    if (feedbackTimer.current !== null) window.clearTimeout(feedbackTimer.current);
+    feedbackTimer.current = window.setTimeout(() => setFlashFeedback(null), 250);
+    roundRef.current += 1;
+    setRound(roundRef.current);
+    if (roundRef.current >= TOTAL_ROUNDS) finish();
+    else scheduleNext();
+  };
+
+  const scheduleNext = () => {
+    timeoutRef.current = window.setTimeout(() => {
+      if (phaseRef.current !== 'test') return;
+      const zone = zoneOrderRef.current[roundRef.current];
+      if (zone === undefined) return finish();
+      const r = Math.floor(zone / COLS);
+      const col = zone % COLS;
+      const width = 100 / COLS, height = 100 / ROWS, padding = 5;
+      const dot = {
+        id: roundRef.current + 1, r, c: col,
+        x: col * width + padding + Math.random() * (width - padding * 2),
+        y: r * height + padding + Math.random() * (height - padding * 2),
+        born: performance.now()
+      };
+      activeRef.current = dot;
+      setActiveDot(dot);
+      timeoutRef.current = window.setTimeout(() => resolveDot(false, dot.id), 1200);
+    }, 700 + Math.random() * 900);
+  };
+
+  const startGame = () => {
+    stopTimers();
+    statsRef.current = emptyStats();
+    setZoneStats(statsRef.current);
+    roundRef.current = 0;
+    // Each region is tested exactly twice, rather than being skipped randomly.
+    const order = [...Array(ROWS * COLS).keys(), ...Array(ROWS * COLS).keys()];
+    for (let i = order.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+    zoneOrderRef.current = order;
+    activeRef.current = null;
+    setActiveDot(null);
+    setFlashFeedback(null);
+    setRound(0);
+    phaseRef.current = 'test';
+    setPhase('test');
+    scheduleNext();
+  };
+
+  const handleInput = () => resolveDot(true);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.code === 'Space' && phaseRef.current === 'test') {
+        event.preventDefault();
+        handleInput();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      stopTimers();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (phase !== 'test') return;
+    const refreshFocus = () => {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      setCentralChar(chars[Math.floor(Math.random() * chars.length)]);
+      charTimeoutRef.current = window.setTimeout(refreshFocus, 800 + Math.random() * 1200);
+    };
+    refreshFocus();
+    return () => {
+      if (charTimeoutRef.current !== null) window.clearTimeout(charTimeoutRef.current);
+    };
+  }, [phase]);
 
   const getZoneColor = (stats: ZoneStats) => {
       const total = stats.hits + stats.misses;
@@ -186,26 +167,27 @@ const PeripheralVisionTest: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto text-center select-none touch-none">
+    <div className="max-w-4xl mx-auto text-center select-none">
        {phase === 'intro' && (
            <div className="py-12 animate-in fade-in zoom-in">
                <Eye size={64} className="mx-auto text-zinc-600 mb-6" />
                <h2 className="text-3xl font-bold text-white mb-2">Peripheral Vision Field Test</h2>
                <p className="text-zinc-400 mb-8 max-w-md mx-auto leading-relaxed">
-                   Measure your visual field reactivity.
+                   Explore how quickly you notice brief targets around your screen. This exercise is not a medical visual-field exam.
                    <br/><br/>
                    1. Keep your eyes locked on the <strong>changing letter</strong> in the center.<br/>
                    2. Press <strong>SPACEBAR</strong> or <strong>TAP</strong> when a white dot flashes in your side vision.
                </p>
-               <button onClick={startGame} className="btn-primary">Start Examination</button>
+               <button onClick={startGame} className="btn-primary">Start Screen Awareness Test</button>
            </div>
        )}
 
        {phase === 'test' && (
            <div 
-              className="relative w-full aspect-video bg-black border border-zinc-800 rounded-xl overflow-hidden cursor-none shadow-2xl active:border-primary-500/50"
-              onTouchStart={(e) => { e.preventDefault(); handleInput(); }}
-              onMouseDown={() => { if(window.innerWidth > 768) handleInput(); }}
+              className="relative w-full aspect-video bg-black border border-zinc-800 rounded-xl overflow-hidden cursor-crosshair touch-none shadow-2xl active:border-primary-500/50"
+              onPointerDown={(e) => { e.preventDefault(); handleInput(); }}
+               role="button" tabIndex={0}
+               aria-label="Respond when a dot flashes. Tap the field or press Space."
            >
                <div className="absolute inset-0 z-0 pointer-events-none opacity-10">
                    <div className="w-full h-full grid grid-cols-4 grid-rows-3">
@@ -240,7 +222,7 @@ const PeripheralVisionTest: React.FC = () => {
        {phase === 'result' && (
            <div className="py-12 animate-in zoom-in">
                <h2 className="text-3xl font-bold text-white mb-2">Visual Field Map</h2>
-               <p className="text-zinc-400 text-sm mb-8">Green = Fast Reaction. Red = Blind Spot / Slow.</p>
+               <p className="text-zinc-400 text-sm mb-8">Green means faster detections in this session; red means missed targets, not medical blind spots.</p>
                
                {/* Heatmap Visualization */}
                <div className="max-w-lg mx-auto bg-black border border-zinc-800 p-1 rounded-lg shadow-2xl mb-8">
@@ -273,14 +255,14 @@ const PeripheralVisionTest: React.FC = () => {
                    <div className="bg-zinc-900 border border-zinc-800 p-4 rounded text-left">
                        <h4 className="text-zinc-400 text-xs uppercase tracking-widest mb-1">Field Analysis</h4>
                        <p className="text-sm text-white">
-                           Gaps in the outer edges (red blocks) may indicate tunnel vision tendencies or simple fatigue.
+                           Missed dots may reflect distraction, small screens or input delay. This online exercise cannot diagnose vision conditions.
                        </p>
                    </div>
                </div>
                
                <div className="mt-12">
                    <button onClick={startGame} className="btn-secondary flex items-center justify-center gap-2 mx-auto">
-                       <RefreshCcw size={16}/> Retake Calibration
+                       <RefreshCcw size={16}/> Retake Exercise
                    </button>
                </div>
            </div>

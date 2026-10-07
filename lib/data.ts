@@ -113,10 +113,17 @@ export const TESTS: TestDefinition[] = [
     id: 'perfect-pitch-test',
     title: 'Perfect Pitch Test',
     category: TestCategory.AUDITORY,
-    description: 'Do you have Absolute Pitch? Challenge your ear to identify musical notes (C, D, E...) without any reference tone.',
+    description: 'Identify musical notes in a ten-round pitch recognition test, with optional C-reference training mode.',
     iconName: 'Music',
     estimatedTime: '2 min',
     isImplemented: true,
+    seoContent: `
+      <h2>How this perfect pitch test works</h2>
+      <p>Listen to a played note and choose its name on the piano keyboard. Easy mode uses seven natural notes; chromatic mode includes all 12 notes. Ten rounds generate a score, longest correct streak and examples of mistaken note names.</p>
+      <h3>Absolute pitch versus pitch training</h3>
+      <p>Without a reference tone, the task is a short note-identification exercise. Enabling the optional C reference makes it a relative-pitch comparison task instead. Neither mode, by itself, diagnoses or establishes an individual's absolute-pitch ability.</p>
+      <p>Use headphones at a comfortable volume. Speakers, timbre, prior exposure and hearing conditions can influence performance.</p>
+    `,
     citations: [
         "Deutsch, D. (2013). Absolute pitch. In D. Deutsch (Ed.), The psychology of music (3rd ed., pp. 141–182). Elsevier.",
         "Miyazaki, K. (1988). Musical pitch identification by absolute pitch possessors. Perception & Psychophysics."
@@ -178,7 +185,7 @@ export const TESTS: TestDefinition[] = [
       </ul>
       
       <h3>Interpreting Your Score</h3>
-      <p>We measure your <strong>Standard Deviation (Stability)</strong> and your <strong>Mean Deviation (Drift)</strong>. A standard deviation under 20ms is considered excellent, comparable to professional drummers.</p>
+      <p>We measure your <strong>Standard Deviation (Stability)</strong> and your <strong>Mean Deviation (Drift)</strong>. Smaller within-session variation indicates more consistent tapping in this particular browser task. Input and sound-output delays may change measured timings.</p>
     `
   },
   {
@@ -229,10 +236,18 @@ export const TESTS: TestDefinition[] = [
     id: 'contrast-test',
     title: 'Contrast Sensitivity Test',
     category: TestCategory.VISUAL,
-    description: 'Can you see the hidden letters? Measure your ability to distinguish faint objects from their background.',
+    description: 'Choose the tilt of increasingly faint stripe patterns in an adaptive browser contrast perception exercise.',
     iconName: 'Contrast',
     estimatedTime: '2 min',
     isImplemented: true,
+    seoContent: `
+      <h2>How this online contrast sensitivity test works</h2>
+      <p>This browser exercise shows a stripe pattern that tilts left or right. Respond in each of eight trials per coarse, medium and fine pattern. After a correct answer the next pattern becomes fainter; after an incorrect answer it becomes more visible.</p>
+      <h3>Understanding your result</h3>
+      <p>The report shows the lowest contrast percentage you correctly identified at each scale. A smaller percentage is more difficult to detect. Because a forced-choice guess can be correct by chance, this is an exploratory result, not a calibrated contrast threshold or medical diagnosis.</p>
+      <h3>Why does screen calibration matter?</h3>
+      <p>Brightness, gamma, glare, pixel density and viewing distance affect contrast. Take repeated tests under similar conditions to compare your own results. This is not the clinical Pelli–Robson letter-chart protocol.</p>
+    `,
     citations: [
         "Pelli, D. G., & Robson, J. G. (1988). The design of a new letter chart for measuring contrast sensitivity. Clinical Vision Sciences."
     ]
@@ -250,7 +265,7 @@ export const TESTS: TestDefinition[] = [
     id: 'peripheral-vision-test',
     title: 'Peripheral Vision Test',
     category: TestCategory.VISUAL,
-    description: 'Test your side vision field awareness. Detect flashing targets while maintaining central focus.',
+    description: 'Notice brief screen-edge targets while keeping central focus in a non-clinical visual awareness exercise.',
     iconName: 'Eye',
     estimatedTime: '1 min',
     isImplemented: true
@@ -271,10 +286,17 @@ export const TESTS: TestDefinition[] = [
     id: 'color-hue-test',
     title: 'Color Hue Test',
     category: TestCategory.VISUAL,
-    description: 'Find the odd color out. A gamified Farnsworth Munsell test for designers and artists.',
+    description: 'Identify the differently colored tile in a timed hue discrimination game. Results are screen-dependent and not clinical.',
     iconName: 'Palette',
     estimatedTime: '2 min',
     isImplemented: true,
+    seoContent: `
+      <h2>How the online color hue test works</h2>
+      <p>Select the differently colored square before the timer runs out. The game cycles through red, yellow, green, cyan, blue and magenta families, making the distinction more subtle as levels advance.</p>
+      <h3>What does the color breakdown mean?</h3>
+      <p>The result shows your correct selections and accuracy for each color family tested. An untested color is marked as such, not presented as 100% accurate. This is an HSL-based game, not a calibrated Farnsworth–Munsell test or an eye examination.</p>
+      <p>Display gamut, color profiles, brightness and ambient lighting can change the appearance of the same digital color. Use consistent conditions for personal comparisons.</p>
+    `,
     citations: [
         "Farnsworth, D. (1943). The Farnsworth-Munsell 100-hue and dichotomous tests for color vision. JOSA."
     ]

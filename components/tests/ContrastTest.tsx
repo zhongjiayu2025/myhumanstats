@@ -68,114 +68,66 @@ const ContrastTest: React.FC = () => {
       ctx.putImageData(imageData, 0, 0);
   };
 
-  const nextRound = (isCorrect: boolean) => {
-      // Reversal Logic
-      const currentResult = isCorrect ? 'hit' : 'miss';
-      let currentReversals = reversals;
-      
-      if (lastResult && currentResult !== lastResult) {
-          currentReversals += 1;
-          setReversals(currentReversals);
-      }
-      setLastResult(currentResult);
+  const [trial, setTrial] = useState(0);
+  const TRIALS_PER_BAND = 8;
+  const recordsRef = useRef<{band: number; contrast: number; correct: boolean}[]>([]);
+  const acceptingRef = useRef(false);
 
-      // Check if Frequency Complete
-      if (currentReversals >= MAX_REVERSALS_PER_FREQ) {
-          completeFrequency();
-          return;
-      }
-
-      // Staircase Step
-      const factor = currentReversals < 2 ? 2.0 : 1.4; 
-      let nextC = contrast;
-      
-      if (isCorrect) {
-          nextC = contrast / factor;
-      } else {
-          nextC = Math.min(100, contrast * factor);
-          revealMistake(); // Brief pause on error
-          return; 
-      }
-
-      setContrast(nextC);
-      
-      // Randomize next orientation
-      const newTilt = Math.random() > 0.5 ? 'left' : 'right';
-      setOrientation(newTilt);
-      
-      // Render
-      setTimeout(() => {
-          if (canvasRef.current && phase === 'test') {
-              drawGabor(canvasRef.current, newTilt, nextC, FREQUENCIES[freqIndex].val);
-          }
-      }, 50);
-  };
-
-  const completeFrequency = () => {
-      // Save result for current frequency
-      // Sensitivity = 1 / contrast threshold
-      const sensitivity = 1 / (contrast / 100);
-      setResults(prev => [...prev, { freq: FREQUENCIES[freqIndex].label, threshold: Math.round(sensitivity) }]);
-
-      if (freqIndex < FREQUENCIES.length - 1) {
-          // Next Freq
-          setFreqIndex(f => f + 1);
-          setContrast(50); // Reset contrast
-          setReversals(0);
-          setLastResult(null);
-          
-          // Render new freq start
-          setTimeout(() => {
-              if (canvasRef.current) drawGabor(canvasRef.current, orientation, 50, FREQUENCIES[freqIndex + 1].val);
-          }, 100);
-      } else {
-          finish();
-      }
-  };
-
-  const revealMistake = () => {
-      setPhase('reveal');
-      if (canvasRef.current) drawGabor(canvasRef.current, orientation, 100, FREQUENCIES[freqIndex].val);
-      
-      setTimeout(() => {
-          setPhase('test');
-          const factor = 1.5; // Penalty
-          const nextC = Math.min(100, contrast * factor);
-          setContrast(nextC);
-          
-          const newTilt = Math.random() > 0.5 ? 'left' : 'right';
-          setOrientation(newTilt);
-          if (canvasRef.current) drawGabor(canvasRef.current, newTilt, nextC, FREQUENCIES[freqIndex].val);
-      }, 1000);
-  };
+  useEffect(() => {
+    if (phase !== 'test' || !canvasRef.current) return;
+    drawGabor(canvasRef.current, orientation, contrast, FREQUENCIES[freqIndex].val);
+    acceptingRef.current = true;
+  }, [phase, trial, orientation, contrast, freqIndex]);
 
   const handleGuess = (guess: 'left' | 'right') => {
-      if (phase !== 'test') return;
-      nextRound(guess === orientation);
+    if (phase !== 'test' || !acceptingRef.current) return;
+    acceptingRef.current = false;
+    const correct = guess === orientation;
+    const records = [...recordsRef.current, {band: freqIndex, contrast, correct}];
+    recordsRef.current = records;
+    const nextTrial = trial + 1;
+
+    if (nextTrial % TRIALS_PER_BAND === 0) {
+      const passed = records.filter(r => r.band === freqIndex && r.correct).map(r => r.contrast);
+      const threshold = passed.length ? Math.round(Math.min(...passed) * 10) / 10 : 100;
+      const nextResults = [...results, {freq: FREQUENCIES[freqIndex].label, threshold}];
+      setResults(nextResults);
+      if (freqIndex >= FREQUENCIES.length - 1) {
+        setPhase('result');
+        const score = Math.round(100 * records.filter(r => r.correct).length / records.length);
+        saveStat('contrast-test', score, score);
+        return;
+      }
+      setFreqIndex(f => f + 1);
+      setContrast(50);
+    } else {
+      setContrast(Math.min(100, Math.max(1, contrast * (correct ? 0.72 : 1.5))));
+    }
+    setOrientation(Math.random() > 0.5 ? 'left' : 'right');
+    setTrial(nextTrial);
   };
+
+  useEffect(() => {
+    if (phase !== 'test') return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        event.preventDefault();
+        handleGuess(event.key === 'ArrowLeft' ? 'left' : 'right');
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [phase, trial, contrast, orientation, freqIndex]);
 
   const startTest = () => {
-      setFreqIndex(0);
-      setResults([]);
-      setReversals(0);
-      setContrast(50);
-      setPhase('test');
-      
-      const newTilt = Math.random() > 0.5 ? 'left' : 'right';
-      setOrientation(newTilt);
-      setTimeout(() => {
-          if (canvasRef.current) drawGabor(canvasRef.current, newTilt, 50, FREQUENCIES[0].val);
-      }, 50);
-  };
-
-  const finish = () => {
-      setPhase('result');
-      // Save average sensitivity across frequencies as the single stat
-      const avgSens = results.reduce((a,b) => a + b.threshold, 0) / results.length;
-      // Convert to 0-100 score (Log scale usually)
-      // Normal sensitivity ranges 50-200.
-      const finalScore = Math.min(100, Math.round((avgSens / 200) * 100));
-      saveStat('contrast-test', finalScore);
+    recordsRef.current = [];
+    acceptingRef.current = false;
+    setResults([]);
+    setTrial(0);
+    setFreqIndex(0);
+    setContrast(50);
+    setOrientation(Math.random() > 0.5 ? 'left' : 'right');
+    setPhase('test');
   };
 
   return (
@@ -185,8 +137,8 @@ const ContrastTest: React.FC = () => {
                <Contrast size={64} className="mx-auto text-zinc-600 mb-6" />
                <h2 className="text-3xl font-bold text-white mb-2">Contrast Sensitivity Function (CSF)</h2>
                <p className="text-zinc-400 mb-8 max-w-md mx-auto leading-relaxed">
-                   Clinical-grade visual assessment.
-                   <br/>We will test your vision at <strong>Low</strong>, <strong>Medium</strong>, and <strong>High</strong> spatial frequencies to build your visual profile.
+                   An educational, screen-dependent perception exercise—not a clinical eye test.
+                   <br/>We will test your vision at <strong>Low</strong>, <strong>Medium</strong>, and <strong>High</strong> spatial frequencies to explore how contrast affects your visual responses.
                </p>
                <button onClick={() => setPhase('calibrate')} className="btn-primary">Start Calibration</button>
            </div>
@@ -197,7 +149,7 @@ const ContrastTest: React.FC = () => {
                <Monitor size={48} className="mx-auto text-primary-500 mb-4" />
                <h2 className="text-xl font-bold text-white mb-6">Gamma Check</h2>
                <p className="text-zinc-400 text-sm mb-8 max-w-sm mx-auto">
-                   Ensure screen brightness is high. You should be able to distinguish the squares below.
+                   Use a comfortable brightness, minimize glare and check that you can distinguish the squares. This screen is not medically calibrated.
                </p>
                <div className="relative w-64 h-64 mx-auto bg-black border border-zinc-700 mb-8 flex items-center justify-center">
                    <div className="w-48 h-48 bg-[#080808] flex items-center justify-center">
@@ -216,7 +168,7 @@ const ContrastTest: React.FC = () => {
            <div className="py-8">
                <div className="flex justify-between items-center mb-8 px-8">
                    <div className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">
-                       Frequency: <span className="text-white">{FREQUENCIES[freqIndex].label}</span>
+                       Frequency: <span className="text-white">{FREQUENCIES[freqIndex].label} / {(trial % TRIALS_PER_BAND) + 1} of {TRIALS_PER_BAND}</span>
                    </div>
                    {phase === 'reveal' && (
                        <div className="text-red-500 font-bold text-sm animate-pulse flex items-center gap-2">
@@ -264,12 +216,12 @@ const ContrastTest: React.FC = () => {
            <div className="py-12 animate-in zoom-in">
                <div className="mb-8">
                    <h2 className="text-sm font-mono text-zinc-500 uppercase tracking-widest mb-2">Visual Performance Profile</h2>
-                   <div className="text-3xl font-bold text-white mb-2">CSF Curve Analysis</div>
+                   <div className="text-3xl font-bold text-white mb-2">Lowest Correct Contrast by Pattern</div>
                </div>
                
                <div className="h-64 w-full bg-zinc-900/30 border border-zinc-800 rounded p-4 mb-8 relative">
                    <div className="absolute top-2 left-2 text-[10px] text-zinc-500 font-mono flex items-center gap-2">
-                       <Activity size={12}/> SENSITIVITY_CURVE
+                       <Activity size={12}/> LOWEST IDENTIFIED CONTRAST (%)
                    </div>
                    <ResponsiveContainer width="100%" height="100%">
                        <LineChart data={results}>
@@ -280,7 +232,7 @@ const ContrastTest: React.FC = () => {
                                contentStyle={{ backgroundColor: '#000', borderColor: '#333', fontSize: '12px' }} 
                                cursor={{stroke: '#333'}}
                            />
-                           <Line type="monotone" dataKey="threshold" name="Sensitivity" stroke="#06b6d4" strokeWidth={3} dot={{r: 4, fill: '#06b6d4'}} />
+                           <Line type="monotone" dataKey="threshold" name="Lowest detected contrast (%)" stroke="#06b6d4" strokeWidth={3} dot={{r: 4, fill: '#06b6d4'}} />
                        </LineChart>
                    </ResponsiveContainer>
                </div>
@@ -289,12 +241,13 @@ const ContrastTest: React.FC = () => {
                    {results.map((r, i) => (
                        <div key={i} className="bg-zinc-900 border border-zinc-800 p-2 rounded">
                            <div className="text-[10px] text-zinc-500 uppercase">{r.freq}</div>
-                           <div className="text-xl font-bold text-white">{r.threshold}</div>
+                           <div className="text-xl font-bold text-white">{r.threshold}%</div>
                        </div>
                    ))}
                </div>
 
-               <button onClick={startTest} className="btn-secondary">
+               <p className="text-sm text-zinc-400 mb-6">Shown values represent the lowest correctly identified contrast in eight trials per pattern, not clinical thresholds. Hardware, lighting and guessing can change scores.</p>
+                <button onClick={startTest} className="btn-secondary">
                    Retake Protocol
                </button>
            </div>

@@ -29,6 +29,7 @@ const ColorHueTest: React.FC = () => {
   });
 
   const timerRef = useRef<number | null>(null);
+  const awaitingNextRound = useRef(false);
 
   // Timer Logic
   useEffect(() => {
@@ -46,6 +47,7 @@ const ColorHueTest: React.FC = () => {
   }, [level, isPlaying]);
 
   const generateLevel = () => {
+    awaitingNextRound.current = false;
     // Grid: 2x2 -> 8x8 max
     const size = Math.min(8, Math.floor(Math.sqrt(level + 3)));
     setGridSize(size);
@@ -77,7 +79,9 @@ const ColorHueTest: React.FC = () => {
   };
 
   const handleTileClick = (index: number) => {
+    if (phase !== 'play' || !isPlaying || timeLeft <= 0 || awaitingNextRound.current) return;
     if (index === diffIndex) {
+      awaitingNextRound.current = true;
       // Correct
       setSpectrumStats(prev => ({
           ...prev,
@@ -104,10 +108,11 @@ const ColorHueTest: React.FC = () => {
     setIsPlaying(false);
     setPhase('end');
     const finalScore = Math.min(100, Math.round((score / 40) * 100));
-    saveStat('color-hue', finalScore);
+    saveStat('color-hue-test', finalScore, score);
   };
 
   const startGame = () => {
+    awaitingNextRound.current = false;
     setLevel(1);
     setScore(0);
     setTimeLeft(60);
@@ -127,7 +132,7 @@ const ColorHueTest: React.FC = () => {
       // Explicitly typing the map arguments for robustness
       return Object.entries(spectrumStats).map(([key, val]: [string, { hits: number, total: number }]) => ({
           subject: key,
-          A: val.total === 0 ? 100 : Math.round((val.hits / val.total) * 100), // Default 100 if untestable
+          A: val.total === 0 ? null : Math.round((val.hits / val.total) * 100), // Untested is not 100%
           fullMark: 100
       }));
   };
@@ -140,10 +145,10 @@ const ColorHueTest: React.FC = () => {
              <div className="w-24 h-24 bg-zinc-900 border border-zinc-800 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Palette size={40} className="text-pink-500" />
              </div>
-             <h2 className="text-3xl font-bold text-white mb-2">Farnsworth Hue Test</h2>
+             <h2 className="text-3xl font-bold text-white mb-2">Color Hue Test</h2>
              <p className="text-zinc-400 mb-8 max-w-sm mx-auto">
                 Find the odd colored tile. 
-                <br/>This test maintains <strong>Iso-luminance</strong> to test pure chromatic sensitivity across the spectrum.
+                <br/>This game compares colors with similar HSL lightness. It is not a calibrated Farnsworth–Munsell or clinical color vision test.
              </p>
              <button onClick={startGame} className="btn-primary flex items-center gap-2 mx-auto">
                 <Play size={18} /> Start Discrimination
@@ -181,7 +186,7 @@ const ColorHueTest: React.FC = () => {
                {Array.from({ length: gridSize * gridSize }).map((_, i) => (
                  <button
                    key={i}
-                   onMouseDown={() => handleTileClick(i)} 
+                   type="button" onClick={() => handleTileClick(i)} aria-label={'Color tile ' + (i + 1)} 
                    className="rounded-md transition-transform active:scale-95 duration-75 shadow-sm hover:brightness-110"
                    style={{ 
                      backgroundColor: i === diffIndex ? colors.diff : colors.base 
@@ -196,7 +201,7 @@ const ColorHueTest: React.FC = () => {
           <div className="text-center py-12 animate-in zoom-in w-full">
              <AlertCircle size={64} className="mx-auto text-zinc-600 mb-6" />
              <div className="text-6xl font-bold text-white mb-2">{score}</div>
-             <p className="text-zinc-500 uppercase font-mono tracking-widest mb-8">Final Score</p>
+             <p className="text-zinc-500 uppercase font-mono tracking-widest mb-8">Correct selections in one timed round</p>
              
              <div className="h-64 w-full relative mb-8">
                  <div className="absolute top-0 right-0 text-[10px] text-zinc-500 flex items-center gap-1 font-mono"><PieChart size={12}/> SPECTRAL_SENSITIVITY</div>
@@ -210,10 +215,16 @@ const ColorHueTest: React.FC = () => {
                  </ResponsiveContainer>
              </div>
 
-             <div className="bg-zinc-900/50 p-4 rounded border border-zinc-800 mb-8 max-w-sm mx-auto text-sm text-zinc-400">
-                {score > 45 ? "Superior Color Vision. You can detect hue shifts of < 2 degrees." : 
-                 score > 30 ? "High Average. Suitable for design work." : 
-                 "Average. Color sensitivity is within normal range."}
+             <div className="grid grid-cols-2 gap-2 mb-6 w-full text-left" aria-label="Accuracy by color family">
+                {Object.entries(spectrumStats).map(([name, value]) => (
+                  <div key={name} className="bg-zinc-900 border border-zinc-800 p-3 text-xs">
+                    <span className="text-zinc-400">{name}: </span>
+                    <strong className="text-white">{value.total ? Math.round(value.hits / value.total * 100) + '% (' + value.hits + '/' + value.total + ')' : 'Not tested'}</strong>
+                  </div>
+                ))}
+              </div>
+              <div className="bg-zinc-900/50 p-4 rounded border border-zinc-800 mb-8 max-w-sm mx-auto text-sm text-zinc-400">
+                Browser color perception varies by display gamut, calibration and lighting. This is a game score, not a clinical vision test.
              </div>
 
              <button onClick={startGame} className="btn-primary">Try Again</button>

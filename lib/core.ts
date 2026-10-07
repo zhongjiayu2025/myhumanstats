@@ -35,11 +35,31 @@ export { TESTS } from './data';
 const STORAGE_KEY = 'mhs_user_stats';
 const HISTORY_KEY = 'mhs_history';
 
+// Earlier test components saved under shortened IDs that do not match TESTS.
+// Preserve existing browser scores and history when users return after this
+// release. New data is written under the canonical TESTS identifiers.
+const LEGACY_TEST_IDS: Record<string, string> = {
+  'color-hue-test': 'color-hue',
+  'perfect-pitch-test': 'perfect-pitch',
+  'peripheral-vision-test': 'peripheral-vision',
+};
+
+const normalizedStats = (stats: UserStats): UserStats => {
+  const result = { ...stats };
+  Object.entries(LEGACY_TEST_IDS).forEach(([canonical, legacy]) => {
+    if (result[canonical] === undefined && result[legacy] !== undefined) {
+      result[canonical] = result[legacy];
+    }
+  });
+  return result;
+};
+
+
 export const getStats = (): UserStats => {
   if (typeof window === 'undefined') return {};
   try {
     const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : {};
+    return normalizedStats(data ? JSON.parse(data) : {});
   } catch (e) {
     console.error("Failed to load stats", e);
     return {};
@@ -57,7 +77,7 @@ export const getHistory = (testId: string): HistoryEntry[] => {
   try {
     const data = localStorage.getItem(HISTORY_KEY);
     const allHistory = data ? JSON.parse(data) : {};
-    return allHistory[testId] || [];
+    return allHistory[testId] || allHistory[LEGACY_TEST_IDS[testId]] || [];
   } catch (e) {
     console.error("Failed to load history", e);
     return [];
@@ -75,7 +95,7 @@ export const saveStat = (testId: string, score: number, rawValue?: number) => {
     // 2. Push to History
     const historyData = localStorage.getItem(HISTORY_KEY);
     const allHistory = historyData ? JSON.parse(historyData) : {};
-    const testHistory = allHistory[testId] || [];
+    const testHistory = allHistory[testId] || allHistory[LEGACY_TEST_IDS[testId]] || [];
     
     // Create new entry, including raw value if provided
     const newEntry: HistoryEntry = { 
