@@ -10,12 +10,13 @@ import Link from 'next/link';
 import { FileText, ChevronRight } from 'lucide-react';
 
 interface Props {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 // Generate Dynamic SEO Metadata
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const testDef = TESTS.find(t => t.id === params.id);
+  const { id } = await params;
+  const testDef = TESTS.find(t => t.id === id);
   if (!testDef) return { title: "Test Not Found" };
   
   return {
@@ -54,8 +55,9 @@ export async function generateStaticParams() {
 }
 
 // Server Component
-export default function TestPage({ params }: Props) {
-  const testDef = TESTS.find(t => t.id === params.id);
+export default async function TestPage({ params }: Props) {
+  const { id } = await params;
+  const testDef = TESTS.find(t => t.id === id);
 
   if (!testDef) {
     notFound();
@@ -125,7 +127,7 @@ export default function TestPage({ params }: Props) {
         />
       )}
       
-      <TestRunnerClient id={params.id} />
+      <TestRunnerClient id={id} />
       
       <div className="max-w-6xl mx-auto px-4 md:px-6 pb-12">
          
