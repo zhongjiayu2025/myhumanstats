@@ -3,6 +3,7 @@ import React from 'react';
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import { TESTS } from '@/lib/data';
+import { SEARCH_SNIPPETS } from '@/lib/seoGrowth';
 import { BLOG_POSTS } from '@/lib/blogData'; // Point 4: Import Blog posts
 import TestRunnerClient from '@/components/TestRunnerClient';
 import RecommendedTests from '@/components/RecommendedTests';
@@ -18,16 +19,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const resolvedParams = await params;
   const testDef = TESTS.find(t => t.id === resolvedParams.id);
   if (!testDef) return { title: "Test Not Found" };
-  
+  const snippet = SEARCH_SNIPPETS[testDef.id];
+  const pageTitle = snippet?.title ?? `${testDef.title} – Free Online Test`;
+  const pageDescription = snippet?.description ?? testDef.description;
+
   return {
-    title: `${testDef.title} - Online Benchmark | MyHumanStats`,
-    description: testDef.description,
+    // The root layout adds the site name; do not duplicate "| MyHumanStats".
+    title: pageTitle,
+    description: pageDescription,
     alternates: {
       canonical: `/test/${testDef.id}`,
     },
     openGraph: {
-        title: `${testDef.title} | Online Benchmark`,
-        description: testDef.description,
+        title: `${testDef.title} | MyHumanStats`,
+        description: pageDescription,
         url: `https://myhumanstats.org/test/${testDef.id}`,
         images: [
           {
@@ -41,7 +46,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     twitter: {
       card: 'summary',
       title: testDef.title,
-      description: testDef.description,
+      description: pageDescription,
       images: ['/logo.svg'],
     }
   };

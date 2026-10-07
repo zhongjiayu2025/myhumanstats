@@ -50,6 +50,13 @@ for (const id of ['tone-generator','bpm-counter','dead-pixel-test','stereo-test'
   if (canonical !== 'https://myhumanstats.org/tools/' + id) issues.push('Tool canonical mismatch: ' + id);
 }
 if (/https:\/\/myhumanstats\.org\/statistics\//.test(xml)) issues.push('Noindex statistics pages found in sitemap');
+// Validate that the home page offers direct HTML links to selected test intents.
+const home = read('out/index.html');
+for (const id of ['rhythm-test','contrast-test','color-hue-test','perfect-pitch-test','peripheral-vision-test','number-memory-test']) {
+  if (!home.includes('href="/test/' + id + '/"')) issues.push('Homepage missing featured link: ' + id);
+}
+if (!home.includes('Free Online Human Ability Tests')) issues.push('Homepage missing clear search-intent H1');
+
 if (issues.length) {
   console.error('Static SEO quality gate failed:\n' + issues.map(x => ' - ' + x).join('\n'));
   process.exit(1);
