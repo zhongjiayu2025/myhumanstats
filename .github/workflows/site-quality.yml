@@ -33,6 +33,8 @@ jobs:
         run: node scripts/audit-tests.mjs
       - name: Audit canonical, metadata and unique content on every test page
         run: node scripts/audit-seo-export.mjs
+      - name: Verify exported internal links, sitemap URLs and image assets
+        run: node scripts/audit-internal-links.mjs
       - name: Verify structured data parity and capture SEO drift baseline
         run: node scripts/capture-seo-baseline.mjs
       - name: Upload SEO baseline for drift comparison

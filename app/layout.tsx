@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     template: "%s | MyHumanStats"
   },
   description: "Explore 35 free browser-based tests for rhythm, memory, color, contrast and musical pitch. No account required; local scores stay in your browser.",
-  keywords: ["human benchmark", "reaction time test", "hearing test", "iq test", "cognitive test", "quantified self", "online test"],
+  keywords: ["human benchmark", "reaction time test", "hearing test", "cognitive test", "quantified self", "online test"],
   authors: [{ name: "MyHumanStats Team" }],
   creator: "MyHumanStats",
   publisher: "MyHumanStats",
