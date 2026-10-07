@@ -42,7 +42,26 @@ const LEGACY_TEST_IDS: Record<string, string> = {
   'color-hue-test': 'color-hue',
   'perfect-pitch-test': 'perfect-pitch',
   'peripheral-vision-test': 'peripheral-vision',
+  'aim-trainer-test': 'aim-trainer',
+  'attention-span-test': 'attention-span',
+  'face-blindness-test': 'face-blindness',
+  'hearing-age-test': 'hearing-age',
+  'left-right-brain-test': 'left-right-brain',
+  'number-memory-test': 'number-memory',
+  'reaction-time-test': 'reaction-time',
+  'reading-speed-test': 'reading-speed',
+  'social-battery-test': 'social-battery',
+  'spacebar-speed-test': 'spacebar-speed',
+  'tone-deaf-test': 'tone-deaf',
+  'verbal-memory-test': 'verbal-memory',
+  'visual-memory-test': 'visual-memory',
+  'vocal-range-test': 'vocal-range',
 };
+
+const CANONICAL_IDS: Record<string, string> = Object.fromEntries(
+  Object.entries(LEGACY_TEST_IDS).map(([canonical, oldId]) => [oldId, canonical])
+);
+const canonicalId = (id: string) => CANONICAL_IDS[id] || id;
 
 const normalizedStats = (stats: UserStats): UserStats => {
   const result = { ...stats };
@@ -77,7 +96,23 @@ export const getHistory = (testId: string): HistoryEntry[] => {
   try {
     const data = localStorage.getItem(HISTORY_KEY);
     const allHistory = data ? JSON.parse(data) : {};
-    return allHistory[testId] || allHistory[LEGACY_TEST_IDS[testId]] || [];
+    const canonical = canonicalId(testId);
+    const legacy = LEGACY_TEST_IDS[canonical];
+    const prior = Array.isArray(allHistory[legacy]) ? allHistory[legacy] : [];
+    const current = Array.isArray(allHistory[canonical]) ? allHistory[canonical] : [];
+    // Migrate reads without losing old entries or double-counting the same entry.
+    const seen = new Set<string>();
+    return [...prior, ...current]
+      .filter((entry): entry is HistoryEntry =>
+        entry && Number.isFinite(entry.timestamp) && Number.isFinite(entry.score))
+      .filter((entry) => {
+        const key = `${entry.timestamp}:${entry.score}:${entry.raw ?? ''}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .sort((a, b) => a.timestamp - b.timestamp)
+      .slice(-50);
   } catch (e) {
     console.error("Failed to load history", e);
     return [];
@@ -85,35 +120,27 @@ export const getHistory = (testId: string): HistoryEntry[] => {
 };
 
 export const saveStat = (testId: string, score: number, rawValue?: number) => {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined' || !Number.isFinite(score)) return;
   try {
-    // 1. Update Current Score
+    const id = canonicalId(testId);
+    // The ability dashboard requires a bounded, normalized 0–100 score.
+    const normalized = Math.max(0, Math.min(100, Math.round(score)));
     const current = getStats();
-    const updated = { ...current, [testId]: score };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...current, [id]: normalized }));
 
-    // 2. Push to History
     const historyData = localStorage.getItem(HISTORY_KEY);
     const allHistory = historyData ? JSON.parse(historyData) : {};
-    const testHistory = allHistory[testId] || allHistory[LEGACY_TEST_IDS[testId]] || [];
-    
-    // Create new entry, including raw value if provided
-    const newEntry: HistoryEntry = { 
-        timestamp: Date.now(), 
-        score 
-    };
-    if (rawValue !== undefined) {
-        newEntry.raw = rawValue;
-    }
+    const existing = getHistory(id);
+    const newEntry: HistoryEntry = { timestamp: Date.now(), score: normalized };
+    if (rawValue !== undefined && Number.isFinite(rawValue)) newEntry.raw = rawValue;
+    const newHistory = [...existing, newEntry].slice(-50);
 
-    // Limit history to last 50 entries to avoid bloat
-    const newHistory = [...testHistory, newEntry].slice(-50);
-    
-    localStorage.setItem(HISTORY_KEY, JSON.stringify({ ...allHistory, [testId]: newHistory }));
-
+    // Keep a snapshot under the canonical key while retaining legacy entries
+    // for old-client compatibility. Duplicate entries are removed on reads.
+    localStorage.setItem(HISTORY_KEY, JSON.stringify({ ...allHistory, [id]: newHistory }));
     window.dispatchEvent(new Event('storage-update'));
   } catch (e) {
-    console.error("Failed to save stat", e);
+    console.error('Failed to save stat', e);
   }
 };
 
