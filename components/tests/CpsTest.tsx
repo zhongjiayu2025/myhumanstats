@@ -349,7 +349,7 @@ const CpsTest: React.FC = () => {
                    </div>
                </div>
                
-               <button onClick={reset} className="btn-secondary w-full flex items-center justify-center gap-2">
+               <button onClick={() => reset()} className="btn-secondary w-full flex items-center justify-center gap-2">
                    <RotateCcw size={16} /> Try Again
                </button>
            </div>
