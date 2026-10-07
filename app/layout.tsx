@@ -96,18 +96,6 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(siteSchema) }}
         />
-        {/* Performance Optimization: Preconnect to Image CDN */}
-        <link rel="preconnect" href="https://images.unsplash.com" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://images.unsplash.com" />
-        
-        {/* Fallback for Image SEO if JS fails */}
-        <noscript>
-          <img 
-            src="https://myhumanstats.org/logo.svg" 
-            alt="MyHumanStats Quantified Self Dashboard Logo" 
-            style={{ display: 'none', visibility: 'hidden' }} 
-          />
-        </noscript>
       </head>
       <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans bg-background text-zinc-200 antialiased`}>
         <SettingsProvider>
