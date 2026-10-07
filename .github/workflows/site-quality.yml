@@ -29,6 +29,8 @@ jobs:
         run: npm run build
       - name: Audit all 35 test registrations, score IDs and static pages
         run: node scripts/audit-tests.mjs
+      - name: Audit canonical, metadata and unique content on every test page
+        run: node scripts/audit-seo-export.mjs
       - name: Verify SEO and core static routes
         run: |
           test -f out/index.html
