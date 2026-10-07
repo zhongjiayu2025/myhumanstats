@@ -29,6 +29,10 @@ export default function ToneGenPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
       />
+      <header className="max-w-4xl mx-auto px-4 pt-6 pb-3">
+        <h1 className="text-3xl sm:text-4xl font-bold text-white">Online Tone Generator</h1>
+        <p className="text-sm text-zinc-400 mt-3">Generate tones on your device at a low, comfortable volume. Browser speakers and headphones are not clinically calibrated.</p>
+      </header>
       <ToneGenClient />
       
       <div className="max-w-4xl mx-auto px-4 pb-20">
@@ -40,8 +44,8 @@ export default function ToneGenPage() {
           
           <h3 className="text-white text-lg font-bold">Features</h3>
           <ul>
-            <li><strong>Frequency Sweep:</strong> Test the range of your speakers or headphones (20Hz - 20kHz).</li>
-            <li><strong>Binaural Beats:</strong> Create differing frequencies in left/right channels to induce brainwave states.</li>
+            <li><strong>Frequency Sweep:</strong> Explore how your speakers or headphones reproduce selected pitches; playback is not a certified hardware test.</li>
+            <li><strong>Binaural Beats:</strong> Listen to slightly different frequencies in the left and right channels using stereo headphones; no therapeutic effect is established by this tool.</li>
             <li><strong>Waveforms:</strong> Switch between Sine, Square, Sawtooth, and Triangle waves.</li>
           </ul>
 
