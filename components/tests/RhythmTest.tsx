@@ -304,9 +304,9 @@ const RhythmTest: React.FC = () => {
         
         {phase === 'idle' && (
             <div className="text-center animate-in fade-in zoom-in">
-                <div className="w-24 h-24 rounded-full border-2 border-zinc-700 bg-zinc-900 flex items-center justify-center mx-auto mb-6 group cursor-pointer hover:border-primary-500 hover:bg-zinc-800 transition-all" onClick={startCalibration}>
+                <button type="button" aria-label="Start rhythm test" className="w-24 h-24 rounded-full border-2 border-zinc-700 bg-zinc-900 flex items-center justify-center mx-auto mb-6 group cursor-pointer hover:border-primary-500 hover:bg-zinc-800 transition-all" onClick={startCalibration}>
                     <Play size={32} className="text-zinc-500 group-hover:text-primary-400 ml-1 transition-colors" />
-                </div>
+                </button>
                 <h2 className="text-2xl font-bold text-white mb-2">Rhythm Test</h2>
                 <p className="text-zinc-400 text-sm max-w-md mx-auto mb-6 leading-relaxed">
                     <strong>Synchronization-Continuation Task</strong><br/>
@@ -346,6 +346,9 @@ const RhythmTest: React.FC = () => {
                 <div className="w-full h-2 bg-zinc-800 rounded-full max-w-xs mx-auto overflow-hidden">
                     <div className="h-full bg-primary-500 transition-all duration-200" style={{ width: `${count * 10}%` }}></div>
                 </div>
+                <button type="button" onClick={(e) => { if (e.detail === 0) handleInput(e); }}
+                  className="mt-8 w-32 h-32 bg-zinc-900 border-2 border-primary-500/50 rounded-full text-white font-bold active:bg-zinc-800 touch-none"
+                  aria-label="Tap to calibrate your beat">TAP BEAT</button>
             </div>
         )}
 
@@ -415,9 +418,10 @@ const RhythmTest: React.FC = () => {
                 </div>
                 
                 <div className="text-center">
-                    <div className="w-32 h-32 md:w-20 md:h-20 bg-zinc-900 rounded-full border-2 border-zinc-700 mx-auto flex items-center justify-center active:bg-zinc-800 active:border-primary-500 transition-all cursor-pointer shadow-lg">
+                    <button type="button" aria-label="Tap rhythm beat" onClick={(e) => { if (e.detail === 0) handleInput(e); }}
+                      className="w-32 h-32 md:w-20 md:h-20 bg-zinc-900 rounded-full border-2 border-zinc-700 mx-auto flex items-center justify-center active:bg-zinc-800 active:border-primary-500 transition-all cursor-pointer shadow-lg">
                         <MousePointer2 size={24} className="text-zinc-500" />
-                    </div>
+                    </button>
                     <div className="text-[10px] text-zinc-600 mt-3 font-mono">TAP ANYWHERE</div>
                 </div>
             </div>
