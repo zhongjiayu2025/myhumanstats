@@ -28,10 +28,12 @@ const RhythmTest: React.FC = () => {
 
   const audioCtxRef = useRef<AudioContext | null>(null);
   const lastTapTimeRef = useRef<number>(0);
+  const tapGuardRef = useRef(0);
   const startTimeRef = useRef<number>(0); 
   
-  const BPM = 120;
-  const INTERVAL_MS = 60000 / BPM; // 500ms per beat
+  const [bpm, setBpm] = useState(120);
+  const BPM = bpm;
+  const INTERVAL_MS = 60000 / BPM;
   const LISTENING_BEATS = 4;
   const TARGET_TAPS = 20; 
 
@@ -89,6 +91,7 @@ const RhythmTest: React.FC = () => {
   };
 
   const startCalibration = () => {
+      tapGuardRef.current = 0;
       setPhase('calibrate');
       setCalibrationTaps([]);
       setCount(0);
@@ -122,7 +125,8 @@ const RhythmTest: React.FC = () => {
           setTimeout(() => {
               const validTaps = updatedTaps.slice(2); // Include the final tap, exclude first two for stability
               const avg = validTaps.length ? validTaps.reduce((a,b)=>a+b, 0) / validTaps.length : 0;
-              setInputLatency(avg);
+              // Tap alignment is not physical hardware latency.
+              setInputLatency(Math.max(-150, Math.min(150, avg)));
               startTest();
           }, 500);
       }
@@ -152,14 +156,18 @@ const RhythmTest: React.FC = () => {
         lastTapTimeRef.current = startTimeRef.current + (LISTENING_BEATS - 1) * INTERVAL_MS; 
     }, 500 + (LISTENING_BEATS * INTERVAL_MS));
 
-  }, [inputLatency]);
+  }, [BPM]);
 
-  const handleInput = useCallback((e?: React.MouseEvent | React.TouchEvent | KeyboardEvent) => {
+  const handleInput = useCallback((e?: React.SyntheticEvent | KeyboardEvent) => {
     if (e) {
         if (phase === 'tapping' || phase === 'calibrate') {
             if(e.cancelable && e.type !== 'mousedown') e.preventDefault(); 
         }
     }
+
+    const inputTime = performance.now();
+    if (inputTime - tapGuardRef.current < 120) return;
+    tapGuardRef.current = inputTime;
 
     if (phase === 'calibrate') {
         handleCalibrationTap();
@@ -205,6 +213,8 @@ const RhythmTest: React.FC = () => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
         if (e.code === 'Space') {
+            if (e.repeat || (e.target instanceof HTMLElement && e.target.closest('button'))) return;
+            e.preventDefault();
             if (phase === 'idle' || phase === 'result') startCalibration();
             else if (phase === 'tapping' || phase === 'calibrate') handleInput(e);
         }
@@ -269,7 +279,7 @@ const RhythmTest: React.FC = () => {
   const lastDev = getLastTapDeviation();
 
   return (
-    <div className="max-w-2xl mx-auto select-none touch-none" onMouseDown={(e) => handleInput(e)} onTouchStart={(e) => handleInput(e)}>
+    <div className="max-w-2xl mx-auto select-none" onPointerDown={(e) => { if (phase === 'calibrate' || phase === 'tapping') handleInput(e); }}>
       
       {/* HUD Header */}
       {(phase === 'tapping' || phase === 'result' || phase === 'calibrate' || phase === 'listening') && (
@@ -277,7 +287,7 @@ const RhythmTest: React.FC = () => {
            <div className="text-left">
               <div className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest">Tempo</div>
               <div className="text-xl text-white font-mono font-bold flex items-center gap-2">
-                 {BPM} BPM <span className="text-zinc-600 text-sm">/ 500ms</span>
+                 {BPM} BPM <span className="text-zinc-600 text-sm">/ {Math.round(INTERVAL_MS)}ms</span>
               </div>
            </div>
            <div className="text-right">
@@ -300,8 +310,17 @@ const RhythmTest: React.FC = () => {
                 <h2 className="text-2xl font-bold text-white mb-2">Rhythm Test</h2>
                 <p className="text-zinc-400 text-sm max-w-md mx-auto mb-6 leading-relaxed">
                     <strong>Synchronization-Continuation Task</strong><br/>
-                    Listen to 4 beats, then continue tapping blindly to the grid. Measures your internal clock stability and drift.
+                    Listen to four beats, then continue tapping to the same tempo without sound. Review timing consistency and drift; browser and audio hardware add uncertainty.
                 </p>
+                 <div className="flex flex-wrap justify-center gap-2 mb-5" role="group" aria-label="Tempo">
+                   {[80, 100, 120, 140].map(value => (
+                     <button type="button" key={value} onClick={() => setBpm(value)}
+                       aria-pressed={bpm === value}
+                       className={'px-3 py-2 text-xs border rounded font-mono ' + (bpm === value ? 'border-primary-500 text-primary-400' : 'border-zinc-700 text-zinc-400')}>
+                       {value} BPM
+                     </button>
+                   ))}
+                 </div>
                 <div className="flex justify-center gap-4 mb-6">
                     <button 
                        onClick={(e) => { e.stopPropagation(); setAudioFeedback(!audioFeedback); }}
@@ -322,7 +341,7 @@ const RhythmTest: React.FC = () => {
                     <Settings size={48} className="text-primary-500 animate-spin-slow" />
                 </div>
                 <h2 className="text-xl font-bold text-white mb-2">Hardware Calibration</h2>
-                <p className="text-zinc-400 text-sm mb-8">Tap along with the beat to measure your system latency.</p>
+                <p className="text-zinc-400 text-sm mb-8">Tap along with the beat to estimate your input alignment. This is not a device-latency calibration.</p>
                 
                 <div className="w-full h-2 bg-zinc-800 rounded-full max-w-xs mx-auto overflow-hidden">
                     <div className="h-full bg-primary-500 transition-all duration-200" style={{ width: `${count * 10}%` }}></div>
@@ -414,7 +433,7 @@ const RhythmTest: React.FC = () => {
                      </div>
                      <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-lg text-center">
                         <div className="text-[10px] text-zinc-500 uppercase font-mono mb-1">Drift (Bias)</div>
-                        <div className={`text-2xl font-bold ${stats.tendency === 'Stable' ? 'text-emerald-400' : 'text-yellow-400'}`}>
+                        <div className={`text-2xl font-bold ${stats.tendency === 'Precise' ? 'text-emerald-400' : 'text-yellow-400'}`}>
                             {stats.avgError > 0 ? '+' : ''}{stats.avgError}ms
                         </div>
                         <div className="text-[9px] text-zinc-600 flex justify-center items-center gap-1">
@@ -464,7 +483,7 @@ const RhythmTest: React.FC = () => {
                 </div>
 
                 <div className="bg-zinc-900/50 p-4 border border-zinc-800 text-xs text-zinc-400 leading-relaxed mb-6">
-                    <strong>Measured Input Latency:</strong> {Math.round(inputLatency)}ms (Compensated)
+                    <strong>Estimated Tap Alignment Offset:</strong> {Math.round(inputLatency)}ms (Applied; not a device latency measurement)
                     <br/><br/>
                     {score > 90 ? "Metronomic precision. Your internal clock is rock solid." :
                      score > 70 ? "Solid rhythm. Minor drift is natural for humans." :
@@ -485,7 +504,7 @@ const RhythmTest: React.FC = () => {
              <BarChart3 size={12} /> Technical Context: Temporal consistency
           </h4>
           <p className="text-xs text-zinc-500 leading-relaxed">
-             Why take a <strong>Rhythm Test</strong>? This tool serves as a precise <strong>rhythm test</strong> designed to quantify temporal consistency. Unlike a standard metronome check, this online <strong>rhythm test</strong> analyzes milliseconds of drift to provide a comprehensive aptitude score.
+             This <strong>Rhythm Test</strong> estimates how consistently you continue a beat after listening. It reports timing drift and interval variation in milliseconds; sound output latency and touch or keyboard input affect the measurements.
           </p>
           <div className="mt-2">
              <Link href="/tools/bpm-counter" className="text-[10px] text-primary-500 hover:text-white font-mono flex items-center gap-1">
