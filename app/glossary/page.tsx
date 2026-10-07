@@ -7,6 +7,7 @@ import { TESTS } from '@/lib/data';
 import GlossaryClient from './GlossaryClient'; 
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/glossary/' },
   title: "Codex | Human Performance Glossary",
   description: "A comprehensive dictionary of terms related to auditory, visual, and cognitive science. Definitions for Hertz, JND, Stroop Effect, and more."
 };

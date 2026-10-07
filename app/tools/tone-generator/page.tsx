@@ -6,6 +6,7 @@ import { ArrowRight, Ear, Activity } from 'lucide-react';
 import ToneGenClient from '@/components/tools/ToneGenClient';
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/tools/tone-generator/' },
   title: "Online Tone Generator | Frequency & Binaural Beats",
   description: "Free online sine wave generator. Create pure tones, frequency sweeps, and binaural beats for audio testing and meditation.",
   keywords: ["tone generator", "frequency sweep", "binaural beats", "audio test", "hz generator"]

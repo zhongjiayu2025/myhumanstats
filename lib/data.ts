@@ -74,7 +74,7 @@ export const TESTS: TestDefinition[] = [
     id: 'vocal-range-test',
     title: 'Vocal Range Test',
     category: TestCategory.AUDITORY,
-    description: 'What is your voice type? Real-time pitch detection to find your range (Bass, Tenor, Alto, Soprano) using your microphone.',
+    description: 'Explore your sung pitch range using browser microphone input. Voice-type estimates depend on technique, microphone quality and room acoustics.',
     iconName: 'Mic',
     estimatedTime: '3 min',
     isImplemented: true,
@@ -131,9 +131,9 @@ export const TESTS: TestDefinition[] = [
   },
   {
     id: 'tone-deaf-test',
-    title: 'Tone Deaf Test (Amusia)',
+    title: 'Tone Deaf Test (Pitch Comparison)',
     category: TestCategory.AUDITORY,
-    description: 'Am I Tone Deaf? A scientific relative pitch test to measure your frequency discrimination ability (JND) in Hz.',
+    description: 'Play a relative-pitch comparison game using pairs of tones. This is not a validated assessment of amusia or hearing health.',
     iconName: 'Music2',
     estimatedTime: '4 min',
     isImplemented: true,
@@ -196,6 +196,9 @@ export const TESTS: TestDefinition[] = [
     iconName: 'VolumeX',
     estimatedTime: '3 min',
     isImplemented: true,
+    seoContent: `
+      <h2>About the sound sensitivity activity</h2><p>This optional exercise presents short synthesized sounds and asks how you react. Start at a low volume, use a comfortable listening setup, and stop whenever a sound is unpleasant.</p><h3>What can a result tell you?</h3><p>Responses to a small set of sounds cannot diagnose misophonia. Personal context, volume, expectations and audio equipment all affect perceived intensity. Use this tool for reflection only, not medical decisions.</p>
+    `,
     citations: [
         "Wu, M. S., et al. (2014). Misophonia: Incidence, phenomenology, and clinical correlates in an undergraduate student sample. Journal of Clinical Psychology.",
         "Schröder, A., et al. (2013). Misophonia: Diagnostic criteria for a new psychiatric disorder. PloS one."
@@ -207,7 +210,7 @@ export const TESTS: TestDefinition[] = [
     id: 'color-blind-test',
     title: 'Color Blind Test (Ishihara)',
     category: TestCategory.VISUAL,
-    description: 'Ishihara Plate Test. Screen for Red-Green (Protan/Deutan) and Blue-Yellow (Tritan) color vision deficiencies.',
+    description: 'Explore patterns in digital color plates. Uncalibrated screens cannot provide a clinical color-vision diagnosis.',
     iconName: 'Eye',
     estimatedTime: '3 min',
     isImplemented: true,
@@ -256,10 +259,13 @@ export const TESTS: TestDefinition[] = [
     id: 'astigmatism-test',
     title: 'Astigmatism Test',
     category: TestCategory.VISUAL,
-    description: 'Do lines look blurry? A quick fan-chart screening tool for refractive errors in your cornea.',
+    description: 'Explore how a radial line pattern appears on your screen. This browser demo cannot diagnose astigmatism.',
     iconName: 'Eye',
     estimatedTime: '1 min',
-    isImplemented: true
+    isImplemented: true,
+    seoContent: `
+      <h2>What does the radial-line demo show?</h2><p>Look at lines pointing in different directions from the same center and notice whether some lines appear stronger or blurrier. Display scaling, viewing distance, brightness and glare can all change the effect.</p><h3>Can an online image diagnose astigmatism?</h3><p>No. This is an uncalibrated visual demonstration. It cannot measure refractive error, determine your prescription or replace a professional examination.</p>
+    `,
   },
   {
     id: 'peripheral-vision-test',
@@ -268,16 +274,22 @@ export const TESTS: TestDefinition[] = [
     description: 'Notice brief screen-edge targets while keeping central focus in a non-clinical visual awareness exercise.',
     iconName: 'Eye',
     estimatedTime: '1 min',
-    isImplemented: true
+    isImplemented: true,
+    seoContent: `
+      <h2>How this peripheral vision awareness exercise works</h2><p>Focus near the center of the screen and respond when a brief dot appears elsewhere. This browser task presents 24 targets across 12 screen regions, then summarizes detections and response timing.</p><h3>Why might you miss a dot?</h3><p>Distraction, small displays, viewing distance and input delay can all affect detection. Missed targets are not proof of blind spots or vision loss. This is not a medical visual-field test.</p>
+    `,
   },
   {
     id: 'face-blindness-test',
     title: 'Face Blindness Test (Prosopagnosia)',
     category: TestCategory.VISUAL,
-    description: 'Do you struggle to recognize faces? A prosopagnosia screening test using feature matching.',
+    description: 'Try a visual face-feature recognition exercise; results are not a validated screening test for prosopagnosia.',
     iconName: 'ScanFace',
     estimatedTime: '3 min',
     isImplemented: true,
+    seoContent: `
+      <h2>What is face-feature recognition?</h2><p>Face recognition involves noticing and remembering a combination of visual features. This short interactive activity explores how you compare and remember some of those features.</p><h3>Does a low score mean prosopagnosia?</h3><p>No. The task is not a validated screening test. Trouble recognizing familiar people has multiple possible causes, and a limited set of images cannot establish a diagnosis.</p>
+    `,
     citations: [
         "Duchaine, B., & Nakayama, K. (2006). The Cambridge Face Memory Test: Results for neurologically intact individuals and an investigation of its validity using inverted face stimuli and prosopagnosic participants. Neuropsychologia."
     ]
@@ -308,13 +320,16 @@ export const TESTS: TestDefinition[] = [
     description: 'Experience the Negative Afterimage Illusion. See how your retina adapts to constant stimulation.',
     iconName: 'Sun',
     estimatedTime: '1 min',
-    isImplemented: true
+    isImplemented: true,
+    seoContent: `
+      <h2>Why do negative afterimages appear?</h2><p>Looking at a colored pattern for a short time can leave a fleeting impression when you shift your gaze to a neutral background. The effect demonstrates visual adaptation.</p><h3>Comfort and limitations</h3><p>Screen brightness, adaptation time and surrounding lighting can change the apparent color or duration. Stop if you experience discomfort. This demonstration does not measure retinal health.</p>
+    `,
   },
   {
     id: 'visual-memory-test',
     title: 'Sequence Memory Test (Corsi)',
     category: TestCategory.VISUAL,
-    description: 'Photographic memory challenge. Recall the pattern of lighting grids in the correct order.',
+    description: 'Practice visual sequence memory by repeating a pattern of illuminated tiles.',
     iconName: 'Grid',
     estimatedTime: '3 min',
     isImplemented: true,
@@ -361,7 +376,7 @@ export const TESTS: TestDefinition[] = [
     id: 'reaction-time-test',
     title: 'Reaction Time Test (ms)', // Point 5
     category: TestCategory.COGNITIVE,
-    description: 'Measure your visual reflex speed in milliseconds. Compare your result to the human average (215ms).',
+    description: 'Measure reaction speed in milliseconds and compare your own attempts without fabricated population averages.',
     iconName: 'Zap',
     estimatedTime: '1 min',
     isImplemented: true,
@@ -433,7 +448,10 @@ export const TESTS: TestDefinition[] = [
     description: 'Short-term memory challenge. Keep track of seen vs. new words as the list grows longer.',
     iconName: 'Book',
     estimatedTime: '2 min',
-    isImplemented: true
+    isImplemented: true,
+    seoContent: `
+      <h2>How this verbal memory game works</h2><p>The task presents words and asks whether each word has appeared before. Keeping track of previously seen and unseen words gets harder as the session continues.</p><h3>Reading your score</h3><p>Results reflect this specific word-recognition game, not a population percentile or clinical cognitive assessment. Language familiarity, fatigue, attention and repeated practice can change your performance.</p>
+    `,
   },
   {
     id: 'typing-speed-test',
@@ -468,7 +486,10 @@ export const TESTS: TestDefinition[] = [
     description: 'How fast do you read? Measure your WPM and comprehension level with a standard passage.',
     iconName: 'BookOpen',
     estimatedTime: '2 min',
-    isImplemented: true
+    isImplemented: true,
+    seoContent: `
+      <h2>Reading speed and comprehension</h2><p>Read a passage at a comfortable pace and answer the comprehension prompts within the activity. Words per minute describe how quickly text was read; understanding the passage remains important.</p><h3>What influences reading results?</h3><p>Language experience, passage complexity, font size, screen width and distractions affect reading pace. Compare yourself using similar passages rather than treating one score as a fixed personal ability.</p>
+    `,
   },
   {
     id: 'chimp-test',
@@ -492,7 +513,7 @@ export const TESTS: TestDefinition[] = [
     id: 'number-memory-test',
     title: 'Number Memory Test',
     category: TestCategory.COGNITIVE,
-    description: 'Digit Span Test. How many numbers can you hold in your head at once? Average is 7.',
+    description: 'How long a digit sequence can you recall? Take a browser memory challenge and track your personal best.',
     iconName: 'Hash',
     estimatedTime: '3 min',
     isImplemented: true,
@@ -570,7 +591,7 @@ export const TESTS: TestDefinition[] = [
     id: 'big-five-test',
     title: 'Big 5 Personality',
     category: TestCategory.PERSONALITY,
-    description: 'The Gold Standard. Measure your Openness, Conscientiousness, Extraversion, Agreeableness, and Neuroticism.',
+    description: 'Reflect on five personality dimensions in an informal questionnaire; not a validated clinical assessment.',
     iconName: 'PieChart',
     estimatedTime: '5 min',
     isImplemented: true,
@@ -602,29 +623,33 @@ export const TESTS: TestDefinition[] = [
     isImplemented: true,
     seoContent: `
       <h2>Emotional Intelligence Quotient (EQ)</h2>
-      <p>Unlike IQ, which measures cognitive intelligence, EQ measures your ability to identify, evaluate, control, and express emotions. High EQ is strongly correlated with leadership ability and relationship satisfaction.</p>
+      <p>The expression 'emotional intelligence' describes skills such as recognizing and responding to emotion. This brief browser questionnaire can prompt reflection, but does not provide a standardized emotional-intelligence score.</p>
     `
   },
   {
     id: 'anxiety-test',
-    title: 'Anxiety Test (GAD-7)', // Point 5
+    title: 'Anxiety Test (Calm & Focus)', // Point 5
     category: TestCategory.PERSONALITY,
-    description: 'GAD-7 Anxiety Screener. Check the severity of generalized anxiety symptoms.',
+    description: 'Try a non-diagnostic pointer control exercise and four self-reflection questions. This is not the complete GAD-7.',
     iconName: 'AlertCircle',
     estimatedTime: '2 min',
     isImplemented: true,
-    citations: [
-        "Spitzer, R. L., et al. (2006). A brief measure for assessing generalized anxiety disorder: the GAD-7. Archives of Internal Medicine."
-    ]
+    seoContent: `
+      <h2>How this anxiety test activity works</h2><p>This free browser activity combines a ten-second pointer-control exercise with four optional questions about worry and relaxation. The movement score describes pointer travel in screen pixels, and the questions provide an informal self-reflection index.</p><h3>Is this the GAD-7?</h3><p>No. A four-question selection is not the validated seven-item GAD-7, and pointer movement does not measure anxiety. The result cannot diagnose, confirm or rule out an anxiety disorder. Consult a qualified professional for persistent health concerns.</p>
+    `,
+
   },
   {
     id: 'chronotype-test',
     title: 'Chronotype Test',
     category: TestCategory.PERSONALITY,
-    description: 'Are you a Lion, Bear, Wolf, or Dolphin? Find your optimal sleep and productivity window.',
+    description: 'Explore your routine preferences in a playful chronotype quiz. Animal categories are illustrative, not clinical.',
     iconName: 'Moon',
     estimatedTime: '2 min',
     isImplemented: true,
+    seoContent: `
+      <h2>Exploring your preferred daily routine</h2><p>Chronotype refers broadly to differences in preferred times for sleep and activity. This informal quiz asks about habits and schedules, then offers a playful animal-style description.</p><h3>Are the animal categories scientific?</h3><p>Not as diagnostic categories. Real sleep timing also depends on work schedules, age, light exposure and sleep debt. Use the result for reflection, not to determine medical sleep needs.</p>
+    `,
     citations: [
         "Breus, M. J. (2016). The Power of When. Little, Brown Spark."
     ]
@@ -633,10 +658,13 @@ export const TESTS: TestDefinition[] = [
     id: 'empathy-test',
     title: 'Empathy Test',
     category: TestCategory.PERSONALITY,
-    description: 'Measure your Affective and Cognitive Empathy levels.',
+    description: 'Explore empathy-related situations in an informal self-reflection questionnaire.',
     iconName: 'Users',
     estimatedTime: '3 min',
-    isImplemented: true
+    isImplemented: true,
+    seoContent: `
+      <h2>Reflecting on empathy</h2><p>The questionnaire presents everyday situations and asks how you might think or respond. Questions may prompt reflection on understanding another person's perspective and emotional experience.</p><h3>What does the score mean?</h3><p>This short questionnaire is not a validated psychological inventory. Responses depend on context, culture and interpretation. Avoid using the result to judge another person's character.</p>
+    `,
   },
   {
     id: 'procrastination-test',
@@ -645,16 +673,22 @@ export const TESTS: TestDefinition[] = [
     description: 'Analyze your time management habits and procrastination triggers.',
     iconName: 'Clock',
     estimatedTime: '5 min',
-    isImplemented: true
+    isImplemented: true,
+    seoContent: `
+      <h2>What does the procrastination exercise explore?</h2><p>The tool combines a short waiting challenge, a time-estimation activity and questions about everyday task habits. The aim is to help you reflect on how you approach small decisions.</p><h3>Interpreting the outcome</h3><p>Practice, attention, device timing and distractions influence the interactive results. A score from a brief browser task cannot diagnose a mental health condition or establish a stable personality trait.</p>
+    `,
   },
   {
     id: 'difficult-person-test',
     title: 'Difficult Person Test',
     category: TestCategory.PERSONALITY,
-    description: 'Based on the IDRlabs concept. Measure agreeableness and potential toxic traits.',
+    description: 'Reflect on interpersonal habits with a playful quiz; scores do not diagnose or label anyone.',
     iconName: 'UserX',
     estimatedTime: '4 min',
-    isImplemented: true
+    isImplemented: true,
+    seoContent: `
+      <h2>Self-reflection on interpersonal habits</h2><p>This informal questionnaire asks about communication, frustration and how you respond to other people. It can start a useful conversation about habits and preferences.</p><h3>Is “difficult person” a diagnosis?</h3><p>No. There is no clinical diagnosis based on this online activity, and a short quiz cannot establish how others perceive you. Results are playful and context-dependent.</p>
+    `,
   },
   {
     id: 'social-battery-test',
@@ -663,15 +697,21 @@ export const TESTS: TestDefinition[] = [
     description: 'Introvert, Extrovert, or Ambivert? Check your social energy drain rate.',
     iconName: 'Battery',
     estimatedTime: '3 min',
-    isImplemented: true
+    isImplemented: true,
+    seoContent: `
+      <h2>What does “social battery” mean?</h2><p>Social battery is an informal way to describe feeling refreshed or tired after different interactions. The quiz presents familiar social situations and summarizes the preferences you select.</p><h3>How should you use the result?</h3><p>Preferences can change with sleep, context and company. This is a reflective quiz, not a medical measure or a fixed classification of your personality.</p>
+    `,
   },
   {
     id: 'left-right-brain-test',
     title: 'Left Brain Right Brain Test',
     category: TestCategory.PERSONALITY,
-    description: 'Are you logical (Left) or creative (Right)? A fun hemisphere dominance quiz.',
+    description: 'A playful learning-style quiz, not a scientifically valid measure of brain-hemisphere dominance.',
     iconName: 'Split',
     estimatedTime: '4 min',
-    isImplemented: true
+    isImplemented: true,
+    seoContent: `
+      <h2>Is there a left-brain or right-brain personality?</h2><p>The popular idea that analytical people are “left-brained” and creative people are “right-brained” is an oversimplification. Many complex mental activities involve networks across both brain hemispheres.</p><h3>What is this quiz for?</h3><p>Enjoy it as a playful discussion of learning preferences. The result does not measure neurological dominance, intelligence or brain health.</p>
+    `,
   }
 ];

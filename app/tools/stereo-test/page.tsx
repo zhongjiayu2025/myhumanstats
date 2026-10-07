@@ -6,8 +6,9 @@ import { ArrowRight, Music2, Volume2 } from 'lucide-react';
 import StereoCheckClient from '@/components/tools/StereoCheckClient';
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/tools/stereo-test/' },
   title: "Left Right Stereo Audio Test | Speaker Check",
-  description: "Test your speakers or headphones for correct Left/Right channel wiring. Ensure your audio setup is balanced.",
+  description: "Check left and right playback channels using comfortable-volume browser tones; this is not a hardware wiring diagnosis.",
   keywords: ["stereo test", "left right audio test", "speaker test", "headphone test"]
 };
 

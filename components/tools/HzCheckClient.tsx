@@ -8,7 +8,6 @@ import Breadcrumbs from '@/components/Breadcrumbs';
 export default function HzCheckClient() {
   const [fps, setFps] = useState(0);
   const [stability, setStability] = useState('Analysing...');
-  const [startTime, setStartTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [ufoSpeed, setUfoSpeed] = useState(960); // Pixels per second
   
@@ -18,98 +17,86 @@ export default function HzCheckClient() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const ufoRef = useRef<HTMLDivElement>(null);
 
-  const animate = (time: number) => {
-    if (!startTime) setStartTime(time);
-    if (!prevTimeRef.current) prevTimeRef.current = time;
+  // Screen refresh is approximated by browser animation frames; never claim
+  // this is a calibrated hardware measurement.
+  useEffect(() => {
+    setIsRunning(true);
+    return () => { if (requestRef.current) cancelAnimationFrame(requestRef.current); };
+  }, []);
 
-    const delta = time - prevTimeRef.current;
-    prevTimeRef.current = time;
+  useEffect(() => {
+    if (!isRunning) return;
+    frameTimesRef.current = [];
+    prevTimeRef.current = 0;
+    let sampledAt = 0;
 
-    // Record Frame Time
-    frameTimesRef.current.push(delta);
-    if (frameTimesRef.current.length > 120) frameTimesRef.current.shift();
-
-    // Calculate FPS every 500ms
-    if (time - startTime > 500) {
-        const avgFrameTime = frameTimesRef.current.reduce((a, b) => a + b, 0) / frameTimesRef.current.length;
-        const currentFps = Math.round(1000 / avgFrameTime);
-        setFps(currentFps);
-        
-        // Stability Check
-        const variance = Math.max(...frameTimesRef.current) - Math.min(...frameTimesRef.current);
-        setStability(variance < 4 ? 'Perfect' : variance < 8 ? 'Good' : 'Stutter Detected');
-        
-        setStartTime(time);
-    }
-
-    // Draw Graph
-    drawGraph();
-
-    // Move UFO
-    if (ufoRef.current) {
-        // Calculate position based on time to be frame-rate independent
-        const pos = (time * (ufoSpeed / 1000)) % (window.innerWidth + 200) - 100;
-        ufoRef.current.style.transform = `translateX(${pos}px)`;
-    }
-
-    requestRef.current = requestAnimationFrame(animate);
-  };
-
-  const drawGraph = () => {
+    const sizeCanvas = () => {
       const canvas = canvasRef.current;
       if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
+      const rect = canvas.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(Math.max(1, rect.width) * dpr);
+      canvas.height = Math.round(Math.max(1, rect.height) * dpr);
+    };
+    sizeCanvas();
+    window.addEventListener('resize', sizeCanvas);
 
-      const w = canvas.width;
-      const h = canvas.height;
-      ctx.clearRect(0, 0, w, h);
+    const frame = (time: number) => {
+      if (document.visibilityState !== 'visible') {
+        prevTimeRef.current = 0;
+        frameTimesRef.current = [];
+        requestRef.current = requestAnimationFrame(frame);
+        return;
+      }
+      const prev = prevTimeRef.current;
+      prevTimeRef.current = time;
+      const delta = prev ? time - prev : 0;
+      if (delta > 1 && delta < 200) {
+        frameTimesRef.current.push(delta);
+        if (frameTimesRef.current.length > 120) frameTimesRef.current.shift();
+      }
+      const frames = frameTimesRef.current;
+      if (frames.length >= 20 && time - sampledAt >= 500) {
+        const mean = frames.reduce((sum, ms) => sum + ms, 0) / frames.length;
+        if (mean > 0) {
+          setFps(Math.round(1000 / mean));
+          const spread = Math.max(...frames) - Math.min(...frames);
+          setStability(spread < 4 ? 'Steady' : spread < 8 ? 'Variable' : 'Frame pacing varies');
+        }
+        sampledAt = time;
+      }
 
-      // Target Line (16.6ms for 60hz, 6.9ms for 144hz)
-      const targetMs = 1000 / (fps || 60);
-      const scaleY = h / 30; // 30ms max range
-
-      ctx.beginPath();
-      ctx.strokeStyle = '#06b6d4';
-      ctx.lineWidth = 2;
-
-      frameTimesRef.current.forEach((ms, i) => {
-          const x = (i / 120) * w;
-          const y = h - (ms * scaleY);
-          if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-      });
-      ctx.stroke();
-
-      // Draw Baseline
-      ctx.beginPath();
-      ctx.strokeStyle = '#3f3f46';
-      ctx.setLineDash([5, 5]);
-      const targetY = h - (targetMs * scaleY);
-      ctx.moveTo(0, targetY);
-      ctx.lineTo(w, targetY);
-      ctx.stroke();
-      ctx.setLineDash([]);
-  };
-
-  useEffect(() => {
-    if (canvasRef.current) {
-        canvasRef.current.width = canvasRef.current.offsetWidth;
-        canvasRef.current.height = canvasRef.current.offsetHeight;
-    }
-    
-    if (isRunning) {
-        requestRef.current = requestAnimationFrame(animate);
-    }
+      const canvas = canvasRef.current;
+      const context = canvas?.getContext('2d');
+      if (canvas && context) {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const w = canvas.width / dpr, h = canvas.height / dpr;
+        context.setTransform(dpr, 0, 0, dpr, 0, 0);
+        context.clearRect(0, 0, w, h);
+        context.beginPath();
+        context.strokeStyle = '#06b6d4';
+        context.lineWidth = 2;
+        const scaleY = h / 40;
+        frames.forEach((ms, i) => {
+          const x = frames.length > 1 ? i * w / (frames.length - 1) : 0;
+          const y = Math.max(0, h - ms * scaleY);
+          if (i === 0) context.moveTo(x, y); else context.lineTo(x, y);
+        });
+        context.stroke();
+      }
+      if (ufoRef.current) {
+        const track = ufoRef.current.parentElement?.clientWidth || window.innerWidth;
+        const x = (time * ufoSpeed / 1000) % (track + 120) - 60;
+        ufoRef.current.style.transform = `translateX(${x}px)`;
+      }
+      requestRef.current = requestAnimationFrame(frame);
+    };
+    requestRef.current = requestAnimationFrame(frame);
     return () => {
-        if (requestRef.current) cancelAnimationFrame(requestRef.current);
+      if (requestRef.current) cancelAnimationFrame(requestRef.current);
+      window.removeEventListener('resize', sizeCanvas);
     };
   }, [isRunning, ufoSpeed]);
-
-  useEffect(() => {
-      setIsRunning(true);
-      return () => setIsRunning(false);
-  }, []);
 
   return (
     <div className="w-full overflow-hidden">
@@ -135,14 +122,14 @@ export default function HzCheckClient() {
                 <div className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-xl">
                     <div className="flex justify-between items-center mb-2">
                         <span className="text-xs text-zinc-500 uppercase font-bold">Stability</span>
-                        <span className={`text-xs font-bold px-2 py-1 rounded ${stability === 'Perfect' ? 'bg-emerald-900/50 text-emerald-400' : 'bg-yellow-900/50 text-yellow-400'}`}>
+                        <span className={`text-xs font-bold px-2 py-1 rounded ${stability === 'Steady' ? 'bg-emerald-900/50 text-emerald-400' : 'bg-yellow-900/50 text-yellow-400'}`}>
                             {stability}
                         </span>
                     </div>
                     {stability !== 'Perfect' && (
                         <p className="text-[10px] text-zinc-500 leading-relaxed">
                             <AlertTriangle size={10} className="inline mr-1"/>
-                            Micro-stutters detected. Close other tabs for better accuracy.
+                            Browser frame pacing varies. Try closing heavy tabs; this is not a hardware refresh calibration.
                         </p>
                     )}
                 </div>
@@ -191,7 +178,7 @@ export default function HzCheckClient() {
                  </div>
                  
                  <div className="text-center text-xs text-zinc-500 font-mono">
-                     Observe the UFO. Gaps or stuttering indicate frame drops or refresh rate mismatch.
+                     Observe the UFO. Gaps can indicate browser frame pacing changes. A background tab or power-saving mode can affect this estimate.
                  </div>
              </div>
           </div>

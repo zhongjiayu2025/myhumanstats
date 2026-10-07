@@ -1,21 +1,29 @@
 # MyHumanStats SEO/GEO release evidence
 
-Release: SEO and credibility foundation, branch seo/2026-10-mhs-quality-foundation.
-Production host: https://myhumanstats.org/
-Baseline (owner screenshot, rolling 3 months): 591 clicks / 36.4k impressions / 1.6% CTR / position 20.7.
+Reference period: October 7, 2026. Production: https://myhumanstats.org/
+User-provided GSC three-month snapshot baseline: **591 clicks, 36,400 impressions, 1.6% CTR, average position 20.7**. This is not a forecast.
 
-| Gate | Expected evidence | Status |
-|---|---|---|
-| TypeScript | `npx tsc --noEmit` in GitHub Actions | Pending run |
-| Static export | `npm run build` in GitHub Actions | Pending run |
-| Key test routes | Build output contains tool HTML | Pending run |
-| Blog links | No `/#/test/` legacy URLs in exported blog | Pending run |
-| Sitemap | Canonical, indexable pages only | Source reviewed; exported check pending |
-| Unverified statistics | noindex, no Dataset structured data | Source changes staged |
-| Service worker | No nonexistent offline precache, no fake 200 navigation fallback | Source changes staged |
-| Clinical claims | Unsupported ADHD/ear-age diagnostics removed | Source changes staged |
-| Mobile test flows | Manual touch, audio, mic permission tests | NOT VERIFIED |
-| Lighthouse/CrUX | Actual production or lab metrics | NOT MEASURED |
-| Deploy version and production HTTP | Cloudflare build/deploy + curl checks | NOT VERIFIED |
+## Release history and verified automated gates
+- PR #1: SEO/canonical, structured-data integrity, misleading clinical claims and static-export repairs.
+- PR #2: core traffic tools (Rhythm, Contrast, Hue, Pitch, Peripheral Vision) and test-specific educational explanations.
+- PR #3: canonical score IDs, local-history compatibility, timer and pointer repairs; 35-test static route gate.
+- PR #4: browser/mobile follow-up for CPS, anxiety/pointer practice, local microphone recording, stereo audio safety and Hz-frame sampling; 35 page unique content and six tool canonicals. **PR checks are authoritative; do not assume it has deployed before they pass.**
 
-Never mark any gate as passed without evidence. Keep the main branch unchanged until CI passes and manual/production follow-up is available.
+## Automated release gate
+| Gate | Evidence |
+|---|---|
+| TypeScript | GitHub Actions / verify / Type-check |
+| Static export | GitHub Actions / verify / Static export |
+| 35 route and score IDs | node scripts/audit-tests.mjs |
+| 35 SEO pages + six tools | node scripts/audit-seo-export.mjs |
+| Cloudflare | Commit-specific Pages check, not just a green GitHub build |
+| Live production | Final deployed version and HTTP/HTML checks required |
+
+## Manual acceptance still needed
+- Android Chrome / iOS Safari touch tests for CPS, Rhythm, Colour Hue and reaction/aim exercises.
+- Browser input permission allowed/denied/not-found flows for microphone and vocal range.
+- Audio playback including stereo channel/phase/orbit, mic recording across supported MIME formats, idle/unmount resource cleanup.
+- Screen reader focus, reduced motion, 360/390/768px layouts and real INP/LCP/CLS.
+- 28-day and 90-day GSC comparison by query x page x country x device.
+
+All statistical comparisons and medical-sounding explanations require evidence. No auto-generated claims of diagnostic validity, universal norms, traffic improvement, or browser passes.
