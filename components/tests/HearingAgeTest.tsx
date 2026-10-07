@@ -226,6 +226,15 @@ const HearingAgeTest: React.FC = () => {
   };
 
 
+  // Persist only on a completed result transition, never while React renders.
+  useEffect(() => {
+    if (phase !== 'report' || results.left === null || results.right === null) return;
+    const bestFreq = Math.max(results.left, results.right);
+    const normalized = Math.max(0, Math.min(100,
+      Math.round((bestFreq - END_FREQ) / (START_FREQ - END_FREQ) * 100)));
+    saveStat('hearing-age-test', normalized, bestFreq);
+  }, [phase, results.left, results.right]);
+
   // --- RENDERERS ---
 
   if (phase === 'env-check') {
@@ -300,7 +309,7 @@ const HearingAgeTest: React.FC = () => {
 
   if (phase === 'report') {
       const bestFreq = Math.max(results.left || 0, results.right || 0);
-      saveStat('hearing-age', Math.max(0, Math.min(100, Math.round(((bestFreq - END_FREQ) / (START_FREQ - END_FREQ)) * 100))));
+
 
       return (
           <div className="max-w-3xl mx-auto animate-in zoom-in duration-500">
