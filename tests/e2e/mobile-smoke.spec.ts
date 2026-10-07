@@ -41,3 +41,21 @@ test('microphone permission denial is explained and no capture is required for p
   await page.getByRole('button', { name: /Start Monitoring/i }).click();
   await expect(page.locator('p[role="alert"]').filter({ hasText: /permission|microphone|supported browser/i }).first()).toBeVisible();
 });
+
+test('homepage offers visible, direct links to the six GSC-focused tests', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Free Online Human Ability Tests', level: 1 })).toBeVisible();
+  const featured = page.getByRole('heading', { name: 'Start with a test' }).locator('..').locator('..');
+  for (const id of ['rhythm-test','contrast-test','color-hue-test','perfect-pitch-test','peripheral-vision-test','number-memory-test']) {
+    await expect(featured.locator('a[href="/test/' + id + '/"]')).toHaveCount(1);
+  }
+});
+
+test('related test pathways stay relevant to rhythm and contrast searches', async ({ page }) => {
+  await page.goto('/test/rhythm-test/');
+  const nextRhythm = page.getByRole('navigation', { name: 'Continue exploring related tests' });
+  await expect(nextRhythm.getByRole('link', { name: /Perfect Pitch Test/i })).toHaveAttribute('href', /\/test\/perfect-pitch-test\/?$/);
+  await page.goto('/test/contrast-test/');
+  const nextContrast = page.getByRole('navigation', { name: 'Continue exploring related tests' });
+  await expect(nextContrast.getByRole('link', { name: /Color Hue Test/i })).toHaveAttribute('href', /\/test\/color-hue-test\/?$/);
+});

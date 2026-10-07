@@ -3,6 +3,7 @@ import React from 'react';
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import { TESTS } from '@/lib/data';
+import { SEARCH_SNIPPETS } from '@/lib/seoGrowth';
 import { BLOG_POSTS } from '@/lib/blogData'; // Point 4: Import Blog posts
 import TestRunnerClient from '@/components/TestRunnerClient';
 import RecommendedTests from '@/components/RecommendedTests';
@@ -18,16 +19,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const resolvedParams = await params;
   const testDef = TESTS.find(t => t.id === resolvedParams.id);
   if (!testDef) return { title: "Test Not Found" };
-  
+  const snippet = SEARCH_SNIPPETS[testDef.id];
+  const pageTitle = snippet?.title ?? `${testDef.title} – Free Online Test`;
+  const pageDescription = snippet?.description ?? testDef.description;
+
   return {
-    title: `${testDef.title} - Online Benchmark | MyHumanStats`,
-    description: testDef.description,
+    // The root layout adds the site name; do not duplicate "| MyHumanStats".
+    title: pageTitle,
+    description: pageDescription,
     alternates: {
       canonical: `/test/${testDef.id}`,
     },
     openGraph: {
-        title: `${testDef.title} | Online Benchmark`,
-        description: testDef.description,
+        title: `${testDef.title} | MyHumanStats`,
+        description: pageDescription,
         url: `https://myhumanstats.org/test/${testDef.id}`,
         images: [
           {
@@ -41,7 +46,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     twitter: {
       card: 'summary',
       title: testDef.title,
-      description: testDef.description,
+      description: pageDescription,
       images: ['/logo.svg'],
     }
   };
@@ -70,8 +75,11 @@ export default async function TestPage({ params }: Props) {
   const softwareSchema = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
+    "@id": `https://myhumanstats.org/test/${testDef.id}/#software`,
     "name": testDef.title,
+    "url": `https://myhumanstats.org/test/${testDef.id}/`,
     "description": testDef.description,
+    "isPartOf": { "@id": "https://myhumanstats.org/#website" },
     "applicationCategory": "EducationalApplication",
     "operatingSystem": "Any",
     "offers": {
@@ -83,17 +91,8 @@ export default async function TestPage({ params }: Props) {
     // Point 3: Removed aggregateRating to avoid Google Manual Action penalty
   };
 
-  const howToSchema = testDef.instructions ? {
-    "@context": "https://schema.org",
-    "@type": "HowTo",
-    "name": `How to take the ${testDef.title}`,
-    "description": testDef.description,
-    "step": testDef.instructions.map((text, i) => ({
-      "@type": "HowToStep",
-      "position": i + 1,
-      "text": text
-    }))
-  } : null;
+  // Instructions are not a visible numbered how-to on the page. Do not
+  // emit unsupported HowTo JSON-LD solely for rich results.
 
   const faqSchema = testDef.faqs ? {
     "@context": "https://schema.org",
@@ -114,12 +113,6 @@ export default async function TestPage({ params }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }}
       />
-      {howToSchema && (
-        <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }}
-        />
-      )}
       {faqSchema && (
         <script
             type="application/ld+json"

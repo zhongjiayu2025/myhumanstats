@@ -1,26 +1,38 @@
 
 import React from 'react';
 import type { Metadata } from 'next';
-import { Fingerprint, Activity, HelpCircle } from 'lucide-react';
+import { Fingerprint, Activity, HelpCircle, ArrowUpRight, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
 import { TESTS } from '@/lib/data';
+import { getFeaturedTests, FEATURED_TEST_DESCRIPTIONS } from '@/lib/seoGrowth';
 import TypingTitle from '@/components/TypingTitle';
 import DashboardRadar from '@/components/DashboardRadar';
 import TestCard from '@/components/TestCard';
 import DashboardStatsOverview from '@/components/DashboardStatsOverview';
 import WorkoutSection from '@/components/WorkoutSection';
 
-export const metadata: Metadata = { alternates: { canonical: '/' } };
+export const metadata: Metadata = {
+  title: 'Free Online Human Ability Tests',
+  description: 'Try 35 free browser-based tests for rhythm, contrast, color hue, perfect pitch, memory and more. No account required; scores stay in your browser.',
+  alternates: { canonical: '/' },
+  openGraph: {
+    title: 'Free Online Human Ability Tests | MyHumanStats',
+    description: 'Explore perception, timing and memory with free interactive browser tests.',
+    url: 'https://myhumanstats.org/',
+  },
+};
 
 const categories = Array.from(new Set(TESTS.map(t => t.category)));
+const featuredTests = getFeaturedTests();
 
 const faqs = [
   {
     q: "Are these tests scientifically accurate?",
-    a: "Our tests are based on established psychological and physiological paradigms. However, browser hardware latency and screen calibration mean these results should be treated as high-quality estimates, not medical diagnoses."
+    a: "These are educational browser exercises, not standardized clinical exams. Screen calibration, audio hardware, practice and input latency can change results; do not use them to make medical decisions."
   },
   {
-    q: "Does MyHumanStats save my data?",
-    a: "No. MyHumanStats uses a 'Local-First' architecture. All your test scores are stored in your browser's LocalStorage. We do not have a backend database."
+    q: "Where are my test scores saved?",
+    a: "Your scores and history are saved in this browser's local storage. No account or shared population-score database is required."
   },
   {
     q: "How can I improve my reaction time?",
@@ -49,6 +61,36 @@ export default function Dashboard() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
       />
       
+      {/* Search-first entry points for new visitors; returning users retain the dashboard below. */}
+      <section aria-labelledby="home-test-heading" className="border border-zinc-800 bg-zinc-950 p-5 sm:p-8 lg:p-10">
+        <div className="max-w-4xl mb-7">
+          <p className="text-[11px] font-mono tracking-[0.18em] uppercase text-primary-400 mb-3">35 free interactive tests · no signup</p>
+          <h1 id="home-test-heading" className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white tracking-tight leading-tight mb-4">Free Online Human Ability Tests</h1>
+          <p className="text-sm sm:text-base leading-relaxed text-zinc-400 max-w-3xl">
+            Explore rhythm, visual perception, pitch and memory with free browser exercises.
+            Start a test immediately, then keep your results in this browser to compare future attempts.
+          </p>
+          <p className="text-xs text-zinc-500 mt-3">Educational games and demonstrations, not medical or clinical assessments.</p>
+        </div>
+        <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
+          <h2 className="text-lg sm:text-xl font-semibold text-white">Start with a test</h2>
+          <a href="#all-tests" className="inline-flex items-center gap-2 text-sm text-primary-400 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-400">
+            Browse all 35 tests <ArrowRight size={15} />
+          </a>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
+          {featuredTests.map(test => (
+            <Link key={test.id} href={`/test/${test.id}/`}
+              className="group block border border-zinc-800 bg-zinc-950/80 p-5 hover:border-primary-500/60 hover:bg-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-400 transition-colors">
+              <span className="block text-[10px] uppercase tracking-wider font-mono text-zinc-500 mb-2">{test.category} · {test.estimatedTime}</span>
+              <h3 className="text-base font-bold text-white group-hover:text-primary-400 transition-colors">{test.title}</h3>
+              <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed mt-2 min-h-[2.5rem]">{FEATURED_TEST_DESCRIPTIONS[test.id]}</p>
+              <span className="inline-flex items-center gap-1 mt-4 text-sm font-semibold text-primary-400">Start free test <ArrowUpRight size={16} /></span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
       {/* Top Section: Identity & Radar */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-6" aria-label="User Statistics Overview">
         
@@ -62,10 +104,10 @@ export default function Dashboard() {
              <header className="flex items-start justify-between mb-8">
                 <div>
                    <h2 className="text-[10px] text-primary-500 font-mono uppercase tracking-[0.3em] mb-2">Subject Identity</h2>
-                   <h1 className="text-3xl md:text-4xl font-bold text-white font-sans tracking-tight leading-none min-h-[40px]">
-                      <span className="sr-only">HUMAN DATA DASHBOARD</span>
+                   <h2 className="text-3xl md:text-4xl font-bold text-white font-sans tracking-tight leading-none min-h-[40px]">
+                      <span className="sr-only">Personal results dashboard</span>
                       <TypingTitle text="HUMAN_DATA" />
-                   </h1>
+                   </h2>
                 </div>
                 <Fingerprint size={48} className="text-zinc-800 group-hover:text-primary-500/20 transition-colors shrink-0" />
              </header>
@@ -103,7 +145,7 @@ export default function Dashboard() {
       {/* Test Modules Grid */}
       <h2 className="sr-only">Test Categories and Modules</h2>
       
-      <div className="space-y-16 pb-12">
+      <div id="all-tests" className="space-y-16 pb-12 scroll-mt-24">
         {categories.map((category, catIdx) => {
           const catTests = TESTS.filter(t => t.category === category);
           
@@ -147,7 +189,7 @@ export default function Dashboard() {
             <h3 className="text-white text-lg font-bold mb-4">Why Measure Cognitive & Sensory Traits?</h3>
             <ul className="list-disc pl-4 space-y-2">
                <li><strong>Personal Progress:</strong> Keep a local history of WPM, click speed and reaction time while remembering that practice and hardware influence results.</li>
-               <li><strong>Early Detection:</strong> Explore color and contrast perception; browser-based exercises do not replace vision examinations.</li>
+               <li><strong>Visual Exploration:</strong> Explore color and contrast perception; browser-based exercises do not replace vision examinations.</li>
                <li><strong>Practice Games:</strong> Try our <em>Aim Trainer</em> and <em>Rhythm Test</em> to practice timing, attention and coordination.</li>
                <li><strong>Self-Reflection:</strong> Informal personality and attention exercises can prompt reflection but do not provide validated clinical screening or diagnosis.</li>
             </ul>

@@ -2,7 +2,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { GitBranch, Clock, Circle } from 'lucide-react';
-import { TESTS } from '@/lib/data'; // Use new data source
+import { getRelatedTests } from '@/lib/seoGrowth';
 import { iconMap } from '@/lib/iconMap';
 
 interface RecommendedTestsProps {
@@ -11,28 +11,12 @@ interface RecommendedTestsProps {
 }
 
 const RecommendedTests: React.FC<RecommendedTestsProps> = ({ currentTestId, category }) => {
-  // Logic: 
-  // 1. Get tests from same category
-  // 2. Exclude current
-  // 3. Limit to 3
-  // 4. If less than 3, fill with random tests from other categories
-  
-  const sameCategory = TESTS.filter(t => t.category === category && t.id !== currentTestId);
-  const others = TESTS.filter(t => t.category !== category && t.id !== currentTestId);
-  
-  // Shuffle logic roughly
-  const recommendations = [...sameCategory].slice(0, 3);
-  
-  if (recommendations.length < 3) {
-    const needed = 3 - recommendations.length;
-    recommendations.push(...others.slice(0, needed));
-  }
-
+  const recommendations = getRelatedTests(currentTestId, category);
   return (
     <div className="border-t border-zinc-800 pt-12 mt-12">
       <div className="flex items-center gap-2 mb-6">
          <GitBranch className="text-primary-500" size={20} />
-         <h3 className="text-xl font-bold text-white uppercase tracking-widest">Recommended Modules</h3>
+         <h3 className="text-xl font-bold text-white uppercase tracking-widest">Related Tests to Try Next</h3>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

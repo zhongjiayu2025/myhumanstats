@@ -43,11 +43,11 @@ export const TESTS: TestDefinition[] = [
     faqs: [
       {
         question: "Is this online hearing test accurate?",
-        answer: "This test is a high-quality screening tool, but its accuracy depends heavily on your hardware. Most standard speakers cannot reproduce frequencies above 16kHz. For precise medical diagnosis, consult an audiologist."
+        answer: "This is not a calibrated hearing screen. Hardware, headphone response, browser audio and comfortable volume all affect the result. If you have hearing concerns, seek a professional evaluation."
       },
       {
         question: "Why can't I hear 18,000 Hz?",
-        answer: "The ability to hear frequencies above 17-18kHz typically diminishes by age 18-20 due to a natural process called presbycusis, where the tiny hair cells in the cochlea degrade over time."
+        answer: "High-frequency audibility varies among people and playback devices. An inaudible browser tone could be due to headphones, volume or hearing, and cannot by itself establish hearing age."
       },
       {
         question: "What is the Mosquito Tone?",
@@ -232,7 +232,7 @@ export const TESTS: TestDefinition[] = [
       <h2>The Science of Color Blindness Tests</h2>
       <p>This <strong>Color Blind Test</strong> uses pseudoisochromatic plates, widely known as the <strong>Ishihara Test</strong>. It is designed to detect Color Vision Deficiency (CVD) by using dots of varying sizes and brightness, arranged to form a number that is only visible if you can distinguish specific colors.</p>
       <h3>How Reliable is this Online Test?</h3>
-      <p>While this tool uses the same principles as a clinical examination, screen calibration can affect results. If you struggle with these plates, we recommend seeing an optometrist for a formal diagnosis.</p>
+      <p>This browser color-pattern exercise is not clinically calibrated and cannot diagnose color-vision deficiencies. If vision concerns persist, seek a professional eye examination.</p>
     `
   },
   {
@@ -389,7 +389,7 @@ export const TESTS: TestDefinition[] = [
     clinicalRelevance: [
       "Neural Processing Speed: Measures the speed of signal transmission from retina to visual cortex to motor cortex.",
       "Cognitive Fatigue: Slower times often correlate with sleep deprivation or mental exhaustion.",
-      "Age-Related Decline: Reaction time is one of the most reliable biomarkers for cognitive aging."
+      "Age and Attention: reaction-time measurements depend on age, task conditions, attention and hardware; this short browser test is not a biomarker."
     ],
     benchmarks: {
       title: "Average Visual Reaction Time by Age",
@@ -414,7 +414,7 @@ export const TESTS: TestDefinition[] = [
     faqs: [
       {
         question: "What is a good reaction time?",
-        answer: "The average human visual reaction time is around 250ms. A score below 200ms is considered fast, and elite athletes or pro gamers often achieve scores below 150ms."
+        answer: "A reaction-time score depends strongly on the task, screen and input lag. Compare your own repeats on similar hardware; this site does not publish verified population norms."
       },
       {
         question: "Does reaction time slow down with age?",

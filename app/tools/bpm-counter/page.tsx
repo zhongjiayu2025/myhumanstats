@@ -29,6 +29,10 @@ export default function BPMPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
       />
+      <header className="max-w-4xl mx-auto px-4 pt-6 pb-3">
+        <h1 className="text-3xl sm:text-4xl font-bold text-white">Tap BPM Counter</h1>
+        <p className="text-sm text-zinc-400 mt-3">Tap a steady beat to estimate tempo in beats per minute. Use it to find a song's tempo before trying the Rhythm Test.</p>
+      </header>
       <BPMClient />
       
       <div className="max-w-4xl mx-auto px-4 pb-20">

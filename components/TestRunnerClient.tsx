@@ -7,18 +7,19 @@ import Link from 'next/link';
 import { ArrowLeft, Cpu, Info, FileText, ChevronRight, Loader2, HelpCircle, BookOpen, Microscope, CheckCircle2, Bookmark, BarChart3, History, Wrench, AlertTriangle, ExternalLink } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import { TESTS } from '@/lib/data';
+import { getRelatedTests } from '@/lib/seoGrowth';
 import { getHistory } from '@/lib/core';
 import { BLOG_POSTS } from '@/lib/blogData';
 import { TEST_REGISTRY } from '@/components/tests/registry';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 const TEST_TO_TOOL_MAP: Record<string, { id: string, name: string, desc: string, icon: any }[]> = {
-    'hearing-age-test': [{ id: 'tone-generator', name: 'Tone Generator', desc: 'Verify speaker frequency response.', icon: Wrench }],
+    'hearing-age-test': [{ id: 'tone-generator', name: 'Tone Generator', desc: 'Explore your speakers with an independent tone tool.', icon: Wrench }],
     'vocal-range-test': [{ id: 'mic-test', name: 'Mic Check', desc: 'Verify input clarity and volume.', icon: Wrench }],
-    'rhythm-test': [{ id: 'bpm-counter', name: 'BPM Counter', desc: 'Manually tap tempo to calibrate.', icon: Wrench }],
+    'rhythm-test': [{ id: 'bpm-counter', name: 'BPM Counter', desc: 'Estimate BPM with a separate tap counter.', icon: Wrench }],
     'stereo-test': [{ id: 'stereo-test', name: 'Left/Right Check', desc: 'Ensure channels are not flipped.', icon: Wrench }],
-    'color-blind-test': [{ id: 'dead-pixel-test', name: 'Dead Pixel Check', desc: 'Ensure screen color accuracy.', icon: Wrench }],
-    'contrast-test': [{ id: 'dead-pixel-test', name: 'Monitor Check', desc: 'Verify black levels.', icon: Wrench }],
+    'color-blind-test': [{ id: 'dead-pixel-test', name: 'Dead Pixel Check', desc: 'Check for obvious display pixel problems.', icon: Wrench }],
+    'contrast-test': [{ id: 'dead-pixel-test', name: 'Monitor Check', desc: 'Explore screen colors; not a calibration tool.', icon: Wrench }],
     'reaction-time-test': [{ id: 'hz-test', name: 'Hz Checker', desc: 'Is your 60Hz monitor slowing you down?', icon: Wrench }],
     'aim-trainer-test': [{ id: 'hz-test', name: 'Hz Checker', desc: 'Frame rate affects tracking accuracy.', icon: Wrench }],
 };
@@ -92,13 +93,14 @@ export default function TestRunnerClient({ id }: { id: string }) {
 
   const TestComponent = TEST_REGISTRY[id];
   const relatedTools = TEST_TO_TOOL_MAP[testDef.id] || [];
+  const nextTests = getRelatedTests(testDef.id, testDef.category, 2);
 
   return (
     <div className="max-w-6xl mx-auto min-h-[60vh] flex flex-col gap-8 pb-12">
       
       <div>
         <Breadcrumbs items={[
-          { label: testDef.category, path: `/#module-${testDef.category}` },
+          { label: testDef.category, path: `/category/${testDef.category.toLowerCase()}/` },
           { label: testDef.title } 
         ]} />
       
@@ -208,7 +210,23 @@ export default function TestRunnerClient({ id }: { id: string }) {
 
           <HistorySection testId={testDef.id} />
 
-          {/* Clinical Relevance */}
+          {nextTests.length > 0 && (
+            <nav aria-label="Continue exploring related tests" className="mb-8 border border-zinc-800 bg-zinc-900/30 p-5 sm:p-6">
+              <h2 className="text-base font-semibold text-white mb-2">Want to try another related test?</h2>
+              <p className="text-xs text-zinc-400 mb-4">Choose a related exercise to compare different skills. Results are saved locally in this browser.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {nextTests.map(next => (
+                  <Link key={next.id} href={`/test/${next.id}/`}
+                    className="group flex items-center justify-between gap-3 border border-zinc-800 bg-black/60 p-4 hover:border-primary-500/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-400">
+                    <span className="text-sm font-semibold text-zinc-200 group-hover:text-primary-400">{next.title}</span>
+                    <ChevronRight size={16} className="shrink-0 text-primary-400" />
+                  </Link>
+                ))}
+              </div>
+            </nav>
+          )}
+
+          {/* Background and limitations */}
           {testDef.clinicalRelevance && testDef.clinicalRelevance.length > 0 && (
              <div className="tech-border bg-black/50 p-6 mb-8 border-l-4 border-l-primary-500">
                 <div className="flex items-center gap-3 mb-4">
@@ -241,44 +259,8 @@ export default function TestRunnerClient({ id }: { id: string }) {
              </article>
           )}
 
-          {/* Global Benchmarks */}
-          {testDef.benchmarks && (
-             <section className="tech-border bg-zinc-900/30 p-8 mb-8 overflow-hidden">
-                <div className="flex items-center gap-3 mb-6">
-                   <BarChart3 className="text-primary-500" size={20} />
-                   <h3 className="text-xl font-bold text-white">Illustrative Reference Values</h3>
-                </div>
-                
-                <p className="text-sm text-zinc-400 mb-6">
-                   These tables are illustrative only. They are not derived from MyHumanStats users, are not verified population averages, and should not guide medical decisions.
-                </p>
-
-                <div className="overflow-x-auto">
-                   <table className="w-full text-left border-collapse font-mono text-xs md:text-sm">
-                      <thead>
-                         <tr>
-                            {testDef.benchmarks.columns.map((col, idx) => (
-                               <th key={idx} className="p-3 border border-zinc-800 bg-black/50 text-primary-400 uppercase tracking-wider">{col}</th>
-                            ))}
-                         </tr>
-                      </thead>
-                      <tbody>
-                         {testDef.benchmarks.rows.map((row, rIdx) => (
-                            <tr key={rIdx} className="hover:bg-white/5 transition-colors">
-                               {row.map((cell, cIdx) => (
-                                  <td key={cIdx} className="p-3 border border-zinc-800 text-zinc-300">{cell}</td>
-                               ))}
-                            </tr>
-                         ))}
-                      </tbody>
-                   </table>
-                </div>
-                
-                <div className="mt-4 text-[10px] text-zinc-600 font-mono text-right">
-                   SOURCE: INTERNAL_AGGREGATE_DATA_2026
-                </div>
-             </section>
-          )}
+          {/* Unsourced population-average tables must not be displayed
+              on indexable test pages until independently documented. */}
 
           {/* Key Concepts */}
           {testDef.concepts && testDef.concepts.length > 0 && (
@@ -325,8 +307,9 @@ export default function TestRunnerClient({ id }: { id: string }) {
           {testDef.citations && testDef.citations.length > 0 && (
              <div className="mb-8 border-t border-zinc-800 pt-8">
                 <h4 className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                   <BookOpen size={12} /> Scientific Methodology & References
+                   <BookOpen size={12} /> Related Reading and References
                 </h4>
+                <p className="text-xs text-zinc-500 mb-4">Background reading does not independently validate these browser exercises or their scores.</p>
                 <ul className="space-y-2">
                    {testDef.citations.map((cite, idx) => (
                       <li key={idx} className="text-xs text-zinc-500 font-mono pl-4 border-l-2 border-zinc-800 flex items-start gap-2">
