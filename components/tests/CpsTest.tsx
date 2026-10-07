@@ -256,7 +256,7 @@ const CpsTest: React.FC = () => {
                    const rect = e.currentTarget.getBoundingClientRect();
                    registerClick(rect.left + rect.width / 2, rect.top + rect.height / 2, rect);
                  }
-               }
+               }}
               className={`
                  w-full h-64 tech-border bg-black relative overflow-hidden group transition-all duration-50 active:scale-[0.99] cursor-crosshair touch-none
                  ${active ? 'border-primary-500 shadow-[0_0_30px_rgba(34,211,238,0.1)]' : 'border-zinc-700 hover:bg-zinc-900'}
