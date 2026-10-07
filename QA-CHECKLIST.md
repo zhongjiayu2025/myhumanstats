@@ -18,3 +18,16 @@
 - [ ] Core Web Vitals measured on actual deployment; no assumed pass
 - [ ] Cloudflare production build version checked and important URLs smoke tested
 - [ ] Record 28-day and 90-day GSC comparison after release
+
+
+## Website-Starter-Standard — SEO/GEO growth gate
+- [ ] Approved keywords untouched and existing ranking slugs unchanged.
+- [ ] Screenshot GSC baseline separated from live GSC access.
+- [ ] Search-intent map and source registry committed with this release.
+- [ ] Six priority test links on homepage exist as raw HTML anchors.
+- [ ] Each test links to relevant related exercises and its real category path.
+- [ ] Indexed test pages do not display unsourced population average tables.
+- [ ] WebSite entity and per-tool SoftwareApplication IDs agree; no invisible HowTo schema.
+- [ ] No false professional-grade clinical or diagnostic claims on core/category pages.
+- [ ] L1 static HTML, JSON-LD and internal route checks pass, drift manifest uploaded to Actions.
+- [ ] Actual production Page and mobile visual QA separately verified; do not infer from builds.

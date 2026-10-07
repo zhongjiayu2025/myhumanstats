@@ -33,6 +33,14 @@ jobs:
         run: node scripts/audit-tests.mjs
       - name: Audit canonical, metadata and unique content on every test page
         run: node scripts/audit-seo-export.mjs
+      - name: Verify structured data parity and capture SEO drift baseline
+        run: node scripts/capture-seo-baseline.mjs
+      - name: Upload SEO baseline for drift comparison
+        uses: actions/upload-artifact@v4
+        with:
+          name: seo-baseline
+          path: reports/seo-baseline.json
+          retention-days: 30
       - name: Install headless Chromium for mobile interaction tests
         run: npx playwright install --with-deps chromium
       - name: Run mobile Chromium interactions

@@ -62,7 +62,7 @@ export default function Dashboard() {
       />
       
       {/* Search-first entry points for new visitors; returning users retain the dashboard below. */}
-      <section aria-labelledby="home-test-heading" className="border border-zinc-800 bg-gradient-to-br from-zinc-900/70 via-black to-primary-950/10 p-5 sm:p-8 lg:p-10">
+      <section aria-labelledby="home-test-heading" className="border border-zinc-800 bg-zinc-950 p-5 sm:p-8 lg:p-10">
         <div className="max-w-4xl mb-7">
           <p className="text-[11px] font-mono tracking-[0.18em] uppercase text-primary-400 mb-3">35 free interactive tests · no signup</p>
           <h1 id="home-test-heading" className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white tracking-tight leading-tight mb-4">Free Online Human Ability Tests</h1>

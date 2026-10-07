@@ -27,3 +27,22 @@ User-provided GSC three-month snapshot baseline: **591 clicks, 36,400 impression
 - 28-day and 90-day GSC comparison by query x page x country x device.
 
 All statistical comparisons and medical-sounding explanations require evidence. No auto-generated claims of diagnostic validity, universal norms, traffic improvement, or browser passes.
+
+
+## Website-Starter-Standard growth and quality pass (branch seo/traffic-growth-entrypoints-20261007)
+Date: 2026-10-07. Governing source: chenmu2024/Website-Starter-Standard; includes agent rules, full quality gate, and per-project intent/evidence mapping.
+Scope: first-visit H1 and six GSC-priority links, contextually relevant related-test journeys, selected search snippets, stable WebSite/SoftwareApplication IDs, removal of invisible HowTo JSON-LD and unsupported global benchmark displays, category/FAQ factual corrections, machine-readable drift baseline.
+No new languages, keyword-variant pages, paid APIs, changed indexed test slugs, or assumed medical validation.
+
+| Gate | Status | Proof needed |
+|---|---|---|
+| TypeScript and Next.js export | Pending PR CI | Action run tied to final branch SHA |
+| 35 test/6 utility sitemap and canonical | Pending PR CI | audit-seo-export.mjs |
+| Unique H1, featured direct links | Pending PR CI | static HTML audit + mobile Chromium |
+| HTML JSON-LD parse and same-page entity relations | Pending PR CI | capture-seo-baseline.mjs |
+| SEO drift manifest | Pending PR CI | uploaded Actions artifact |
+| Mobile Chromium entry and related-link navigation | Pending PR CI | Playwright tests |
+| Real Cloudflare production commit verification | Pending merge | commit-specific deployment check |
+| Safari/iOS hardware, Android real microphone/audio | NOT VERIFIED | real-device acceptance matrix |
+| Core Web Vitals lab/field LCP/INP/CLS | NOT MEASURED | real site and CrUX/lab measurement |
+| New GSC clicks/CTR or AI-search visibility | NOT YET MEASURED | 28/90-day GSC export; this site not in the currently linked GSC list |
