@@ -41,11 +41,11 @@ export default function NotFound() {
             </div>
             <p className="text-xs text-zinc-500">Check frequency range</p>
          </Link>
-         <Link href="/test/iq-test" className="p-4 bg-zinc-900 border border-zinc-800 rounded hover:border-primary-500/50 transition-colors group text-left">
+         <Link href="/test/number-memory-test/" className="p-4 bg-zinc-900 border border-zinc-800 rounded hover:border-primary-500/50 transition-colors group text-left">
             <div className="flex items-center gap-2 text-white font-bold mb-1">
-               <Brain size={16} className="text-primary-500"/> Cognitive
+               <Brain size={16} className="text-primary-500"/> Number Memory
             </div>
-            <p className="text-xs text-zinc-500">Memory & Logic</p>
+            <p className="text-xs text-zinc-500">Practice digit recall</p>
          </Link>
          <Link href="/tools" className="p-4 bg-zinc-900 border border-zinc-800 rounded hover:border-primary-500/50 transition-colors group text-left">
             <div className="flex items-center gap-2 text-white font-bold mb-1">
