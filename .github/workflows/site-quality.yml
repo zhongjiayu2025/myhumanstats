@@ -9,7 +9,7 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     permissions:
       contents: read
     env:
@@ -18,11 +18,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: npm
           cache-dependency-path: package.json
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
       - name: Type-check
         run: npx tsc --noEmit
       - name: Static export
@@ -31,9 +33,14 @@ jobs:
         run: node scripts/audit-tests.mjs
       - name: Audit canonical, metadata and unique content on every test page
         run: node scripts/audit-seo-export.mjs
+      - name: Install headless Chromium for mobile interaction tests
+        run: npx playwright install --with-deps chromium
+      - name: Run mobile Chromium interactions
+        run: npx playwright test --config=playwright.config.ts
       - name: Verify SEO and core static routes
         run: |
           test -f out/index.html
+          test -f out/build-info.json
           test -f out/sitemap.xml
           test -f out/robots.txt
           test -f out/test/rhythm-test/index.html

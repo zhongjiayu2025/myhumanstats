@@ -8,7 +8,7 @@ import { TESTS } from '@/lib/data';
 import Breadcrumbs from '@/components/Breadcrumbs';
 
 interface Props {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 // Get all tests that have benchmark data
@@ -17,7 +17,8 @@ const getBenchmarkTests = () => {
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const test = getBenchmarkTests().find(t => t.id === params.id);
+  const resolvedParams = await params;
+  const test = getBenchmarkTests().find(t => t.id === resolvedParams.id);
   if (!test || !test.benchmarks) return { title: "Statistics Not Found" };
 
   return {
@@ -38,8 +39,9 @@ export async function generateStaticParams() {
   }));
 }
 
-export default function StatDetailPage({ params }: Props) {
-  const test = getBenchmarkTests().find(t => t.id === params.id);
+export default async function StatDetailPage({ params }: Props) {
+  const resolvedParams = await params;
+  const test = getBenchmarkTests().find(t => t.id === resolvedParams.id);
 
   if (!test || !test.benchmarks) {
     notFound();

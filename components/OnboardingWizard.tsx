@@ -11,14 +11,9 @@ const OnboardingWizard = () => {
   const [isExiting, setIsExiting] = useState(false);
 
   useEffect(() => {
-    // 1. Auto-trigger on first visit
-    const hasVisited = localStorage.getItem('mhs_onboarded');
-    if (!hasVisited) {
-        // LCP Optimization: Removed artificial delay (setTimeout 500ms)
-        setVisible(true);
-    }
-
-    // 2. Listen for manual trigger (Replay)
+    // Keep the interactive tools usable immediately on first visit.
+    // The guided tour is optional from Settings > Re-Initialize System.
+    // Listen only for the user-requested replay event.
     const handleReplay = () => {
         setStep(0);
         setIsExiting(false);
@@ -71,7 +66,7 @@ const OnboardingWizard = () => {
                     <h1 className="text-3xl font-bold text-white mb-4">Initialize Profile?</h1>
                     <p className="text-zinc-400 text-sm leading-relaxed mb-8">
                         Welcome to <strong>MyHumanStats</strong>. 
-                        <br/>We are about to quantify your biological hardware.
+                        <br/>Explore browser-based tests and save your results locally.
                     </p>
                     <button onClick={handleStart} className="btn-primary w-full flex items-center justify-center gap-2">
                         Start Calibration <ArrowRight size={16} />
@@ -91,8 +86,8 @@ const OnboardingWizard = () => {
                         <p>Unlike other platforms, we operate on a <strong>Serverless Architecture</strong>.</p>
                         <ul className="space-y-2">
                             <li className="flex gap-2"><CheckCircle2 size={16} className="text-emerald-500 mt-0.5"/> <span>Results are stored in <strong>Local Storage</strong>.</span></li>
-                            <li className="flex gap-2"><CheckCircle2 size={16} className="text-emerald-500 mt-0.5"/> <span>No data is sent to the cloud.</span></li>
-                            <li className="flex gap-2"><CheckCircle2 size={16} className="text-emerald-500 mt-0.5"/> <span>Total privacy and anonymity.</span></li>
+                            <li className="flex gap-2"><CheckCircle2 size={16} className="text-emerald-500 mt-0.5"/> <span>Saved test scores stay in this browser; external content may still make network requests.</span></li>
+                            <li className="flex gap-2"><CheckCircle2 size={16} className="text-emerald-500 mt-0.5"/> <span>No account is required to run the tests.</span></li>
                         </ul>
                     </div>
                     <button onClick={handleNext} className="btn-secondary w-full">
@@ -122,7 +117,7 @@ const OnboardingWizard = () => {
                         <div className="p-4 bg-zinc-800/50 border border-zinc-700 rounded flex flex-col items-center text-center opacity-80 cursor-default">
                             <Monitor size={24} className="text-zinc-300 mb-2" />
                             <span className="text-xs font-bold text-white">Display</span>
-                            <span className="text-[10px] text-zinc-500">Max brightness advised</span>
+                            <span className="text-[10px] text-zinc-500">Use comfortable brightness</span>
                         </div>
                     </div>
 

@@ -1,4 +1,6 @@
 
+export const dynamic = 'force-static';
+
 import { MetadataRoute } from 'next';
 import { TESTS } from '@/lib/data';
 import { BLOG_POSTS } from '@/lib/blogData';

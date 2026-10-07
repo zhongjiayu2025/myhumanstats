@@ -137,19 +137,19 @@ export default function Dashboard() {
          <div className="prose prose-invert prose-sm text-zinc-400">
             <h2 className="text-white text-2xl font-bold mb-4">The Science of Human Benchmarking</h2>
             <p>
-               <strong>MyHumanStats</strong> is a comprehensive digital platform designed to measure the limits of human perception and cognition. In the modern era, "knowing yourself" involves more than introspection; it requires quantifiable data. Our suite of 30+ tests provides a a consistent way to explore your own performance over time without implying global clinical norms.
+               <strong>MyHumanStats</strong> is a comprehensive digital platform designed to measure the limits of human perception and cognition. In the modern era, "knowing yourself" involves more than introspection; it requires quantifiable data. Our suite of 30+ tests provides a consistent way to explore your own performance over time without implying global clinical norms.
             </p>
             <p>
-               From detecting the early signs of <strong>Presbycusis</strong> via our <em>Hearing Age Test</em> to analyzing synaptic efficiency with the <em>Reaction Time Test</em>, interactive modules use appropriate browser APIs while acknowledging hardware and input latency.
+               From the <em>Hearing Age Test</em> that explores audible frequencies to the <em>Reaction Time Test</em> that times simple responses, these browser exercises are designed for personal exploration. Devices, listening levels and input latency can change results.
             </p>
          </div>
          <div className="prose prose-invert prose-sm text-zinc-400">
             <h3 className="text-white text-lg font-bold mb-4">Why Measure Cognitive & Sensory Traits?</h3>
             <ul className="list-disc pl-4 space-y-2">
-               <li><strong>Neuroplasticity Monitoring:</strong> Track improvements in cognitive processing speed (WPM, CPS) over time.</li>
+               <li><strong>Personal Progress:</strong> Keep a local history of WPM, click speed and reaction time while remembering that practice and hardware influence results.</li>
                <li><strong>Early Detection:</strong> Explore color and contrast perception; browser-based exercises do not replace vision examinations.</li>
-               <li><strong>Performance Optimization:</strong> Gamers and athletes use our <em>Aim Trainer</em> and <em>Rhythm Test</em> to fine-tune motor cortex reflexes.</li>
-               <li><strong>Self-Awareness:</strong> Personality assessments based on the Big Five and ASRS-v1.1 models help navigate social dynamics.</li>
+               <li><strong>Practice Games:</strong> Try our <em>Aim Trainer</em> and <em>Rhythm Test</em> to practice timing, attention and coordination.</li>
+               <li><strong>Self-Reflection:</strong> Informal personality and attention exercises can prompt reflection but do not provide validated clinical screening or diagnosis.</li>
             </ul>
          </div>
       </article>

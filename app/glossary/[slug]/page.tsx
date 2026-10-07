@@ -8,7 +8,7 @@ import { TESTS } from '@/lib/data';
 import Breadcrumbs from '@/components/Breadcrumbs';
 
 interface Props {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
 const getAllConcepts = () => {
@@ -30,7 +30,8 @@ const getAllConcepts = () => {
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const concept = getAllConcepts().find(c => c.slug === params.slug);
+  const resolvedParams = await params;
+  const concept = getAllConcepts().find(c => c.slug === resolvedParams.slug);
   if (!concept) return { title: "Term Not Found" };
 
   return {
@@ -51,8 +52,9 @@ export async function generateStaticParams() {
   }));
 }
 
-export default function GlossaryEntryPage({ params }: Props) {
-  const concept = getAllConcepts().find(c => c.slug === params.slug);
+export default async function GlossaryEntryPage({ params }: Props) {
+  const resolvedParams = await params;
+  const concept = getAllConcepts().find(c => c.slug === resolvedParams.slug);
 
   if (!concept) {
     notFound();
