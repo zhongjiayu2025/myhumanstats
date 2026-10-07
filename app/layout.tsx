@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     default: "MyHumanStats | Quantify Yourself",
     template: "%s | MyHumanStats"
   },
-  description: "A personal digital ability dashboard to measure your auditory, visual, cognitive, and personality traits through scientific testing.",
+  description: "Explore 35 free browser-based tests for rhythm, memory, color, contrast and musical pitch. No account required; local scores stay in your browser.",
   keywords: ["human benchmark", "reaction time test", "hearing test", "iq test", "cognitive test", "quantified self", "online test"],
   authors: [{ name: "MyHumanStats Team" }],
   creator: "MyHumanStats",
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: 'https://myhumanstats.org',
     title: 'MyHumanStats | Quantify Yourself',
-    description: 'Measure your auditory, visual, and cognitive performance with professional-grade online tools.',
+    description: 'Free interactive perception, timing and memory exercises with clear browser and hardware limitations.',
     siteName: 'MyHumanStats',
     images: [
       {
@@ -62,7 +62,6 @@ export const metadata: Metadata = {
     title: 'MyHumanStats | Quantify Yourself',
     description: 'Measure your auditory, visual, and cognitive performance.',
     images: ['/logo.svg'],
-    creator: '@myhumanstats',
   },
   manifest: "/manifest.json",
   icons: {
@@ -84,8 +83,10 @@ export default function RootLayout({
   const siteSchema = {
     "@context": "https://schema.org",
     "@type": "WebSite",
+    "@id": "https://myhumanstats.org/#website",
     "name": "MyHumanStats",
-    "url": "https://myhumanstats.org/"
+    "url": "https://myhumanstats.org/",
+    "inLanguage": "en"
   };
 
   return (

@@ -75,8 +75,11 @@ export default async function TestPage({ params }: Props) {
   const softwareSchema = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
+    "@id": `https://myhumanstats.org/test/${testDef.id}/#software`,
     "name": testDef.title,
+    "url": `https://myhumanstats.org/test/${testDef.id}/`,
     "description": testDef.description,
+    "isPartOf": { "@id": "https://myhumanstats.org/#website" },
     "applicationCategory": "EducationalApplication",
     "operatingSystem": "Any",
     "offers": {
@@ -88,17 +91,8 @@ export default async function TestPage({ params }: Props) {
     // Point 3: Removed aggregateRating to avoid Google Manual Action penalty
   };
 
-  const howToSchema = testDef.instructions ? {
-    "@context": "https://schema.org",
-    "@type": "HowTo",
-    "name": `How to take the ${testDef.title}`,
-    "description": testDef.description,
-    "step": testDef.instructions.map((text, i) => ({
-      "@type": "HowToStep",
-      "position": i + 1,
-      "text": text
-    }))
-  } : null;
+  // Instructions are not a visible numbered how-to on the page. Do not
+  // emit unsupported HowTo JSON-LD solely for rich results.
 
   const faqSchema = testDef.faqs ? {
     "@context": "https://schema.org",
@@ -119,12 +113,6 @@ export default async function TestPage({ params }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }}
       />
-      {howToSchema && (
-        <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }}
-        />
-      )}
       {faqSchema && (
         <script
             type="application/ld+json"

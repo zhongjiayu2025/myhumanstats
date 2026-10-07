@@ -259,44 +259,8 @@ export default function TestRunnerClient({ id }: { id: string }) {
              </article>
           )}
 
-          {/* Global Benchmarks */}
-          {testDef.benchmarks && (
-             <section className="tech-border bg-zinc-900/30 p-8 mb-8 overflow-hidden">
-                <div className="flex items-center gap-3 mb-6">
-                   <BarChart3 className="text-primary-500" size={20} />
-                   <h3 className="text-xl font-bold text-white">Illustrative Reference Values</h3>
-                </div>
-                
-                <p className="text-sm text-zinc-400 mb-6">
-                   These tables are illustrative only. They are not derived from MyHumanStats users, are not verified population averages, and should not guide medical decisions.
-                </p>
-
-                <div className="overflow-x-auto">
-                   <table className="w-full text-left border-collapse font-mono text-xs md:text-sm">
-                      <thead>
-                         <tr>
-                            {testDef.benchmarks.columns.map((col, idx) => (
-                               <th key={idx} className="p-3 border border-zinc-800 bg-black/50 text-primary-400 uppercase tracking-wider">{col}</th>
-                            ))}
-                         </tr>
-                      </thead>
-                      <tbody>
-                         {testDef.benchmarks.rows.map((row, rIdx) => (
-                            <tr key={rIdx} className="hover:bg-white/5 transition-colors">
-                               {row.map((cell, cIdx) => (
-                                  <td key={cIdx} className="p-3 border border-zinc-800 text-zinc-300">{cell}</td>
-                               ))}
-                            </tr>
-                         ))}
-                      </tbody>
-                   </table>
-                </div>
-                
-                <div className="mt-4 text-[10px] text-zinc-600 font-mono text-right">
-                   ILLUSTRATIVE ONLY · NO VERIFIED POPULATION SAMPLE
-                </div>
-             </section>
-          )}
+          {/* Unsourced population-average tables must not be displayed
+              on indexable test pages until independently documented. */}
 
           {/* Key Concepts */}
           {testDef.concepts && testDef.concepts.length > 0 && (
@@ -343,8 +307,9 @@ export default function TestRunnerClient({ id }: { id: string }) {
           {testDef.citations && testDef.citations.length > 0 && (
              <div className="mb-8 border-t border-zinc-800 pt-8">
                 <h4 className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                   <BookOpen size={12} /> Scientific Methodology & References
+                   <BookOpen size={12} /> Related Reading and References
                 </h4>
+                <p className="text-xs text-zinc-500 mb-4">Background reading does not independently validate these browser exercises or their scores.</p>
                 <ul className="space-y-2">
                    {testDef.citations.map((cite, idx) => (
                       <li key={idx} className="text-xs text-zinc-500 font-mono pl-4 border-l-2 border-zinc-800 flex items-start gap-2">
