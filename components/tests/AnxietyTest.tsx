@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { AlertCircle, Wind, RotateCcw, Fingerprint, Focus } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
-// GAD-7
+// Four self-reflection prompts, not the full GAD-7 instrument or a validated screen.
 const QUESTIONS = [
   { text: "Feeling nervous, anxious, or on edge", options: [{label: "Not at all", value: 0}, {label: "Several days", value: 1}, {label: "Over half", value: 2}, {label: "Nearly every day", value: 3}] },
   { text: "Not being able to stop or control worrying", options: [{label: "Not at all", value: 0}, {label: "Several days", value: 1}, {label: "Over half", value: 2}, {label: "Nearly every day", value: 3}] },
@@ -22,6 +22,14 @@ const AnxietyTest: React.FC = () => {
   const [holdTime, setHoldTime] = useState(0);
   const positionsRef = useRef<{x:number, y:number}[]>([]);
   const holdTimerRef = useRef<number | null>(null);
+  const holdStartRef = useRef(0);
+  const holdingRef = useRef(false);
+  const completionTimerRef = useRef<number | null>(null);
+
+  useEffect(() => () => {
+    if (holdTimerRef.current !== null) clearInterval(holdTimerRef.current);
+    if (completionTimerRef.current !== null) clearTimeout(completionTimerRef.current);
+  }, []);
 
   // Grounding Game
   const [groundingTargets, setGroundingTargets] = useState<number[]>([]);
@@ -36,75 +44,65 @@ const AnxietyTest: React.FC = () => {
   };
 
   const finishTest = (finalQuizScore: number) => {
-      // Normalize GAD (Max 12 in short version, usually 21) -> 0-100
-      const normQuiz = (finalQuizScore / 12) * 100;
-      // Tremor score is arbitrary jitter sum. Let's normalize.
-      // Lower tremor is better. 
-      // If Jitter > 500, High Anxiety physical symptom.
-      const normTremor = Math.min(100, (tremorScore / 500) * 100);
-      
-      const total = Math.round((normQuiz * 0.7) + (normTremor * 0.3));
-      
-      saveStat('anxiety-test', total);
-      setPhase('result');
+    // This personal reflection index is not a clinical anxiety severity scale.
+    const index = Math.max(0, Math.min(100, Math.round(100 * (1 - finalQuizScore / (QUESTIONS.length * 3)))));
+    saveStat('anxiety-test', index, finalQuizScore);
+    setPhase('result');
   };
 
-  // --- TREMOR LOGIC ---
+  const calculateMovement = () => {
+    let distance = 0;
+    for (let i = 1; i < positionsRef.current.length; i++) {
+      const a = positionsRef.current[i-1], b = positionsRef.current[i];
+      distance += Math.hypot(b.x - a.x, b.y - a.y);
+    }
+    setTremorScore(Math.round(distance)); // Pointer travel distance, not a biomarker.
+    setPhase('quiz');
+  };
+
   const handleStartHold = () => {
-      setIsHolding(true);
-      setHoldTime(0);
-      positionsRef.current = [];
-      
-      const interval = setInterval(() => {
-          setHoldTime(t => {
-              if (t >= 10) {
-                  clearInterval(interval);
-                  setIsHolding(false);
-                  calculateTremor();
-                  return 10;
-              }
-              return t + 0.1;
-          });
-      }, 100);
-      holdTimerRef.current = interval as any;
+    if (holdingRef.current || phase !== 'tremor') return;
+    if (holdTimerRef.current !== null) clearInterval(holdTimerRef.current);
+    holdingRef.current = true;
+    holdStartRef.current = performance.now();
+    positionsRef.current = [];
+    setIsHolding(true);
+    setHoldTime(0);
+    holdTimerRef.current = window.setInterval(() => {
+      const elapsed = Math.min(10, (performance.now() - holdStartRef.current) / 1000);
+      setHoldTime(elapsed);
+      if (elapsed >= 10) {
+        if (holdTimerRef.current !== null) clearInterval(holdTimerRef.current);
+        holdTimerRef.current = null;
+        holdingRef.current = false;
+        setIsHolding(false);
+        calculateMovement();
+      }
+    }, 50);
   };
 
-  const handleMove = (e: React.MouseEvent | React.TouchEvent) => {
-      if (!isHolding) return;
-      let clientX, clientY;
-      if ('touches' in e) {
-          clientX = e.touches[0].clientX;
-          clientY = e.touches[0].clientY;
-      } else {
-          clientX = (e as React.MouseEvent).clientX;
-          clientY = (e as React.MouseEvent).clientY;
-      }
-      positionsRef.current.push({ x: clientX, y: clientY });
+  const handleMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (holdingRef.current) positionsRef.current.push({ x: e.clientX, y: e.clientY });
   };
 
   const handleStopHold = () => {
-      if (holdTime < 10) {
-          if(holdTimerRef.current) clearInterval(holdTimerRef.current);
-          setIsHolding(false);
-          setHoldTime(0);
-          positionsRef.current = [];
-      }
+    if (!holdingRef.current) return;
+    holdingRef.current = false;
+    if (holdTimerRef.current !== null) clearInterval(holdTimerRef.current);
+    holdTimerRef.current = null;
+    setIsHolding(false);
+    setHoldTime(0);
+    positionsRef.current = [];
   };
 
-  const calculateTremor = () => {
-      // Calculate total path length vs displacement? 
-      // Or just standard deviation of movement from center?
-      // Simplified: Sum of distance between consecutive points.
-      // High jitter = long path length in small area.
-      let totalDist = 0;
-      for(let i=1; i<positionsRef.current.length; i++) {
-          const p1 = positionsRef.current[i-1];
-          const p2 = positionsRef.current[i];
-          const dist = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
-          totalDist += dist;
-      }
-      setTremorScore(Math.round(totalDist));
-      setPhase('quiz');
+  const restartExercise = () => {
+    handleStopHold();
+    if (completionTimerRef.current !== null) clearTimeout(completionTimerRef.current);
+    setTremorScore(0);
+    setCurrentQ(0);
+    setQuizScore(0);
+    setGroundingTargets([]);
+    setPhase('intro');
   };
 
   // --- GROUNDING GAME ---
@@ -116,37 +114,37 @@ const AnxietyTest: React.FC = () => {
   const clickTarget = (id: number) => {
       setGroundingTargets(prev => prev.filter(t => t !== id));
       if (groundingTargets.length <= 1) {
-          setTimeout(() => setPhase('result'), 500);
+          completionTimerRef.current = window.setTimeout(() => setPhase('result'), 500);
       }
   };
 
   return (
-    <div className="max-w-2xl mx-auto text-center select-none" onMouseMove={handleMove} onTouchMove={handleMove}>
+    <div className="max-w-2xl mx-auto text-center select-none" onPointerMove={handleMove}>
        
        {phase === 'intro' && (
            <div className="py-12 animate-in fade-in">
                <AlertCircle size={64} className="mx-auto text-zinc-600 mb-6" />
-               <h2 className="text-3xl font-bold text-white mb-2">Anxiety & Motor Screener</h2>
+               <h2 className="text-3xl font-bold text-white mb-2">Anxiety Test — Calm & Focus Exercise</h2>
                <p className="text-zinc-400 mb-8 max-w-md mx-auto">
-                   Assesses both psychological symptoms (GAD-7) and physiological markers (Motor Stability/Tremor).
+                   A non-diagnostic pointer control exercise and four optional self-reflection questions. Not a clinical screening tool.
                </p>
-               <button onClick={() => setPhase('tremor')} className="btn-primary">Start Assessment</button>
+               <button onClick={() => setPhase('tremor')} className="btn-primary">Start Exercise</button>
            </div>
        )}
 
        {phase === 'tremor' && (
            <div className="py-12 animate-in slide-in-from-right">
-               <h3 className="text-white font-bold mb-4">Motor Stability Test</h3>
+               <h3 className="text-white font-bold mb-4">Pointer Control Exercise</h3>
                <p className="text-zinc-400 text-sm mb-8">
                    Press and hold the circle for 10 seconds. <br/>Try to keep your hand as steady as possible.
                </p>
                
                <div className="relative h-64 flex items-center justify-center">
                    <button 
-                      onMouseDown={handleStartHold}
-                      onMouseUp={handleStopHold}
-                      onTouchStart={(e) => { e.preventDefault(); handleStartHold(); }}
-                      onTouchEnd={handleStopHold}
+                      onPointerDown={(e) => { e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId); handleStartHold(); }}
+                      onPointerUp={handleStopHold}
+                      onPointerCancel={handleStopHold}
+                      onLostPointerCapture={handleStopHold}
                       className={`w-32 h-32 rounded-full border-4 flex items-center justify-center transition-all ${isHolding ? 'border-primary-500 bg-primary-900/20 scale-110' : 'border-zinc-700 bg-zinc-900'}`}
                    >
                        {isHolding ? (
@@ -166,7 +164,7 @@ const AnxietyTest: React.FC = () => {
 
        {phase === 'quiz' && (
            <div className="py-12 animate-in slide-in-from-right">
-               <div className="text-xs font-mono text-zinc-500 mb-8">PART 2: SYMPTOM CHECK ({currentQ + 1}/4)</div>
+               <div className="text-xs font-mono text-zinc-500 mb-8">PART 2: SELF-REFLECTION ({currentQ + 1}/4)</div>
                <h3 className="text-2xl font-medium text-white mb-12 min-h-[80px]">{QUESTIONS[currentQ].text}</h3>
                <div className="space-y-3 max-w-md mx-auto">
                    {QUESTIONS[currentQ].options.map((opt, i) => (
@@ -193,9 +191,9 @@ const AnxietyTest: React.FC = () => {
                       onClick={() => clickTarget(id)}
                       className="absolute w-16 h-16 rounded-full bg-emerald-500 hover:bg-emerald-400 shadow-[0_0_20px_#10b981] flex items-center justify-center text-black font-bold animate-pulse transition-all"
                       style={{ 
-                          top: `${20 + Math.random() * 60}%`, 
-                          left: `${10 + Math.random() * 80}%`,
-                          animationDuration: `${2 + Math.random()}s`
+                          top: `${20 + (id * 17) % 55}%`,
+                          left: `${10 + (id * 19) % 70}%`,
+                          animationDuration: '2.5s'
                       }}
                    >
                        {id}
@@ -209,16 +207,16 @@ const AnxietyTest: React.FC = () => {
                <div className="mb-12">
                    <h2 className="text-sm font-mono text-zinc-500 uppercase tracking-widest mb-2">Analysis Complete</h2>
                    <div className="text-zinc-400 text-sm">
-                       Physiological Jitter: <strong className="text-white">{tremorScore} px</strong>
+                       Pointer Movement Path: <strong className="text-white">{tremorScore} px</strong>
                    </div>
                </div>
 
                {/* Breathing / Grounding CTA */}
                <div className="bg-black border border-zinc-800 p-8 rounded-xl relative overflow-hidden mb-8">
                    <div className="relative z-10">
-                       <h3 className="text-white font-bold mb-2">High Arousal Detected?</h3>
+                       <h3 className="text-white font-bold mb-2">Take a Focus Break</h3>
                        <p className="text-zinc-400 text-sm mb-6 max-w-xs mx-auto">
-                           Engage in a visual grounding exercise to reset your parasympathetic nervous system.
+                           Try a short, optional focus game. This does not measure or treat a health condition.
                        </p>
                        <button 
                           onClick={startGrounding}
@@ -229,7 +227,7 @@ const AnxietyTest: React.FC = () => {
                    </div>
                </div>
                
-               <button onClick={() => window.location.reload()} className="btn-secondary flex items-center justify-center gap-2 mx-auto">
+               <button onClick={restartExercise} className="btn-secondary flex items-center justify-center gap-2 mx-auto">
                    <RotateCcw size={16} /> Restart
                </button>
            </div>
