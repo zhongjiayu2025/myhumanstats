@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Music, Volume2, Trophy, Settings, RefreshCcw, CheckCircle2, XCircle, Ear, Activity } from 'lucide-react';
 import { saveStat } from '../../lib/core';
 
@@ -63,7 +63,8 @@ const PianoKey: React.FC<PianoKeyProps> = ({
 
   return (
       <button
-          disabled={isWaiting || isDisabled}
+          type="button" aria-label={"Answer: " + note.name}
+           disabled={isWaiting || isDisabled}
           onClick={() => onGuess(note.name)}
           className={`
               relative flex flex-col justify-end items-center pb-2 transition-all duration-150
@@ -158,75 +159,97 @@ const PerfectPitchTest: React.FC = () => {
      setTimeout(resolve, duration * 1000);
   });
 
-  // --- Game Logic ---
-  const startRound = async () => {
-     if (rounds >= TOTAL_ROUNDS) {
-         finish();
-         return;
-     }
-     
-     setIsWaiting(false);
-     setLastGuess(null);
-     setIsCorrect(null);
+  const scoreRef = useRef(0);
+  const roundsRef = useRef(0);
+  const streakRef = useRef(0);
+  const sessionRef = useRef(0);
+  const lockedRef = useRef(false);
+  const timersRef = useRef<number[]>([]);
 
-     const pool = difficulty === 'easy' ? OCTAVE.filter(n => n.type === 'white') : OCTAVE;
-     const randomNote = pool[Math.floor(Math.random() * pool.length)];
-     setCurrentNote(randomNote);
+  const clearTimers = () => {
+    timersRef.current.forEach(window.clearTimeout);
+    timersRef.current = [];
+  };
 
-     if (useReference) {
-         await playTone(261.63, 0.8);
-         await new Promise(r => setTimeout(r, 400));
-     }
-     
-     playTone(randomNote.freq);
+  useEffect(() => () => {
+    sessionRef.current += 1;
+    timersRef.current.forEach(window.clearTimeout);
+    void audioCtxRef.current?.close();
+  }, []);
+
+  const finish = (token: number) => {
+    if (token !== sessionRef.current) return;
+    clearTimers();
+    setPhase('result');
+    saveStat('perfect-pitch-test', Math.round(scoreRef.current / TOTAL_ROUNDS * 100), scoreRef.current);
+  };
+
+  const startRound = (diff: Difficulty, token: number) => {
+    if (token !== sessionRef.current) return;
+    if (roundsRef.current >= TOTAL_ROUNDS) return finish(token);
+    const pool = diff === 'easy' ? OCTAVE.filter(note => note.type === 'white') : OCTAVE;
+    const next = pool[Math.floor(Math.random() * pool.length)];
+    lockedRef.current = false;
+    setIsWaiting(false);
+    setIsCorrect(null);
+    setLastGuess(null);
+    setCurrentNote(next);
+    if (useReference) {
+      void playTone(261.63, 0.5);
+      timersRef.current.push(window.setTimeout(() => {
+        if (token === sessionRef.current) void playTone(next.freq, 1.0);
+      }, 650));
+    } else {
+      void playTone(next.freq, 1.0);
+    }
   };
 
   const startGame = (diff: Difficulty) => {
-     setDifficulty(diff);
-     setScore(0);
-     setRounds(0);
-     setMaxStreak(0);
-     setMistakes([]);
-     setPhase('play');
-     setTimeout(() => startRound(), 100);
+    clearTimers();
+    sessionRef.current += 1;
+    const token = sessionRef.current;
+    scoreRef.current = 0;
+    roundsRef.current = 0;
+    streakRef.current = 0;
+    lockedRef.current = false;
+    setDifficulty(diff);
+    setScore(0);
+    setRounds(0);
+    setMaxStreak(0);
+    setMistakes([]);
+    setPhase('play');
+    startRound(diff, token);
   };
 
   const handleGuess = (noteName: string) => {
-      if (isWaiting || !currentNote) return;
-      
-      setLastGuess(noteName);
-      setIsWaiting(true);
-      setRounds(r => r + 1);
+    if (lockedRef.current || !currentNote || phase !== 'play') return;
+    lockedRef.current = true;
+    const token = sessionRef.current;
+    const correct = noteName === currentNote.name;
+    roundsRef.current += 1;
+    setRounds(roundsRef.current);
+    setIsWaiting(true);
+    setLastGuess(noteName);
+    setIsCorrect(correct);
 
-      if (noteName === currentNote.name) {
-          setIsCorrect(true);
-          setScore(s => s + 1);
-          setMaxStreak(m => Math.max(m, score + 1));
-          playTone(currentNote.freq * 2, 0.3);
-      } else {
-          setIsCorrect(false);
-          setMistakes(prev => [...prev, { expected: currentNote.name, guessed: noteName }]);
-          const guessedNoteDef = OCTAVE.find(n => n.name === noteName);
-          if (guessedNoteDef) {
-              playTone(guessedNoteDef.freq, 0.4).then(() => {
-                  setTimeout(() => playTone(currentNote.freq, 0.6), 500);
-              });
-          }
-      }
+    if (correct) {
+      scoreRef.current += 1;
+      setScore(scoreRef.current);
+      streakRef.current += 1;
+      setMaxStreak(previous => Math.max(previous, streakRef.current));
+      void playTone(currentNote.freq * 2, 0.3);
+    } else {
+      streakRef.current = 0;
+      setMistakes(previous => [...previous, {expected: currentNote.name, guessed: noteName}]);
+      const guessed = OCTAVE.find(note => note.name === noteName);
+      if (guessed) void playTone(guessed.freq, 0.35);
+    }
 
-      setTimeout(() => {
-          if (rounds + 1 < TOTAL_ROUNDS) {
-              startRound();
-          } else {
-              finish();
-          }
-      }, isCorrect ? 1500 : 2500);
-  };
-
-  const finish = () => {
-      setPhase('result');
-      const baseScore = Math.round((score / TOTAL_ROUNDS) * 100);
-      saveStat('perfect-pitch', baseScore);
+    timersRef.current.push(window.setTimeout(() => {
+      if (token !== sessionRef.current) return;
+      if (roundsRef.current >= TOTAL_ROUNDS) finish(token);
+      else startRound(difficulty, token);
+    }, correct ? 1000 : 1600));
   };
 
   return (
@@ -239,7 +262,7 @@ const PerfectPitchTest: React.FC = () => {
              </div>
              <h2 className="text-3xl font-bold text-white mb-2">Pitch Recognition</h2>
              <p className="text-zinc-400 mb-8 max-w-md mx-auto leading-relaxed">
-                Identify musical notes by ear. Configure your test below.
+                Identify musical notes by ear. Results describe this short exercise, not whether you have absolute pitch. Configure your test below.
              </p>
              
              {/* Config Panel */}
@@ -358,6 +381,7 @@ const PerfectPitchTest: React.FC = () => {
              
              <div className="text-6xl font-bold text-white mb-2">{score}<span className="text-zinc-600 text-3xl">/{TOTAL_ROUNDS}</span></div>
              <h2 className="text-sm font-mono text-zinc-500 uppercase tracking-widest mb-8">Pitch Recognition Score</h2>
+              <p className="text-sm text-zinc-400 mb-8">Best correct-answer streak: <strong>{maxStreak}</strong>. This browser exercise does not clinically establish perfect pitch. Reference-C mode provides a comparison pitch and therefore measures a different task.</p>
              
              {/* Confusion Analysis */}
              {mistakes.length > 0 && (
@@ -374,7 +398,7 @@ const PerfectPitchTest: React.FC = () => {
                          ))}
                      </div>
                      <p className="text-[10px] text-zinc-500 mt-4 italic">
-                         Identifying your specific confusion intervals (e.g. confusing 4ths or 5ths) is key to ear training.
+                         Use these mistaken note identifications to guide future ear-training practice.
                      </p>
                  </div>
              )}
